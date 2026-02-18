@@ -16,53 +16,33 @@ async function findOverseerrUserByEmail(email, OVERSEERR_URL, OVERSEERR_API_KEY,
 
     console.debug(`[Overseerr] Searching for user with email: ${email}${username ? ` or username: ${username}` : ""}`);
 
-    // Récupérer TOUS les utilisateurs Overseerr avec pagination
+    // Récupérer tous les utilisateurs Overseerr (l'endpoint retourne tous les users d'une fois)
+    const url = `${OVERSEERR_URL}/api/v1/user`;
+
+    const res = await fetch(url, {
+      headers: {
+        "X-API-Key": OVERSEERR_API_KEY,
+        "Accept": "application/json"
+      }
+    });
+
+    if (!res.ok) {
+      console.warn(`[Overseerr] Could not fetch users list: ${res.status} ${res.statusText}`);
+      return null;
+    }
+
+    const json = await res.json();
+
+    // Extraire les utilisateurs selon le format de réponse
     let allUsers = [];
-    let page = 1;
-    let hasMore = true;
-
-    while (hasMore) {
-      const url = `${OVERSEERR_URL}/api/v1/user?page=${page}&perPage=50`;
-
-      const res = await fetch(url, {
-        headers: {
-          "X-API-Key": OVERSEERR_API_KEY,
-          "Accept": "application/json"
-        }
-      });
-
-      if (!res.ok) {
-        console.warn(`[Overseerr] Could not fetch users list page ${page}: ${res.status} ${res.statusText}`);
-        break;
-      }
-
-      const json = await res.json();
-
-      // Extraire les utilisateurs selon le format de réponse
-      let users = [];
-      if (Array.isArray(json)) {
-        users = json;
-      } else if (Array.isArray(json.results)) {
-        users = json.results;
-      } else if (Array.isArray(json.data)) {
-        users = json.data;
-      } else if (Array.isArray(json.users)) {
-        users = json.users;
-      }
-
-      if (users.length === 0) {
-        break;
-      }
-
-      allUsers = allUsers.concat(users);
-      console.debug(`[Overseerr] Page ${page}: ${users.length} users (total so far: ${allUsers.length})`);
-
-      // Vérifier s'il y a d'autres pages
-      if (!json.pageInfo || page >= json.pageInfo.pages) {
-        hasMore = false;
-      } else {
-        page++;
-      }
+    if (Array.isArray(json)) {
+      allUsers = json;
+    } else if (Array.isArray(json.results)) {
+      allUsers = json.results;
+    } else if (Array.isArray(json.data)) {
+      allUsers = json.data;
+    } else if (Array.isArray(json.users)) {
+      allUsers = json.users;
     }
 
     console.debug(`[Overseerr] Total users fetched: ${allUsers.length}`);
@@ -77,7 +57,7 @@ async function findOverseerrUserByEmail(email, OVERSEERR_URL, OVERSEERR_API_KEY,
 
     // Si pas trouvé par email, essayer par username Plex
     if (username) {
-      console.debug(`[Overseerr] Email not found. Trying username: ${username}`);
+      console.debug(`[Overseerr] Email not found. Trying username/displayName: ${username}`);
       
       // Chercher dans displayName, username, et autres champs
       found = allUsers.find(u => {
@@ -85,11 +65,13 @@ async function findOverseerrUserByEmail(email, OVERSEERR_URL, OVERSEERR_API_KEY,
         const usernameField = (u.username || "").toLowerCase();
         const plexUsername = (u.plexUsername || "").toLowerCase();
         
+        const target = username.toLowerCase();
         return (
-          displayName === username.toLowerCase() ||
-          usernameField === username.toLowerCase() ||
-          plexUsername === username.toLowerCase() ||
-          displayName.includes(username.toLowerCase())
+          displayName === target ||
+          usernameField === target ||
+          plexUsername === target ||
+          displayName.includes(target) ||
+          usernameField.includes(target)
         );
       });
 
@@ -99,12 +81,11 @@ async function findOverseerrUserByEmail(email, OVERSEERR_URL, OVERSEERR_API_KEY,
       }
     }
 
-    // Debug: afficher les infos des utilisateurs disponibles
-    const availableUsers = allUsers
-      .slice(0, 10)
-      .map(u => `ID ${u.id}: email="${u.email}", displayName="${u.displayName}"`)
+    // Debug: afficher tous les utilisateurs disponibles
+    const usersList = allUsers
+      .map(u => `ID ${u.id}: displayName="${u.displayName}", username="${u.username}", email="${u.email}"`)
       .join("\n  ");
-    console.warn(`[Overseerr] User not found after checking ${allUsers.length} users. Sample:\n  ${availableUsers}`);
+    console.warn(`[Overseerr] User not found. All ${allUsers.length} users in system:\n  ${usersList}`);
 
     return null;
 
