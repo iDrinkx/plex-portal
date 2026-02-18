@@ -145,10 +145,6 @@ document.addEventListener("DOMContentLoaded", async () => {
             <span class="label">✅ Approuvées</span>
             <span class="value">${overseerrData.approved}</span>
           </div>
-          <div class="subscription-row">
-            <span class="label">📺 Disponibles</span>
-            <span class="value">${overseerrData.available}</span>
-          </div>
         </div>
       `;
     }
