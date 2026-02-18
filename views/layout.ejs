@@ -9,7 +9,7 @@
     window.APP_BASE_PATH = "<%= basePath %>";
   </script>
 </head>
-<body>
+<body <% if (user) { %>data-user-id="<%= user.id %>"<% } %>>
 
 <% if (user) { %>
   <nav class="navbar">
