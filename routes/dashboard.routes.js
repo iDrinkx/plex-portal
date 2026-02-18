@@ -122,7 +122,8 @@ router.get("/api/stats", requireAuth, async (req, res) => {
         process.env.TRACEARR_API_KEY,
         req.session.user.id,        // plexUserId
         process.env.PLEX_URL,       // PLEX_URL (pour fallback joinDate)
-        process.env.PLEX_TOKEN      // PLEX_TOKEN
+        process.env.PLEX_TOKEN,     // PLEX_TOKEN
+        req.session.user.joinedAtTimestamp  // Timestamp depuis Plex OAuth
       ),
       60 * 1000 // 60 secondes
     );

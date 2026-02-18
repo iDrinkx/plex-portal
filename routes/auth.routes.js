@@ -79,6 +79,7 @@ router.get("/auth-complete", async (req, res) => {
   console.info(`[Auth] User authenticated via Plex OAuth\n`);
 
   req.session.user = user;
+  req.session.user.joinedAtTimestamp = user.joinedAt; // Store the Unix timestamp from Plex OAuth
   delete req.session.pinId;
 
   res.redirect(req.basePath + "/dashboard");

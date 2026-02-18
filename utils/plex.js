@@ -123,19 +123,31 @@ async function isUserAuthorized(plexUserId, PLEX_URL, PLEX_TOKEN) {
 
 /**
  * Récupère la date d'adhésion d'un utilisateur depuis le serveur Plex
- * Récupère les infos au format XML depuis la bibliothèque de l'utilisateur
+ * Utilise en priorité le timestamp provenant de l'API cloud Plex OAuth
+ * Fallback sur la requête locale seulement si le timestamp n'est pas disponible
  * @param {string|number} plexUserId - ID de l'utilisateur Plex
  * @param {string} PLEX_URL - URL du serveur Plex
  * @param {string} PLEX_TOKEN - Token d'authentification Plex
+ * @param {number} joinedAtTimestamp - (Optionnel) Timestamp Unix de joinedAt depuis Plex OAuth
  * @returns {Promise<Date|null>} Date d'adhésion ou null
  */
-async function getPlexJoinDate(plexUserId, PLEX_URL, PLEX_TOKEN) {
+async function getPlexJoinDate(plexUserId, PLEX_URL, PLEX_TOKEN, joinedAtTimestamp = null) {
   try {
+    // Si on a le timestamp depuis Plex OAuth, l'utiliser directement (c'est la source la plus fiable)
+    if (joinedAtTimestamp) {
+      console.info(`[Plex JoinDate] Using timestamp from Plex OAuth: ${joinedAtTimestamp}`);
+      const joinDate = new Date(joinedAtTimestamp * 1000); // Convertir secondes en millisecondes
+      console.info(`[Plex JoinDate] ✅ User ${plexUserId} joined on ${joinDate.toISOString()}`);
+      return joinDate;
+    }
+
+    // Fallback: essayer le serveur local Plex
     if (!PLEX_URL || !PLEX_TOKEN || !plexUserId) {
       console.warn("[Plex JoinDate] Missing config:", { hasUrl: !!PLEX_URL, hasToken: !!PLEX_TOKEN, hasUserId: !!plexUserId });
       return null;
     }
 
+    console.debug(`[Plex JoinDate] No OAuth timestamp available, trying local Plex server...`);
     console.debug(`[Plex JoinDate] Fetching join date for user ID: ${plexUserId}`);
 
     // Essayer de récupérer depuis les données de la bibliothèque
