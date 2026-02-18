@@ -14,45 +14,61 @@ async function findOverseerrUserByEmail(email, OVERSEERR_URL, OVERSEERR_API_KEY,
       return null;
     }
 
-    console.debug(`[Overseerr] Searching for user with email: ${email}`);
+    console.debug(`[Overseerr] Searching for user with email: ${email}${username ? ` or username: ${username}` : ""}`);
 
-    // Essayer sans pagination en premier lieu
-    const url = `${OVERSEERR_URL}/api/v1/user`;
+    // Récupérer TOUS les utilisateurs Overseerr avec pagination
+    let allUsers = [];
+    let page = 1;
+    let hasMore = true;
 
-    const res = await fetch(url, {
-      headers: {
-        "X-API-Key": OVERSEERR_API_KEY,
-        "Accept": "application/json"
+    while (hasMore) {
+      const url = `${OVERSEERR_URL}/api/v1/user?page=${page}&perPage=50`;
+
+      const res = await fetch(url, {
+        headers: {
+          "X-API-Key": OVERSEERR_API_KEY,
+          "Accept": "application/json"
+        }
+      });
+
+      if (!res.ok) {
+        console.warn(`[Overseerr] Could not fetch users list page ${page}: ${res.status} ${res.statusText}`);
+        break;
       }
-    });
 
-    if (!res.ok) {
-      console.warn(`[Overseerr] Could not fetch users list: ${res.status} ${res.statusText}`);
-      return null;
+      const json = await res.json();
+
+      // Extraire les utilisateurs selon le format de réponse
+      let users = [];
+      if (Array.isArray(json)) {
+        users = json;
+      } else if (Array.isArray(json.results)) {
+        users = json.results;
+      } else if (Array.isArray(json.data)) {
+        users = json.data;
+      } else if (Array.isArray(json.users)) {
+        users = json.users;
+      }
+
+      if (users.length === 0) {
+        break;
+      }
+
+      allUsers = allUsers.concat(users);
+      console.debug(`[Overseerr] Page ${page}: ${users.length} users (total so far: ${allUsers.length})`);
+
+      // Vérifier s'il y a d'autres pages
+      if (!json.pageInfo || page >= json.pageInfo.pages) {
+        hasMore = false;
+      } else {
+        page++;
+      }
     }
 
-    const json = await res.json();
-    console.debug(`[Overseerr] API response keys:`, Object.keys(json));
-
-    // Essayer différents formats de réponse possibles
-    let users = [];
-    if (Array.isArray(json)) {
-      users = json;
-    } else if (Array.isArray(json.results)) {
-      users = json.results;
-    } else if (Array.isArray(json.data)) {
-      users = json.data;
-    } else if (Array.isArray(json.users)) {
-      users = json.users;
-    } else {
-      console.warn(`[Overseerr] Unexpected response format. Raw data:`, JSON.stringify(json).substring(0, 500));
-      return null;
-    }
-
-    console.debug(`[Overseerr] Found ${users.length} users in response`);
+    console.debug(`[Overseerr] Total users fetched: ${allUsers.length}`);
 
     // Chercher l'utilisateur avec cet email
-    let found = users.find(u => u.email && u.email.toLowerCase() === email.toLowerCase());
+    let found = allUsers.find(u => u.email && u.email.toLowerCase() === email.toLowerCase());
 
     if (found) {
       console.info(`[Overseerr] ✓ Found user ID ${found.id} by email: ${email}`);
@@ -62,31 +78,33 @@ async function findOverseerrUserByEmail(email, OVERSEERR_URL, OVERSEERR_API_KEY,
     // Si pas trouvé par email, essayer par username Plex
     if (username) {
       console.debug(`[Overseerr] Email not found. Trying username: ${username}`);
-      found = users.find(u => {
-        // Chercher dans username, displayName, et autres champs possibles
-        const checkNames = [
-          u.username?.toLowerCase(),
-          u.displayName?.toLowerCase(),
-          u.plexUsername?.toLowerCase()
-        ].filter(Boolean);
-        return checkNames.some(name => 
-          name === username.toLowerCase() || 
-          name.includes(username.toLowerCase())
+      
+      // Chercher dans displayName, username, et autres champs
+      found = allUsers.find(u => {
+        const displayName = (u.displayName || "").toLowerCase();
+        const usernameField = (u.username || "").toLowerCase();
+        const plexUsername = (u.plexUsername || "").toLowerCase();
+        
+        return (
+          displayName === username.toLowerCase() ||
+          usernameField === username.toLowerCase() ||
+          plexUsername === username.toLowerCase() ||
+          displayName.includes(username.toLowerCase())
         );
       });
 
       if (found) {
-        console.info(`[Overseerr] ✓ Found user ID ${found.id} by username: ${username}`);
+        console.info(`[Overseerr] ✓ Found user ID ${found.id} by username/displayName: ${username}`);
         return found;
       }
     }
 
     // Debug: afficher les infos des utilisateurs disponibles
-    const availableUsers = users
-      .slice(0, 5)
-      .map(u => `ID ${u.id}: email="${u.email}", username="${u.username}", displayName="${u.displayName}"`)
+    const availableUsers = allUsers
+      .slice(0, 10)
+      .map(u => `ID ${u.id}: email="${u.email}", displayName="${u.displayName}"`)
       .join("\n  ");
-    console.warn(`[Overseerr] User not found by email or username. Sample users:\n  ${availableUsers}`);
+    console.warn(`[Overseerr] User not found after checking ${allUsers.length} users. Sample:\n  ${availableUsers}`);
 
     return null;
 
