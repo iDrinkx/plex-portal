@@ -6,6 +6,7 @@ const { computeSubscription } = require("../utils/wizarr");
 const { getTracearrStats } = require("../utils/tracearr");
 const { getOverseerrStats } = require("../utils/overseerr");
 const { getPlexJoinDate } = require("../utils/plex");
+const { XP_SYSTEM } = require("../utils/xp-system");
 const CacheManager = require("../utils/cache");
 
 /* ===============================
@@ -74,15 +75,19 @@ async function getWizarrSubscription(user) {
 =============================== */
 
 router.get("/dashboard", requireAuth, (req, res) => {
-  res.render("dashboard/index", { user: req.session.user });
+  res.render("dashboard/index", { user: req.session.user, basePath: req.basePath });
+});
+
+router.get("/profil", requireAuth, (req, res) => {
+  res.render("profil/index", { user: req.session.user, basePath: req.basePath, XP_SYSTEM });
 });
 
 router.get("/abonnement", requireAuth, (req, res) => {
-  res.render("abonnement/index", { user: req.session.user });
+  res.render("abonnement/index", { user: req.session.user, basePath: req.basePath });
 });
 
 router.get("/statistiques", requireAuth, (req, res) => {
-  res.render("statistiques/index", { user: req.session.user });
+  res.render("statistiques/index", { user: req.session.user, basePath: req.basePath });
 });
 
 /* ===============================

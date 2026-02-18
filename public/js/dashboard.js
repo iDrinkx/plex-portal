@@ -8,6 +8,24 @@ document.addEventListener("DOMContentLoaded", async () => {
   const userId = document.body.getAttribute("data-user-id") || "guest";
 
   /* ===============================
+     🎮 XP SYSTEM DEFINITION
+  =============================== */
+
+  const XP_SYSTEM = {
+    badges: [
+      { level: 1, name: "Bronze", icon: "🔵", minXp: 0, maxXp: 100, color: "#5B9BD5", bgColor: "rgba(91, 155, 213, 0.2)", borderColor: "#5B9BD5" },
+      { level: 2, name: "Argent", icon: "⚪", minXp: 100, maxXp: 300, color: "#C0C0C0", bgColor: "rgba(192, 192, 192, 0.2)", borderColor: "#C0C0C0" },
+      { level: 3, name: "Or", icon: "🟡", minXp: 300, maxXp: 700, color: "#E5A00D", bgColor: "rgba(229, 160, 13, 0.2)", borderColor: "#E5A00D" },
+      { level: 4, name: "Platine", icon: "💎", minXp: 700, maxXp: 1500, color: "#00D9FF", bgColor: "rgba(0, 217, 255, 0.2)", borderColor: "#00D9FF" },
+      { level: 5, name: "Diamant", icon: "💜", minXp: 1500, maxXp: Infinity, color: "#FF1493", bgColor: "rgba(255, 20, 147, 0.2)", borderColor: "#FF1493" }
+    ]
+  };
+
+  XP_SYSTEM.getBadgeByXp = function(totalXp) {
+    return this.badges.find(b => totalXp >= b.minXp && totalXp < b.maxXp) || this.badges[this.badges.length - 1];
+  };
+
+  /* ===============================
      🕒 DATE UTILITIES
   =============================== */
 
@@ -175,12 +193,58 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   /* ===============================
+     🎮 UPDATE AVATAR XP COLOR
+  =============================== */
+
+  async function updateAvatarXpColor() {
+    try {
+      const avatarEl = document.querySelector(".user-avatar");
+      if (!avatarEl) return;
+
+      // Charger stats et overseerr
+      let tracearrData = cacheManager.get("statsCache", STATS_CACHE_DURATION);
+      if (!tracearrData) {
+        const res = await fetch(basePath + "/api/stats", {
+          headers: { "Accept": "application/json" }
+        });
+        if (!res.ok) return;
+        tracearrData = await res.json();
+        cacheManager.set("statsCache", tracearrData);
+      }
+
+      let overseerrData = cacheManager.get("overseerrCache", STATS_CACHE_DURATION);
+      if (!overseerrData) {
+        const res = await fetch(basePath + "/api/overseerr", {
+          headers: { "Accept": "application/json" }
+        });
+        if (!res.ok) return;
+        overseerrData = await res.json();
+        cacheManager.set("overseerrCache", overseerrData);
+      }
+
+      // Calculer l'XP
+      const sessionCount = tracearrData?.sessionCount || 0;
+      const totalRequests = overseerrData?.total || 0;
+      const totalXp = sessionCount * 2 + totalRequests * 15;
+
+      // Obtenir le badge couleur
+      const badge = XP_SYSTEM.getBadgeByXp(totalXp);
+
+      // Mettre à jour la couleur du avatar
+      avatarEl.style.borderColor = badge.borderColor;
+    } catch (err) {
+      console.debug("Avatar XP color update skipped:", err.message);
+    }
+  }
+
+  /* ===============================
      🚀 LOAD ALL DATA
   =============================== */
 
   await Promise.all([
     loadSubscription(),
-    loadStats()
+    loadStats(),
+    updateAvatarXpColor()
   ]);
 
 });

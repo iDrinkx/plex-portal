@@ -53,7 +53,8 @@ async function getTracearrStats(username, TRACEARR_URL, TRACEARR_API_KEY, plexUs
 
     return {
       joinedAt,
-      lastActivity: foundUser.lastActivityAt || null
+      lastActivity: foundUser.lastActivityAt || null,
+      sessionCount: foundUser.sessionCount || 0
     };
 
   } catch (err) {

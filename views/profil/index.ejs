@@ -1,0 +1,662 @@
+<div class="profil-container">
+  <!-- HEADER AVEC AVATAR ET XP -->
+  <div class="profil-header">
+    <% 
+      // Calculer les stats XP - données seront chargées via API
+      const estimatedXp = (user.sessionCount || 0) * 2;
+    %>
+    <div class="avatar-wrapper" id="avatarWrapper">
+      <% if (user.thumb) { %>
+        <img src="<%= user.thumb %>" alt="<%= user.username %>" class="profile-avatar" id="profileAvatar" />
+      <% } %>
+      <div class="badge-ring" id="badgeRing"></div>
+    </div>
+
+    <div class="profile-info">
+      <h1><%= user.username %></h1>
+      <p class="profile-email"><%= user.email %></p>
+      
+      <div class="xp-status" id="xpStatus">
+        <span class="xp-badge" id="xpBadge">🔵 Bronze</span>
+        <span class="xp-amount" id="xpAmount">0 XP</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROGRESS BAR XP -->
+  <div class="xp-progress-section" id="xpProgressSection">
+    <div class="progress-header">
+      <span>Progression vers le prochain badge</span>
+      <span class="xp-needed" id="xpNeeded"></span>
+    </div>
+    <div class="progress-bar-container">
+      <div class="progress-bar" id="progressBar"></div>
+    </div>
+  </div>
+
+  <!-- GRID DE CARTES -->
+  <div class="profil-grid">
+    <!-- CARTE PROFIL -->
+    <div class="profil-card">
+      <h2>👤 Profil</h2>
+      <div class="card-content">
+        <div class="stat-row">
+          <span class="stat-label">Plateforme</span>
+          <span class="stat-value">Plex</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Inscrit depuis</span>
+          <span class="stat-value" id="joinedDate">Chargement...</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Sessions Tracearr</span>
+          <span class="stat-value" id="sessionCount">0</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Dernière activité</span>
+          <span class="stat-value" id="lastActivity">Chargement...</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- CARTE ABONNEMENT -->
+    <div class="profil-card">
+      <h2>📅 Abonnement</h2>
+      <div class="card-content" id="subscriptionCard">
+        <p style="color: #aaa;">Chargement des informations...</p>
+      </div>
+    </div>
+
+    <!-- CARTE REQUÊTES -->
+    <div class="profil-card">
+      <h2>🎬 Demandes</h2>
+      <div class="card-content">
+        <div class="stat-row">
+          <span class="stat-label">Total demandes</span>
+          <span class="stat-value" id="totalRequests">0</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Approuvées</span>
+          <span class="stat-value approved" id="approvedRequests">0</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">En attente</span>
+          <span class="stat-value pending" id="pendingRequests">0</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Disponibles</span>
+          <span class="stat-value available" id="availableRequests">0</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION BADGES -->
+  <div class="badges-section">
+    <h2>🏆 Progression des Badges</h2>
+    <div class="badges-container" id="badgesContainer"></div>
+  </div>
+
+  <!-- BREAKDOWN XP -->
+  <div class="xp-breakdown">
+    <h3>Détail du Calcul XP</h3>
+    <div class="breakdown-grid">
+      <div class="breakdown-item">
+        <div class="breakdown-icon">🎮</div>
+        <div class="breakdown-detail">
+          <div class="breakdown-label">Sessions Tracearr</div>
+          <div class="breakdown-formula" id="sessionFormulaXp"></div>
+          <small id="sessionCount2"></small>
+        </div>
+      </div>
+      <div class="breakdown-item">
+        <div class="breakdown-icon">📝</div>
+        <div class="breakdown-detail">
+          <div class="breakdown-label">Demandes Overseerr</div>
+          <div class="breakdown-formula" id="requestFormulaXp"></div>
+          <small id="requestCount2"></small>
+        </div>
+      </div>
+      <div class="breakdown-item highlight">
+        <div class="breakdown-icon">⭐</div>
+        <div class="breakdown-detail">
+          <div class="breakdown-label">Total XP</div>
+          <div class="breakdown-total" id="totalXpFormula">0 XP</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .profil-container {
+    max-width: 1000px;
+    margin: 0 auto;
+  }
+
+  /* HEADER */
+  .profil-header {
+    display: flex;
+    align-items: center;
+    gap: 30px;
+    margin-bottom: 40px;
+    padding: 30px;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(229, 160, 13, 0.05) 100%);
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .avatar-wrapper {
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  .profile-avatar {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid #5B9BD5;
+    transition: border-color 0.3s ease;
+    position: relative;
+    z-index: 2;
+  }
+
+  .badge-ring {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 110px;
+    height: 110px;
+    border-radius: 50%;
+    border: 3px solid #5B9BD5;
+    opacity: 0.3;
+    animation: ring-pulse 2s ease-in-out infinite;
+    z-index: 1;
+  }
+
+  @keyframes ring-pulse {
+    0%, 100% { opacity: 0.3; transform: translate(-50%, -50%) scale(1); }
+    50% { opacity: 0.1; transform: translate(-50%, -50%) scale(1.15); }
+  }
+
+  .profile-info {
+    flex: 1;
+  }
+
+  .profile-info h1 {
+    font-size: 32px;
+    font-weight: 700;
+    margin: 0 0 8px 0;
+    color: #fff;
+  }
+
+  .profile-email {
+    color: #aaa;
+    margin: 0 0 15px 0;
+  }
+
+  .xp-status {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .xp-badge {
+    display: inline-block;
+    padding: 6px 14px;
+    background: rgba(91, 155, 213, 0.2);
+    color: #5B9BD5;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    border: 1px solid rgba(91, 155, 213, 0.5);
+  }
+
+  .xp-amount {
+    font-size: 14px;
+    color: #bbb;
+  }
+
+  /* XP PROGRESS */
+  .xp-progress-section {
+    background: rgba(255, 255, 255, 0.03);
+    padding: 20px;
+    border-radius: 12px;
+    margin-bottom: 30px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .progress-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    color: #aaa;
+    margin-bottom: 10px;
+  }
+
+  .xp-needed {
+    font-weight: 600;
+    color: #667eea;
+  }
+
+  .progress-bar-container {
+    width: 100%;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  .progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #667eea, #764ba2);
+    border-radius: 10px;
+    transition: width 0.5s ease;
+    width: 0%;
+  }
+
+  /* GRID */
+  .profil-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    margin-bottom: 40px;
+  }
+
+  .profil-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 24px;
+    transition: all 0.3s ease;
+  }
+
+  .profil-card:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.2);
+  }
+
+  .profil-card h2 {
+    font-size: 18px;
+    margin-bottom: 16px;
+    color: #fff;
+  }
+
+  .card-content {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .stat-row:last-child {
+    border-bottom: none;
+  }
+
+  .stat-label {
+    color: #aaa;
+    font-size: 13px;
+  }
+
+  .stat-value {
+    font-weight: 600;
+    color: #fff;
+  }
+
+  .stat-value.approved {
+    color: #4caf50;
+  }
+
+  .stat-value.pending {
+    color: #ff9800;
+  }
+
+  .stat-value.available {
+    color: #2196f3;
+  }
+
+  /* BADGES */
+  .badges-section {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 40px;
+  }
+
+  .badges-section h2 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    color: #fff;
+  }
+
+  .badges-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 15px;
+  }
+
+  .badge-item {
+    background: rgba(255, 255, 255, 0.05);
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    transition: all 0.3s ease;
+    opacity: 0.5;
+  }
+
+  .badge-item.unlocked {
+    opacity: 1;
+    border-color: currentColor;
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  .badge-icon {
+    font-size: 32px;
+    margin-bottom: 8px;
+  }
+
+  .badge-name {
+    font-weight: 600;
+    color: #fff;
+    margin-bottom: 4px;
+    font-size: 14px;
+  }
+
+  .badge-range {
+    color: #aaa;
+    font-size: 11px;
+  }
+
+  /* XP BREAKDOWN */
+  .xp-breakdown {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 24px;
+  }
+
+  .xp-breakdown h3 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    color: #fff;
+  }
+
+  .breakdown-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+  }
+
+  .breakdown-item {
+    display: flex;
+    gap: 15px;
+    padding: 16px;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 8px;
+    border-left: 3px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .breakdown-item.highlight {
+    background: rgba(102, 126, 234, 0.1);
+    border-left-color: #667eea;
+  }
+
+  .breakdown-icon {
+    font-size: 24px;
+    flex-shrink: 0;
+  }
+
+  .breakdown-detail {
+    flex: 1;
+  }
+
+  .breakdown-label {
+    font-size: 12px;
+    color: #aaa;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+  }
+
+  .breakdown-formula {
+    font-size: 16px;
+    font-weight: 600;
+    color: #fff;
+    margin-bottom: 4px;
+  }
+
+  .breakdown-formula small,
+  .breakdown-detail small {
+    color: #888;
+    font-size: 11px;
+  }
+
+  .breakdown-total {
+    font-size: 24px;
+    font-weight: 700;
+    color: #667eea;
+  }
+
+  /* RESPONSIVE */
+  @media (max-width: 768px) {
+    .profil-header {
+      flex-direction: column;
+      text-align: center;
+      gap: 20px;
+      padding: 20px;
+    }
+
+    .profile-info h1 {
+      font-size: 24px;
+    }
+
+    .profil-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .badges-container {
+      grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    }
+
+    .breakdown-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<script>
+  // XP System Definition
+  const XP_SYSTEM = {
+    badges: <%= JSON.stringify(XP_SYSTEM.badges) %>
+  };
+
+  XP_SYSTEM.getBadgeByXp = function(totalXp) {
+    return this.badges.find(b => totalXp >= b.minXp && totalXp < b.maxXp) || this.badges[this.badges.length - 1];
+  };
+
+  XP_SYSTEM.getProgressToNextBadge = function(totalXp) {
+    const currentBadge = this.getBadgeByXp(totalXp);
+    const nextBadge = this.badges.find(b => b.level === currentBadge.level + 1);
+    if (!nextBadge) {
+      return {
+        current: currentBadge,
+        next: null,
+        currentXp: totalXp,
+        nextXpThreshold: null,
+        progressPercent: 100,
+        xpNeeded: 0
+      };
+    }
+    const xpInCurrentBadge = totalXp - currentBadge.minXp;
+    const xpNeededForNextBadge = nextBadge.minXp - currentBadge.minXp;
+    const progressPercent = Math.floor((xpInCurrentBadge / xpNeededForNextBadge) * 100);
+    return {
+      current: currentBadge,
+      next: nextBadge,
+      currentXp: totalXp,
+      nextXpThreshold: nextBadge.minXp,
+      progressPercent: Math.min(progressPercent, 100),
+      xpNeeded: Math.max(nextBadge.minXp - totalXp, 0)
+    };
+  };
+
+  // Formatteurs
+  function formatRelativeTime(dateString) {
+    if (!dateString) return "N/A";
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffSec = Math.floor((now - date) / 1000);
+    const diffMin = Math.floor(diffSec / 60);
+    const diffHour = Math.floor(diffMin / 60);
+    const diffDay = Math.floor(diffHour / 24);
+    const diffMonth = Math.floor(diffDay / 30);
+
+    if (diffMonth > 0) return `il y a ${diffMonth} mois`;
+    if (diffDay > 0) return `il y a ${diffDay}j`;
+    if (diffHour > 0) return `il y a ${diffHour}h`;
+    if (diffMin > 0) return `il y a ${diffMin}min`;
+    return "À l'instant";
+  }
+
+  function formatFullDate(dateString) {
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    return date.toLocaleDateString("fr-FR", {
+      year: "numeric",
+      month: "long",
+      day: "numeric"
+    });
+  }
+
+  // Fonction pour rendre les badges
+  function renderBadges() {
+    const container = document.getElementById("badgesContainer");
+    if (!container) return;
+    
+    XP_SYSTEM.badges.forEach((badge) => {
+      const badgeEl = document.createElement("div");
+      badgeEl.className = "badge-item";
+      badgeEl.dataset.level = badge.level;
+      badgeEl.innerHTML = `
+        <div class="badge-icon" style="color: ${badge.color};">${badge.icon}</div>
+        <div class="badge-name">${badge.name}</div>
+        <div class="badge-range">${badge.minXp} - ${badge.maxXp === Infinity ? '∞' : badge.maxXp} XP</div>
+      `;
+      container.appendChild(badgeEl);
+    });
+  }
+
+  document.addEventListener("DOMContentLoaded", async () => {
+    const basePath = window.APP_BASE_PATH || "";
+
+    renderBadges();
+
+    // Charger les données
+    try {
+      const statsRes = await fetch(basePath + "/api/stats");
+      const overseerrRes = await fetch(basePath + "/api/overseerr");
+      const subscriptionRes = await fetch(basePath + "/api/subscription");
+
+      const stats = statsRes.ok ? await statsRes.json() : {};
+      const overseerr = overseerrRes.ok ? await overseerrRes.json() : { total: 0, pending: 0, approved: 0, available: 0, unavailable: 0 };
+      const subscription = subscriptionRes.ok ? await subscriptionRes.json() : {};
+
+      // Afficher les stats
+      document.getElementById("joinedDate").textContent = stats.joinedAt ? formatFullDate(stats.joinedAt) : "N/A";
+      document.getElementById("lastActivity").textContent = stats.lastActivity ? formatRelativeTime(stats.lastActivity) : "Aucune";
+
+      // Note: sessionCount nécessite une requête API supplémentaire à Tracearr
+      // Pour maintenant on met une placeholder
+      const tracearrSessionCount = stats.sessionCount || 0;
+      
+      document.getElementById("sessionCount").textContent = tracearrSessionCount;
+      document.getElementById("sessionCount2").textContent = tracearrSessionCount + " sessions";
+
+      // Afficher les stats Overseerr
+      document.getElementById("totalRequests").textContent = overseerr.total || 0;
+      document.getElementById("approvedRequests").textContent = overseerr.approved || 0;
+      document.getElementById("pendingRequests").textContent = overseerr.pending || 0;
+      document.getElementById("availableRequests").textContent = overseerr.available || 0;
+      document.getElementById("requestCount2").textContent = (overseerr.total || 0) + " demandes";
+
+      // Calculer l'XP
+      const totalXp = tracearrSessionCount * 2 + (overseerr.total || 0) * 15;
+      const badge = XP_SYSTEM.getBadgeByXp(totalXp);
+      const progress = XP_SYSTEM.getProgressToNextBadge(totalXp);
+
+      // Couleur avatar selon badge
+      const avatarEl = document.getElementById("profileAvatar");
+      const badgeRing = document.getElementById("badgeRing");
+      if (avatarEl) {
+        avatarEl.style.borderColor = badge.borderColor;
+      }
+      if (badgeRing) {
+        badgeRing.style.borderColor = badge.borderColor;
+      }
+
+      // Afficher badge et XP
+      document.getElementById("xpBadge").textContent = `${badge.icon} ${badge.name}`;
+      document.getElementById("xpBadge").style.background = badge.bgColor;
+      document.getElementById("xpBadge").style.color = badge.color;
+      document.getElementById("xpBadge").style.borderColor = badge.borderColor;
+      document.getElementById("xpAmount").textContent = `${totalXp} XP`;
+
+      // Barre de progression
+      const progressBar = document.getElementById("progressBar");
+      const xpNeeded = document.getElementById("xpNeeded");
+      if (progressBar) {
+        progressBar.style.width = progress.progressPercent + "%";
+        progressBar.style.backgroundColor = badge.color;
+      }
+      if (xpNeeded) {
+        xpNeeded.textContent = progress.xpNeeded > 0 ? `${progress.xpNeeded} XP avant ${progress.next?.name || "max"}` : "Max atteint!";
+      }
+
+      // Formules XP
+      document.getElementById("sessionFormulaXp").textContent = `${tracearrSessionCount} × 2 = ${tracearrSessionCount * 2} XP`;
+      document.getElementById("requestFormulaXp").textContent = `${overseerr.total || 0} × 15 = ${(overseerr.total || 0) * 15} XP`;
+      document.getElementById("totalXpFormula").textContent = `${totalXp} XP`;
+
+      // Afficher abonnement
+      if (subscription.status) {
+        const subHtml = `
+          <div class="stat-row">
+            <span class="stat-label">Statut</span>
+            <span class="stat-value">${subscription.status}</span>
+          </div>
+          ${subscription.daysLeft ? `
+          <div class="stat-row">
+            <span class="stat-label">Jours restants</span>
+            <span class="stat-value">${subscription.daysLeft}</span>
+          </div>
+          ` : ''}
+        `;
+        document.getElementById("subscriptionCard").innerHTML = subHtml;
+      }
+
+      // Activer les badges débloqués
+      const badgeItems = document.querySelectorAll(".badge-item");
+      badgeItems.forEach(item => {
+        const level = parseInt(item.dataset.level);
+        const badgeData = XP_SYSTEM.badges[level - 1];
+        if (totalXp >= badgeData.minXp) {
+          item.classList.add("unlocked");
+        }
+      });
+
+    } catch (err) {
+      console.error("Error loading profile data:", err);
+    }
+  });
+</script>
