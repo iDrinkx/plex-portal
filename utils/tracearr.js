@@ -271,26 +271,40 @@ async function updateUserSessionCache(username, TRACEARR_URL, TRACEARR_API_KEY, 
 }
 
 /**
- * 🚀 SCAN OPTIMISÉ: Scanne L'HISTORIQUE COMPLET une SEULE FOIS
- * Retourne les stats pour TOUS les utilisateurs en une passe
- * BEAUCOUP plus rapide que de scanner par utilisateur!
+ * 🚀 SCAN INTELLIGENT: Scanne L'HISTORIQUE jusqu'à atteindre les sessions déjà connues
+ * S'arrête automatiquement quand il détecte les données en cache (smart delta scan)
+ * BEAUCOUP plus rapide à chaque exécution!
  */
 async function scanTracearrHistoryForAllUsers(TRACEARR_URL, TRACEARR_API_KEY) {
   try {
     GLOBAL_SCAN_IN_PROGRESS = true;  // 🚩 Activer le drapeau
     
-    console.log("\n[TRACEARR-SCAN] 🚀 DÉBUT SCAN OPTIMISÉ - Une seule passe pour TOUS les utilisateurs");
+    console.log("\n[TRACEARR-SCAN] 🚀 DÉBUT SCAN INTELLIGENT - Scan delta avec arrêt smart");
     const scanStartTime = Date.now();
+    
+    // Charger les timestamps du cache pour chaque utilisateur
+    const cachedUsers = SessionStatsCache.getAll();
+    const userCacheLimits = {};
+    for (const [username, userData] of Object.entries(cachedUsers)) {
+      if (userData?.lastSessionTimestamp) {
+        userCacheLimits[username] = new Date(userData.lastSessionTimestamp);
+      }
+    }
+    console.log("[TRACEARR-SCAN] Utilisateurs en cache avec limite:", Object.keys(userCacheLimits).length);
     
     // Objet pour accumuler les stats par utilisateur
     const userStats = {};
+    
+    // Tracker quels users ont "atteint leur limite de cache" (on a scanné jusqu'aux vieilles données)
+    const usersReachedCacheLimit = {};
     
     let historyPage = 1;
     let historyTotalPages = 1;
     const pageSize = 100;
     let totalSessionsScanned = 0;
+    let pagesScannedIntelligently = 0;
     
-    // BOUCLE UNE SEULE FOIS sur toutes les pages
+    // BOUCLE INTELLIGENTE - S'ARRÊTE quand on atteint les données du cache
     while (historyPage <= historyTotalPages) {
       const histRes = await fetch(
         `${TRACEARR_URL}/api/v1/public/history?page=${historyPage}&pageSize=${pageSize}`,
@@ -312,6 +326,10 @@ async function scanTracearrHistoryForAllUsers(TRACEARR_URL, TRACEARR_API_KEY) {
 
       historyTotalPages = Math.ceil((histJson.meta?.total || 0) / (histJson.meta?.pageSize || pageSize));
       
+      pagesScannedIntelligently++;
+      
+      let pageHasNewSessions = false;  // Si cette page contient UNIQUEMENT des sessions déjà scannées
+      
       console.log("[TRACEARR-SCAN] Page", historyPage, '/', historyTotalPages, '-', (histJson.data || []).length, 'sessions');
 
       // POUR CHAQUE SESSION, compter pour l'utilisateur associé
@@ -319,10 +337,22 @@ async function scanTracearrHistoryForAllUsers(TRACEARR_URL, TRACEARR_API_KEY) {
         const username = session.user?.username;
         if (!username) continue;
 
-        totalSessionsScanned++;
-        
         const sessionTime = session.startedAt || session.stoppedAt;
         const durationMs = session.totalDurationMs || 0;
+        
+        // Vérifier si c'est une sessions déjà connue pour l'utilisateur
+        if (userCacheLimits[username] && sessionTime) {
+          const sessionDate = new Date(sessionTime);
+          if (!isNaN(sessionDate.getTime()) && sessionDate <= userCacheLimits[username]) {
+            // Cette session est plus vieille que ce qu'on a en cache = limite atteinte pour cet user
+            usersReachedCacheLimit[username] = true;
+            continue; // Skip - déjà scanné avant
+          }
+        }
+        
+        // C'est une NOUVELLE session (pas en cache)
+        pageHasNewSessions = true;
+        totalSessionsScanned++;
 
         // Initialiser si premier utilisateur
         if (!userStats[username]) {
@@ -366,6 +396,13 @@ async function scanTracearrHistoryForAllUsers(TRACEARR_URL, TRACEARR_API_KEY) {
         }
       }
 
+      // ARRÊT INTELLIGENT: Si pas de nouvelles sessions ET tous les users connus ont atteint leur limite
+      if (!pageHasNewSessions && Object.keys(usersReachedCacheLimit).length >= Object.keys(userCacheLimits).length) {
+        console.log("[TRACEARR-SCAN] ✋ ARRÊT INTELLIGENT - Toutes les données en cache ont été atteintes");
+        console.log("[TRACEARR-SCAN]   Limite de cache trouvée pour tous les utilisateurs connus");
+        break;
+      }
+
       historyPage++;
     }
 
@@ -391,9 +428,11 @@ async function scanTracearrHistoryForAllUsers(TRACEARR_URL, TRACEARR_API_KEY) {
 
     const duration = Math.round((Date.now() - scanStartTime) / 1000);
     console.log("[TRACEARR-SCAN] ✅ SCAN TERMINÉ");
-    console.log("[TRACEARR-SCAN]   Sessions totales scannées:", totalSessionsScanned);
-    console.log("[TRACEARR-SCAN]   Utilisateurs trouvés:", Object.keys(finalStats).length);
-    console.log("[TRACEARR-SCAN]   Durée:", duration, 'secondes');
+    console.log("[TRACEARR-SCAN]   🆕 Nouvelles sessions trouvées:", totalSessionsScanned);
+    console.log("[TRACEARR-SCAN]   📊 Utilisateurs mis à jour:", Object.keys(finalStats).length);
+    console.log("[TRACEARR-SCAN]   📄 Pages scannées (avant arrêt smart):", pagesScannedIntelligently, '/', historyTotalPages);
+    console.log("[TRACEARR-SCAN]   ⏱️  Durée:", duration, 'secondes');
+    console.log("[TRACEARR-SCAN]   💾 Utilisateurs en cache avant:", Object.keys(userCacheLimits).length);
     
     GLOBAL_SCAN_IN_PROGRESS = false;  // 🚩 Désactiver le drapeau
     return finalStats;
