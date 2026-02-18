@@ -1,13 +1,14 @@
 const fetch = require("node-fetch");
 
 /**
- * Cherche un utilisateur Overseerr par email
+ * Cherche un utilisateur Overseerr par email OU username Plex
  * @param {string} email - Email à chercher
  * @param {string} OVERSEERR_URL - URL de base d'Overseerr
  * @param {string} OVERSEERR_API_KEY - Clé API Overseerr
+ * @param {string} username - Username Plex à chercher aussi en fallback
  * @returns {Promise<Object|null>} Utilisateur trouvé ou null
  */
-async function findOverseerrUserByEmail(email, OVERSEERR_URL, OVERSEERR_API_KEY) {
+async function findOverseerrUserByEmail(email, OVERSEERR_URL, OVERSEERR_API_KEY, username = null) {
   try {
     if (!email || !OVERSEERR_URL || !OVERSEERR_API_KEY) {
       return null;
@@ -51,19 +52,41 @@ async function findOverseerrUserByEmail(email, OVERSEERR_URL, OVERSEERR_API_KEY)
     console.debug(`[Overseerr] Found ${users.length} users in response`);
 
     // Chercher l'utilisateur avec cet email
-    const found = users.find(u => u.email && u.email.toLowerCase() === email.toLowerCase());
+    let found = users.find(u => u.email && u.email.toLowerCase() === email.toLowerCase());
 
     if (found) {
-      console.info(`[Overseerr] ✓ Found user ID ${found.id} with email ${email}`);
+      console.info(`[Overseerr] ✓ Found user ID ${found.id} by email: ${email}`);
       return found;
     }
 
-    // Debug: afficher les emails disponibles
-    const availableEmails = users
-      .filter(u => u.email)
-      .map(u => `${u.email} (ID: ${u.id})`)
-      .slice(0, 10);
-    console.warn(`[Overseerr] User not found. Available emails in system:`, availableEmails);
+    // Si pas trouvé par email, essayer par username Plex
+    if (username) {
+      console.debug(`[Overseerr] Email not found. Trying username: ${username}`);
+      found = users.find(u => {
+        // Chercher dans username, displayName, et autres champs possibles
+        const checkNames = [
+          u.username?.toLowerCase(),
+          u.displayName?.toLowerCase(),
+          u.plexUsername?.toLowerCase()
+        ].filter(Boolean);
+        return checkNames.some(name => 
+          name === username.toLowerCase() || 
+          name.includes(username.toLowerCase())
+        );
+      });
+
+      if (found) {
+        console.info(`[Overseerr] ✓ Found user ID ${found.id} by username: ${username}`);
+        return found;
+      }
+    }
+
+    // Debug: afficher les infos des utilisateurs disponibles
+    const availableUsers = users
+      .slice(0, 5)
+      .map(u => `ID ${u.id}: email="${u.email}", username="${u.username}", displayName="${u.displayName}"`)
+      .join("\n  ");
+    console.warn(`[Overseerr] User not found by email or username. Sample users:\n  ${availableUsers}`);
 
     return null;
 
@@ -112,11 +135,12 @@ async function getCurrentOverseerrUser(OVERSEERR_URL, OVERSEERR_API_KEY) {
 /**
  * Récupère les statistiques Overseerr pour un utilisateur spécifique
  * @param {string} userEmail - Email de l'utilisateur Plex (utilisé pour trouver l'utilisateur Overseerr)
+ * @param {string} username - Username Plex (fallback si l'email ne match pas)
  * @param {string} OVERSEERR_URL - URL de base d'Overseerr
  * @param {string} OVERSEERR_API_KEY - Clé API Overseerr
  * @returns {Promise<Object|null>} Stats avec pending, approved, available, unavailable
  */
-async function getOverseerrStats(userEmail, OVERSEERR_URL, OVERSEERR_API_KEY) {
+async function getOverseerrStats(userEmail, username, OVERSEERR_URL, OVERSEERR_API_KEY) {
   try {
     if (!OVERSEERR_URL || !OVERSEERR_API_KEY) {
       console.warn("Overseerr config missing:", { hasUrl: !!OVERSEERR_URL, hasKey: !!OVERSEERR_API_KEY });
@@ -128,8 +152,8 @@ async function getOverseerrStats(userEmail, OVERSEERR_URL, OVERSEERR_API_KEY) {
       return null;
     }
 
-    // Chercher l'utilisateur Overseerr par son email Plex
-    const overseerrUser = await findOverseerrUserByEmail(userEmail, OVERSEERR_URL, OVERSEERR_API_KEY);
+    // Chercher l'utilisateur Overseerr par son email OU username Plex
+    const overseerrUser = await findOverseerrUserByEmail(userEmail, OVERSEERR_URL, OVERSEERR_API_KEY, username);
     
     if (!overseerrUser || !overseerrUser.id) {
       console.warn(`[Overseerr] Could not find Overseerr user for email: ${userEmail}`);

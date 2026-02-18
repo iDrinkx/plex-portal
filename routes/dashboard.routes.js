@@ -141,6 +141,7 @@ router.get("/api/stats", requireAuth, async (req, res) => {
 router.get("/api/overseerr", requireAuth, async (req, res) => {
   try {
     const userEmail = req.session.user?.email;
+    const username = req.session.user?.username;
     
     if (!userEmail) {
       return res.status(400).json({ error: "No user email in session" });
@@ -152,6 +153,7 @@ router.get("/api/overseerr", requireAuth, async (req, res) => {
       cacheKey,
       () => getOverseerrStats(
         userEmail,
+        username,
         process.env.OVERSEERR_URL,
         process.env.OVERSEERR_API_KEY
       ),
