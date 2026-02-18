@@ -15,8 +15,9 @@ async function findOverseerrUserByEmail(email, OVERSEERR_URL, OVERSEERR_API_KEY)
 
     console.debug(`[Overseerr] Searching for user with email: ${email}`);
 
-    // Essayer sans pagination en premier lieu
+    // Récupérer tous les utilisateurs Overseerr
     const url = `${OVERSEERR_URL}/api/v1/user`;
+    console.debug(`[Overseerr] Fetching users from: ${url}`);
 
     const res = await fetch(url, {
       headers: {
@@ -25,49 +26,46 @@ async function findOverseerrUserByEmail(email, OVERSEERR_URL, OVERSEERR_API_KEY)
       }
     });
 
+    console.debug(`[Overseerr] Response status: ${res.status}`);
+    
     if (!res.ok) {
-      console.warn(`[Overseerr] Could not fetch users list: ${res.status} ${res.statusText}`);
+      const errorText = await res.text();
+      console.error(`[Overseerr] API error ${res.status}: ${errorText.substring(0, 200)}`);
       return null;
     }
 
     const json = await res.json();
-    console.debug(`[Overseerr] API response keys:`, Object.keys(json));
 
-    // Essayer différents formats de réponse possibles
-    let users = [];
+    // La réponse peut être un array ou un object avec .results ou .data
+    let allUsers = [];
+    
     if (Array.isArray(json)) {
-      users = json;
-    } else if (Array.isArray(json.results)) {
-      users = json.results;
-    } else if (Array.isArray(json.data)) {
-      users = json.data;
-    } else if (Array.isArray(json.users)) {\n      users = json.users;
+      allUsers = json;
+    } else if (json.results && Array.isArray(json.results)) {
+      allUsers = json.results;
+    } else if (json.data && Array.isArray(json.data)) {
+      allUsers = json.data;
     } else {
-      console.warn(`[Overseerr] Unexpected response format. Raw data:`, JSON.stringify(json).substring(0, 500));
+      console.warn(`[Overseerr] Unexpected response format. Keys: ${Object.keys(json).join(", ")}`);
       return null;
     }
 
-    console.debug(`[Overseerr] Found ${users.length} users in response`);
+    console.debug(`[Overseerr] Found ${allUsers.length} users total`);
 
     // Chercher l'utilisateur avec cet email
-    const found = users.find(u => u.email && u.email.toLowerCase() === email.toLowerCase());
+    const found = allUsers.find(u => u.email && u.email.toLowerCase() === email.toLowerCase());
 
     if (found) {
-      console.info(`[Overseerr] ✓ Found user ID ${found.id} with email ${email}`);
+      console.log(`[Overseerr] ✅ Found user ID ${found.id} for email: ${email}`);
       return found;
     }
 
-    // Debug: afficher les emails disponibles
-    const availableEmails = users
-      .filter(u => u.email)
-      .map(u => `${u.email} (ID: ${u.id})`)
-      .slice(0, 10);
-    console.warn(`[Overseerr] User not found. Available emails in system:`, availableEmails);
-
+    console.warn(`[Overseerr] ❌ No user found with email: ${email}`);
+    console.warn(`[Overseerr] Available users: ${allUsers.map(u => `${u.id}:${u.email}`).join(", ")}`);
     return null;
 
   } catch (err) {
-    console.error("[Overseerr] Error searching for user by email:", err.message, err.stack);
+    console.error("[Overseerr] Error searching for user by email:", err.message);
     return null;
   }
 }

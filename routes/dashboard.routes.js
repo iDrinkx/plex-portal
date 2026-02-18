@@ -166,36 +166,72 @@ router.get("/api/overseerr", requireAuth, async (req, res) => {
 });
 
 /* ===============================
-   🔍 API OVERSEERR DEBUG
+   🔍 API OVERSEERR DEBUG (Test endpoints)
 =============================== */
 
 router.get("/api/overseerr-debug", requireAuth, async (req, res) => {
   try {
-    const userId = req.session.user.id;
-    const url = `${process.env.OVERSEERR_URL}/api/v1/user/${userId}/requests`;
-    
-    console.log(`[Debug] Overseerr request to: ${url}`);
+    const baseUrl = process.env.OVERSEERR_URL;
+    const apiKey = process.env.OVERSEERR_API_KEY;
+    const userEmail = req.session.user?.email;
 
-    const rawRes = await fetch(url, {
-      headers: {
-        "X-API-Key": process.env.OVERSEERR_API_KEY,
-        "Accept": "application/json"
-      }
-    });
+    const tests = [];
 
-    const text = await rawRes.text();
+    // Test 1: GET /user sans params
+    try {
+      const r1 = await fetch(`${baseUrl}/api/v1/user`, {
+        headers: { "X-API-Key": apiKey, "Accept": "application/json" }
+      });
+      const d1 = await r1.text();
+      tests.push({
+        name: "GET /user (no params)",
+        status: r1.status,
+        ok: r1.ok,
+        preview: d1.substring(0, 200)
+      });
+    } catch (e) {
+      tests.push({ name: "GET /user", error: e.message });
+    }
+
+    // Test 2: GET /user?page=1&perPage=50
+    try {
+      const r2 = await fetch(`${baseUrl}/api/v1/user?page=1&perPage=50`, {
+        headers: { "X-API-Key": apiKey, "Accept": "application/json" }
+      });
+      const d2 = await r2.text();
+      tests.push({
+        name: "GET /user?page=1&perPage=50",
+        status: r2.status,
+        ok: r2.ok,
+        preview: d2.substring(0, 200)
+      });
+    } catch (e) {
+      tests.push({ name: "GET /user?page=1&perPage=50", error: e.message });
+    }
+
+    // Test 3: GET /auth/me
+    try {
+      const r3 = await fetch(`${baseUrl}/api/v1/auth/me`, {
+        headers: { "X-API-Key": apiKey, "Accept": "application/json" }
+      });
+      const d3 = await r3.json();
+      tests.push({
+        name: "GET /auth/me",
+        status: r3.status,
+        ok: r3.ok,
+        user: d3
+      });
+    } catch (e) {
+      tests.push({ name: "GET /auth/me", error: e.message });
+    }
 
     res.json({
-      status: rawRes.status,
-      ok: rawRes.ok,
-      headers: Object.fromEntries(rawRes.headers),
-      body: text ? (text.startsWith("{") ? JSON.parse(text) : text) : null,
       config: {
-        url,
-        userId,
-        hasUrl: !!process.env.OVERSEERR_URL,
-        hasKey: !!process.env.OVERSEERR_API_KEY
-      }
+        overseerr_url: baseUrl,
+        user_email: userEmail,
+        has_api_key: !!apiKey
+      },
+      tests
     });
   } catch (err) {
     console.error("Debug error:", err.message);
