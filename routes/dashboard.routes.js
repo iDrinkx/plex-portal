@@ -4,6 +4,7 @@ const fetch = require("node-fetch");
 
 const { computeSubscription } = require("../utils/wizarr");
 const { getTracearrStats } = require("../utils/tracearr");
+const CacheManager = require("../utils/cache");
 
 /* ===============================
    🔐 AUTH
@@ -15,10 +16,11 @@ function requireAuth(req, res, next) {
 }
 
 /* ===============================
-   ⚙️ CACHE CONFIG
+   💾 CACHE MANAGER
 =============================== */
 
-const CACHE_DURATION = 60 * 1000; // 60 secondes
+// Instance centralisée de cache (60 secondes par défaut)
+const cache = new CacheManager(60 * 1000);
 
 /* ===============================
    🔎 WIZARR
@@ -82,60 +84,71 @@ router.get("/statistiques", requireAuth, (req, res) => {
 });
 
 /* ===============================
-   🔄 API SUBSCRIPTION (avec cache)
+   🔄 API SUBSCRIPTION
 =============================== */
 
 router.get("/api/subscription", requireAuth, async (req, res) => {
+  try {
+    const cacheKey = `subscription:${req.session.user.id}`;
+    
+    const subscription = await cache.getOrSet(
+      cacheKey,
+      () => getWizarrSubscription(req.session.user),
+      60 * 1000 // 60 secondes
+    );
 
-  const now = Date.now();
-
-  if (
-    req.session.subscriptionCache &&
-    now - req.session.subscriptionCache.timestamp < CACHE_DURATION
-  ) {
-    return res.json(req.session.subscriptionCache.data);
+    res.json(subscription);
+  } catch (err) {
+    console.error("Subscription API error:", err.message);
+    res.status(500).json({ error: "Failed to fetch subscription" });
   }
-
-  const subscription = await getWizarrSubscription(req.session.user);
-
-  req.session.subscriptionCache = {
-    data: subscription,
-    timestamp: now
-  };
-
-  res.json(subscription);
 });
 
 /* ===============================
-   🔄 API STATS (TRACEARR ONLY)
+   🔄 API STATS
 =============================== */
 
 router.get("/api/stats", requireAuth, async (req, res) => {
-  const now = Date.now();
+  try {
+    const cacheKey = `stats:${req.session.user.id}`;
+    
+    const stats = await cache.getOrSet(
+      cacheKey,
+      () => getTracearrStats(
+        req.session.user.username,
+        process.env.TRACEARR_URL,
+        process.env.TRACEARR_API_KEY
+      ),
+      60 * 1000 // 60 secondes
+    );
 
-  // ✅ Cache session
-  if (
-    req.session.statsCache &&
-    now - req.session.statsCache.timestamp < CACHE_DURATION
-  ) {
-    return res.json(req.session.statsCache.data);
+    res.json(stats);
+  } catch (err) {
+    console.error("Stats API error:", err.message);
+    res.status(500).json({ error: "Failed to fetch stats" });
   }
+});
 
-  const stats = await getTracearrStats(
-    req.session.user.username,
-    process.env.TRACEARR_URL,
-    process.env.TRACEARR_API_KEY
-  );
+/* ===============================
+   🗑️ CACHE INVALIDATION
+=============================== */
 
-  // (Optionnel) log seulement si pas cache
-  console.log("Tracearr stats:", stats);
-
-  req.session.statsCache = {
-    data: stats,
-    timestamp: now
-  };
-
-  res.json(stats);
+router.post("/api/cache/invalidate", requireAuth, (req, res) => {
+  try {
+    const userId = req.session.user.id;
+    
+    // Invalide tous les caches de l'utilisateur
+    cache.invalidate(`subscription:${userId}`);
+    cache.invalidate(`stats:${userId}`);
+    
+    res.json({ 
+      message: "Cache invalidated", 
+      stats: cache.stats() 
+    });
+  } catch (err) {
+    console.error("Cache invalidation error:", err.message);
+    res.status(500).json({ error: "Failed to invalidate cache" });
+  }
 });
 
 module.exports = router;
