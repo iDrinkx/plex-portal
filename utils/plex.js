@@ -9,9 +9,11 @@ const fetch = require("node-fetch");
 async function getPlexUsers(PLEX_URL, PLEX_TOKEN) {
   try {
     if (!PLEX_URL || !PLEX_TOKEN) {
-      console.warn("[Plex] Config missing for user list");
+      console.warn("[Plex] Config missing:", { hasUrl: !!PLEX_URL, hasToken: !!PLEX_TOKEN });
       return [];
     }
+
+    console.debug(`[Plex] Fetching users from: ${PLEX_URL}`);
 
     const url = `${PLEX_URL}/api/v2/accounts`;
     
@@ -22,19 +24,27 @@ async function getPlexUsers(PLEX_URL, PLEX_TOKEN) {
       }
     });
 
+    console.debug(`[Plex] Response status: ${res.status}`);
+
     if (!res.ok) {
-      console.error(`[Plex] Failed to get users: ${res.status}`);
+      console.error(`[Plex] Failed to get users: ${res.status} ${res.statusText}`);
+      const errorText = await res.text();
+      console.error(`[Plex] Error body: ${errorText}`);
       return [];
     }
 
     const json = await res.json();
     
     if (!Array.isArray(json?.data)) {
-      console.warn("[Plex] Unexpected response format for users");
+      console.warn("[Plex] Unexpected response format for users", json);
       return [];
     }
 
-    console.debug(`[Plex] Found ${json.data.length} users on server`);
+    console.info(`[Plex] ✅ Found ${json.data.length} users on server:`);
+    json.data.forEach(u => {
+      console.info(`  - ID: ${u.id}, Email: ${u.email}, Username: ${u.username}`);
+    });
+    
     return json.data;
 
   } catch (err) {
@@ -53,21 +63,25 @@ async function getPlexUsers(PLEX_URL, PLEX_TOKEN) {
 async function getPlexUserInfo(plexUserId, PLEX_URL, PLEX_TOKEN) {
   try {
     if (!PLEX_URL || !PLEX_TOKEN || !plexUserId) {
+      console.debug("[Plex] Missing config for user info lookup");
       return null;
     }
+
+    console.debug(`[Plex] Looking for user ID ${plexUserId} in server's user list...`);
 
     // Récupérer tous les users et chercher celui-ci
     const users = await getPlexUsers(PLEX_URL, PLEX_TOKEN);
     
     const userIdNum = parseInt(plexUserId);
+    console.debug(`[Plex] Searching through ${users.length} users for ID: ${userIdNum}`);
+
     const user = users.find(u => u.id === userIdNum);
 
     if (user) {
-      console.debug(`[Plex] Found user info for ID ${plexUserId}:`, {
-        id: user.id,
-        email: user.email,
-        username: user.username
-      });
+      console.debug(`[Plex] ✅ Found user: ID=${user.id}, Email=${user.email}`);
+    } else {
+      console.warn(`[Plex] ❌ User ID ${userIdNum} not found in list`);
+      console.warn(`[Plex] Available user IDs: ${users.map(u => u.id).join(', ')}`);
     }
 
     return user || null;
@@ -87,18 +101,22 @@ async function getPlexUserInfo(plexUserId, PLEX_URL, PLEX_TOKEN) {
  */
 async function isUserAuthorized(plexUserId, PLEX_URL, PLEX_TOKEN) {
   try {
+    console.info(`\n[Plex Auth] Checking authorization for Plex user ID: ${plexUserId}`);
+    console.info(`[Plex Auth] Config - URL: ${PLEX_URL ? '✅ Set' : '❌ Missing'}, Token: ${PLEX_TOKEN ? '✅ Set' : '❌ Missing'}`);
+
     const user = await getPlexUserInfo(plexUserId, PLEX_URL, PLEX_TOKEN);
     
     if (!user) {
-      console.warn(`[Plex] User ${plexUserId} not found on server - UNAUTHORIZED`);
+      console.error(`❌ [Plex Auth] User ID ${plexUserId} NOT FOUND on server - UNAUTHORIZED`);
+      console.error(`[Plex Auth] This user is not in the Plex server's user list`);
       return false;
     }
 
-    console.debug(`[Plex] User ${plexUserId} is authorized`);
+    console.info(`✅ [Plex Auth] User ID ${plexUserId} (${user.email}) is authorized`);
     return true;
 
   } catch (err) {
-    console.error("[Plex] Error checking authorization:", err.message);
+    console.error("[Plex Auth] Error checking authorization:", err.message);
     return false;
   }
 }

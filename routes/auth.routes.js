@@ -65,8 +65,15 @@ router.get("/auth-complete", async (req, res) => {
 
   const user = await account.json();
 
+  console.info(`\n[Auth] Login attempt from Plex user:`);
+  console.info(`  ID: ${user.id}`);
+  console.info(`  Email: ${user.email}`);
+  console.info(`  Username: ${user.username}`);
+
   // ✅ VÉRIFICATION DE SÉCURITÉ: Whitelist des utilisateurs Plex
   if (process.env.PLEX_URL && process.env.PLEX_TOKEN) {
+    console.info(`[Auth] Security check ENABLED - Validating user against Plex server whitelist...`);
+    
     const isAuthorized = await isUserAuthorized(
       user.id,
       process.env.PLEX_URL,
@@ -74,7 +81,8 @@ router.get("/auth-complete", async (req, res) => {
     );
 
     if (!isAuthorized) {
-      console.warn(`[Auth] Unauthorized login attempt from Plex user ${user.id} (${user.email})`);
+      console.error(`\n❌ [Auth] LOGIN DENIED for user ${user.id} (${user.email})`);
+      console.error(`[Auth] User is not in the Plex server's authorized list\n`);
       delete req.session.pinId;
       return res.status(403).send(`
         <html>
@@ -99,7 +107,11 @@ router.get("/auth-complete", async (req, res) => {
       `);
     }
 
-    console.info(`[Auth] Authorized login for Plex user ${user.id} (${user.email})`);
+    console.info(`\n✅ [Auth] LOGIN SUCCESS for user ${user.id} (${user.email})\n`);
+  } else {
+    console.warn(`[Auth] ⚠️ Security check DISABLED - PLEX_URL or PLEX_TOKEN not configured`);
+    console.warn(`[Auth] Anyone with a Plex account can log in!`);
+    console.info(`✅ [Auth] LOGIN SUCCESS for user ${user.id} (${user.email}) [Security disabled]\n`);
   }
 
   req.session.user = user;
