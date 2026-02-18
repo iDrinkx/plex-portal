@@ -114,33 +114,49 @@ router.get("/api/subscription", requireAuth, async (req, res) => {
    🔄 API STATS
 =============================== */
 
+/* ===============================
+   🔄 API STATS (avec timeout)
+=============================== */
+
 router.get("/api/stats", requireAuth, async (req, res) => {
   try {
-    const cacheKey = `stats:${req.session.user.id}`;
     console.log("[API/STATS] Requête de stats pour user:", req.session.user.username);
     
-    const stats = await cache.getOrSet(
-      cacheKey,
-      () => {
-        console.log("[API/STATS] Appel getTracearrStats...");
-        return getTracearrStats(
-          req.session.user.username,
-          process.env.TRACEARR_URL,
-          process.env.TRACEARR_API_KEY,
-          req.session.user.id,        // plexUserId
-          process.env.PLEX_URL,       // PLEX_URL (pour fallback joinDate)
-          process.env.PLEX_TOKEN,     // PLEX_TOKEN
-          req.session.user.joinedAtTimestamp  // Timestamp depuis Plex OAuth
-        );
-      },
-      60 * 1000 // 60 secondes
-    );
+    // Wrapper pour ajouter un timeout
+    const statsWithTimeout = await Promise.race([
+      getTracearrStats(
+        req.session.user.username,
+        process.env.TRACEARR_URL,
+        process.env.TRACEARR_API_KEY,
+        req.session.user.id,
+        process.env.PLEX_URL,
+        process.env.PLEX_TOKEN,
+        req.session.user.joinedAtTimestamp
+      ),
+      // Timeout après 30 secondes
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error("TIMEOUT_30S")), 30000)
+      )
+    ]);
 
-    console.log("[API/STATS] Resultat final:", stats);
-    res.json(stats);
+    console.log("[API/STATS] Resultat final:", statsWithTimeout);
+    res.json(statsWithTimeout);
+    
   } catch (err) {
-    console.error("[API/STATS] Erreur:", err.message);
-    res.status(500).json({ error: "Failed to fetch stats" });
+    if (err.message === "TIMEOUT_30S") {
+      console.warn("[API/STATS] Timeout 30s - le cron job mettra a jour en arriere-plan");
+      // Retourner un objet par défaut pendant que le cron job travaille
+      res.json({
+        joinedAt: req.session.user.joinedAtTimestamp ? new Date(req.session.user.joinedAtTimestamp * 1000).toISOString() : null,
+        lastActivity: null,
+        sessionCount: 0,
+        status: "computing",
+        message: "Les données des sessions sont en cours de calcul... (rechargez dans quelques minutes)"
+      });
+    } else {
+      console.error("[API/STATS] Erreur:", err.message);
+      res.status(500).json({ error: "Failed to fetch stats" });
+    }
   }
 });
 

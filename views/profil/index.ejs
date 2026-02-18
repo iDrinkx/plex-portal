@@ -772,16 +772,27 @@
       console.log("[DOM] joinedDate element:", joinedEl);
       console.log("[DOM] lastActivity element:", activityEl);
       
-      if (joinedEl) joinedEl.textContent = stats.joinedAt ? formatFullDate(stats.joinedAt) : "N/A";
-      if (activityEl) activityEl.textContent = stats.lastActivity ? formatRelativeTime(stats.lastActivity) : "Aucune";
+      // Vérifier si les données sont en cours de calcul
+      if (stats.status === "computing") {
+        console.log("[DOM] Stats en cours de calcul - afficher message");
+        if (joinedEl) joinedEl.textContent = "En cours...";
+        if (activityEl) activityEl.textContent = "En cours...";
+        const sessionEl = document.getElementById("sessionCount");
+        const sessionEl2 = document.getElementById("sessionCount2");
+        if (sessionEl) sessionEl.textContent = "Calcul en cours...";
+        if (sessionEl2) sessionEl2.textContent = "Calcul en cours...";
+      } else {
+        if (joinedEl) joinedEl.textContent = stats.joinedAt ? formatFullDate(stats.joinedAt) : "N/A";
+        if (activityEl) activityEl.textContent = stats.lastActivity ? formatRelativeTime(stats.lastActivity) : "Aucune";
 
-      const tracearrSessionCount = stats.sessionCount || 0;
-      const sessionEl = document.getElementById("sessionCount");
-      const sessionEl2 = document.getElementById("sessionCount2");
-      console.log("[DOM] sessionCount element:", sessionEl, "value:", tracearrSessionCount);
-      
-      if (sessionEl) sessionEl.textContent = tracearrSessionCount;
-      if (sessionEl2) sessionEl2.textContent = tracearrSessionCount + " sessions";
+        const tracearrSessionCount = stats.sessionCount || 0;
+        const sessionEl = document.getElementById("sessionCount");
+        const sessionEl2 = document.getElementById("sessionCount2");
+        console.log("[DOM] sessionCount element:", sessionEl, "value:", tracearrSessionCount);
+        
+        if (sessionEl) sessionEl.textContent = tracearrSessionCount;
+        if (sessionEl2) sessionEl2.textContent = tracearrSessionCount + " sessions";
+      }
 
       // Afficher les stats Overseerr
       const totalReqEl = document.getElementById("totalRequests");
