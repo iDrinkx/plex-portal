@@ -8,7 +8,32 @@ document.addEventListener("DOMContentLoaded", async () => {
   const userId = document.body.getAttribute("data-user-id") || "guest";
 
   /* ===============================
-     💾 CACHE UTILITIES
+     � DATE UTILITIES
+  =============================== */
+
+  function formatRelativeTime(dateString) {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffSec = Math.floor(diffMs / 1000);
+    const diffMin = Math.floor(diffSec / 60);
+    const diffHour = Math.floor(diffMin / 60);
+    const diffDay = Math.floor(diffHour / 24);
+    const diffWeek = Math.floor(diffDay / 7);
+    const diffMonth = Math.floor(diffDay / 30);
+    const diffYear = Math.floor(diffDay / 365);
+
+    if (diffYear > 0) return `il y a ${diffYear} an${diffYear > 1 ? 's' : ''}`;
+    if (diffMonth > 0) return `il y a ${diffMonth} mois`;
+    if (diffWeek > 0) return `il y a ${diffWeek} semaine${diffWeek > 1 ? 's' : ''}`;
+    if (diffDay > 0) return `il y a ${diffDay} jour${diffDay > 1 ? 's' : ''}`;
+    if (diffHour > 0) return `il y a ${diffHour}h`;
+    if (diffMin > 0) return `il y a ${diffMin}min`;
+    return 'À l\'instant';
+  }
+
+  /* ===============================
+     �💾 CACHE UTILITIES
   =============================== */
 
   const cacheManager = {
@@ -65,7 +90,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         : "Inconnu";
 
       const last = data.lastActivity
-        ? new Date(data.lastActivity).toLocaleString("fr-FR")
+        ? formatRelativeTime(data.lastActivity)
         : "Aucune activité";
 
       return { joined, last };

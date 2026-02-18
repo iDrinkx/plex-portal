@@ -1,23 +1,51 @@
 document.addEventListener("DOMContentLoaded", async () => {
 
   const basePath = window.APP_BASE_PATH || "";
-  const CACHE_DURATION = 30000; // 30 secondes
+  const SUBSCRIPTION_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+  const STATS_CACHE_DURATION = 30000; // 30 secondes
 
   // Récupérer l'ID utilisateur depuis le attribut data du body (à ajouter dans le template si absent)
   const userId = document.body.getAttribute("data-user-id") || "guest";
+
+  /* ===============================
+     🕒 DATE UTILITIES
+  =============================== */
+
+  function formatRelativeTime(dateString) {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffSec = Math.floor(diffMs / 1000);
+    const diffMin = Math.floor(diffSec / 60);
+    const diffHour = Math.floor(diffMin / 60);
+    const diffDay = Math.floor(diffHour / 24);
+    const diffWeek = Math.floor(diffDay / 7);
+    const diffMonth = Math.floor(diffDay / 30);
+    const diffYear = Math.floor(diffDay / 365);
+
+    if (diffYear > 0) return `il y a ${diffYear} an${diffYear > 1 ? 's' : ''}`;
+    if (diffMonth > 0) return `il y a ${diffMonth} mois`;
+    if (diffWeek > 0) return `il y a ${diffWeek} semaine${diffWeek > 1 ? 's' : ''}`;
+    if (diffDay > 0) return `il y a ${diffDay} jour${diffDay > 1 ? 's' : ''}`;
+    if (diffHour > 0) return `il y a ${diffHour}h`;
+    if (diffMin > 0) return `il y a ${diffMin}min`;
+    return 'À l\'instant';
+  }
+
+  window.formatRelativeTime = formatRelativeTime;
 
   /* ===============================
      💾 CACHE UTILITIES
   =============================== */
 
   const cacheManager = {
-    get(key) {
+    get(key, duration = STATS_CACHE_DURATION) {
       const cacheKey = `${key}:${userId}`;
       const cached = sessionStorage.getItem(cacheKey);
       const time = sessionStorage.getItem(`${cacheKey}:time`);
       const now = Date.now();
 
-      if (cached && time && now - parseInt(time) < CACHE_DURATION) {
+      if (cached && time && now - parseInt(time) < duration) {
         return JSON.parse(cached);
       }
       
@@ -55,8 +83,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     const contentEl = document.getElementById("subscriptionContent");
 
     try {
-      // Vérifier cache local (30s)
-      let sub = cacheManager.get("subscriptionCache");
+      // Vérifier cache local (5 minutes - moins fréquent que stats)
+      let sub = cacheManager.get("subscriptionCache", SUBSCRIPTION_CACHE_DURATION);
 
       if (!sub) {
         const res = await fetch(basePath + "/api/subscription");
@@ -67,7 +95,10 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       statusEl.className = "status-mini " + sub.status;
       statusEl.textContent = sub.status || "Indispo";
-      contentEl.innerHTML = `<p>${sub.daysLeft || "Accès illimité"}</p>`;
+      
+      // Afficher "X jours restants" ou "Accès illimité"
+      const displayText = sub.daysLeft ? `${sub.daysLeft} jours restants` : "Accès illimité";
+      contentEl.innerHTML = `<p>${displayText}</p>`;
 
     } catch (err) {
       console.error("Subscription load error:", err);
@@ -85,7 +116,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     try {
       // Charger Tracearr stats
-      let tracearrData = cacheManager.get("statsCache");
+      let tracearrData = cacheManager.get("statsCache", STATS_CACHE_DURATION);
       if (!tracearrData) {
         const res = await fetch(basePath + "/api/stats", {
           headers: { "Accept": "application/json" }
@@ -96,7 +127,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
 
       // Charger Overseerr stats
-      let overseerrData = cacheManager.get("overseerrCache");
+      let overseerrData = cacheManager.get("overseerrCache", STATS_CACHE_DURATION);
       if (!overseerrData) {
         const res = await fetch(basePath + "/api/overseerr", {
           headers: { "Accept": "application/json" }
@@ -122,9 +153,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       let html = "";
 
-      // Afficher derniere activité Tracearr
+      // Afficher derniere activité Tracearr en format relatif
       if (hasTracearrData && tracearrData.lastActivity) {
-        const last = new Date(tracearrData.lastActivity).toLocaleString("fr-FR");
+        const last = formatRelativeTime(tracearrData.lastActivity);
         html += `<p style="font-size:14px; margin-bottom:6px;">🕒 Dernière activité : <strong>${last}</strong></p>`;
       }
 
