@@ -1,6 +1,68 @@
 const fetch = require("node-fetch");
 
 /**
+ * Cherche un utilisateur Overseerr par email
+ * @param {string} email - Email à chercher
+ * @param {string} OVERSEERR_URL - URL de base d'Overseerr
+ * @param {string} OVERSEERR_API_KEY - Clé API Overseerr
+ * @returns {Promise<Object|null>} Utilisateur trouvé ou null
+ */
+async function findOverseerrUserByEmail(email, OVERSEERR_URL, OVERSEERR_API_KEY) {
+  try {
+    if (!email || !OVERSEERR_URL || !OVERSEERR_API_KEY) {
+      return null;
+    }
+
+    console.debug(`[Overseerr] Searching for user with email: ${email}`);
+
+    // Parcourir les utilisateurs pour trouver celui avec cet email
+    let page = 1;
+    let found = null;
+
+    while (!found) {
+      const url = `${OVERSEERR_URL}/api/v1/user?page=${page}&perPage=50`;
+
+      const res = await fetch(url, {
+        headers: {
+          "X-API-Key": OVERSEERR_API_KEY,
+          "Accept": "application/json"
+        }
+      });
+
+      if (!res.ok) {
+        console.warn(`[Overseerr] Could not fetch users list: ${res.status}`);
+        break;
+      }
+
+      const json = await res.json();
+      const users = json.results || [];
+
+      // Chercher l'utilisateur avec cet email
+      found = users.find(u => u.email && u.email.toLowerCase() === email.toLowerCase());
+
+      if (found) {
+        console.debug(`[Overseerr] Found user ID ${found.id} with email ${email}`);
+        return found;
+      }
+
+      // Vérifier s'il y a d'autres pages
+      if (!json.pageInfo || page >= json.pageInfo.pages) {
+        break;
+      }
+
+      page++;
+    }
+
+    console.warn(`[Overseerr] No user found with email: ${email}`);
+    return null;
+
+  } catch (err) {
+    console.error("[Overseerr] Error searching for user by email:", err.message);
+    return null;
+  }
+}
+
+/**
  * Récupère l'utilisateur courant Overseerr via la clé API
  * @param {string} OVERSEERR_URL - URL de base d'Overseerr
  * @param {string} OVERSEERR_API_KEY - Clé API Overseerr
@@ -37,27 +99,33 @@ async function getCurrentOverseerrUser(OVERSEERR_URL, OVERSEERR_API_KEY) {
 }
 
 /**
- * Récupère les statistiques Overseerr pour l'utilisateur courant
+ * Récupère les statistiques Overseerr pour un utilisateur spécifique
+ * @param {string} userEmail - Email de l'utilisateur Plex (utilisé pour trouver l'utilisateur Overseerr)
  * @param {string} OVERSEERR_URL - URL de base d'Overseerr
  * @param {string} OVERSEERR_API_KEY - Clé API Overseerr
  * @returns {Promise<Object|null>} Stats avec pending, approved, available, unavailable
  */
-async function getOverseerrStats(OVERSEERR_URL, OVERSEERR_API_KEY) {
+async function getOverseerrStats(userEmail, OVERSEERR_URL, OVERSEERR_API_KEY) {
   try {
     if (!OVERSEERR_URL || !OVERSEERR_API_KEY) {
       console.warn("Overseerr config missing:", { hasUrl: !!OVERSEERR_URL, hasKey: !!OVERSEERR_API_KEY });
       return null;
     }
 
-    // Récupérer l'utilisateur courant pour obtenir son ID Overseerr
-    const currentUser = await getCurrentOverseerrUser(OVERSEERR_URL, OVERSEERR_API_KEY);
-    
-    if (!currentUser || !currentUser.id) {
-      console.warn("[Overseerr] Could not determine current user ID");
+    if (!userEmail) {
+      console.warn("[Overseerr] No user email provided");
       return null;
     }
 
-    const userIdNum = currentUser.id;
+    // Chercher l'utilisateur Overseerr par son email Plex
+    const overseerrUser = await findOverseerrUserByEmail(userEmail, OVERSEERR_URL, OVERSEERR_API_KEY);
+    
+    if (!overseerrUser || !overseerrUser.id) {
+      console.warn(`[Overseerr] Could not find Overseerr user for email: ${userEmail}`);
+      return null;
+    }
+
+    const userIdNum = overseerrUser.id;
     console.debug(`[Overseerr] Fetching requests for Overseerr user ID: ${userIdNum}`);
 
     // Récupérer TOUTES les demandes en paginant
@@ -181,4 +249,4 @@ async function getOverseerrGlobalStats(OVERSEERR_URL, OVERSEERR_API_KEY) {
   }
 }
 
-module.exports = { getOverseerrStats, getOverseerrGlobalStats, getCurrentOverseerrUser };
+module.exports = { getOverseerrStats, getOverseerrGlobalStats, getCurrentOverseerrUser, findOverseerrUserByEmail };
