@@ -60,36 +60,45 @@ async function getOverseerrStats(OVERSEERR_URL, OVERSEERR_API_KEY) {
     const userIdNum = currentUser.id;
     console.debug(`[Overseerr] Fetching requests for Overseerr user ID: ${userIdNum}`);
 
-    // Récupérer les demandes de l'utilisateur via l'endpoint dédié
-    // GET /user/{userId}/requests selon la documentation API
-    const url = `${OVERSEERR_URL}/api/v1/user/${userIdNum}/requests`;
+    // Récupérer TOUTES les demandes en paginant
+    let allRequests = [];
+    let page = 1;
+    let hasMore = true;
 
-    const res = await fetch(url, {
-      headers: {
-        "X-API-Key": OVERSEERR_API_KEY,
-        "Accept": "application/json"
+    while (hasMore) {
+      const url = `${OVERSEERR_URL}/api/v1/user/${userIdNum}/requests?page=${page}&perPage=50`;
+
+      const res = await fetch(url, {
+        headers: {
+          "X-API-Key": OVERSEERR_API_KEY,
+          "Accept": "application/json"
+        }
+      });
+
+      if (!res.ok) {
+        console.error(`[Overseerr] API error: ${res.status} for user ID ${userIdNum}`);
+        break;
       }
-    });
 
-    if (!res.ok) {
-      console.error(`[Overseerr] API error: ${res.status} for user ID ${userIdNum}`);
-      return null;
+      const json = await res.json();
+
+      if (!json?.results || !Array.isArray(json.results)) {
+        console.warn(`[Overseerr] No results on page ${page}`);
+        break;
+      }
+
+      allRequests = allRequests.concat(json.results);
+      console.debug(`[Overseerr] Page ${page}: ${json.results.length} results (total so far: ${allRequests.length})`);
+
+      // Vérifier s'il y a d'autres pages
+      if (!json.pageInfo || page >= json.pageInfo.pages) {
+        hasMore = false;
+      } else {
+        page++;
+      }
     }
 
-    const json = await res.json();
-
-    if (!json?.results || !Array.isArray(json.results)) {
-      console.warn(`[Overseerr] No results or invalid format for user ID ${userIdNum}`, json);
-      return {
-        pending: 0,
-        approved: 0,
-        available: 0,
-        unavailable: 0,
-        total: 0
-      };
-    }
-
-    console.debug(`[Overseerr] Found ${json.results.length} requests for user ID ${userIdNum}`);
+    console.debug(`[Overseerr] Retrieved ${allRequests.length} total requests for user ID ${userIdNum}`);
 
     // Compter par statut
     let pending = 0;
@@ -97,7 +106,7 @@ async function getOverseerrStats(OVERSEERR_URL, OVERSEERR_API_KEY) {
     let available = 0;
     let unavailable = 0;
 
-    json.results.forEach(req => {
+    allRequests.forEach(req => {
       // Status: 1=PENDING, 2=APPROVED, 3=DECLINED
       // mediaStatus: 1=UNKNOWN, 2=PENDING, 3=PROCESSING, 4=PARTIALLY_AVAILABLE, 5=AVAILABLE
       if (req.status === 1) {
@@ -119,7 +128,7 @@ async function getOverseerrStats(OVERSEERR_URL, OVERSEERR_API_KEY) {
       approved: approved - available,
       available,
       unavailable,
-      total: json.results.length
+      total: allRequests.length
     };
 
     console.debug(`[Overseerr] Stats for user ID ${userIdNum}:`, result);
