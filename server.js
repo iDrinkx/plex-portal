@@ -90,6 +90,8 @@ async function initializeAllUsersForCron() {
       return [];
     }
 
+    console.log("[SETUP] Tentative de fetch des utilisateurs Overseerr depuis:", baseUrl);
+
     const users = [];
     let page = 1;
     let pageSize = 50;
@@ -98,6 +100,8 @@ async function initializeAllUsersForCron() {
 
     while (page <= totalPages && retries > 0) {
       try {
+        console.log(`[SETUP]   Fetch page ${page}...`);
+        
         const resp = await fetch(
           `${baseUrl}/api/v1/user?skip=${(page - 1) * pageSize}&take=${pageSize}`,
           {
@@ -108,15 +112,20 @@ async function initializeAllUsersForCron() {
           }
         );
 
+        console.log(`[SETUP]   Status: ${resp.status}`);
+
         if (!resp.ok) {
-          console.warn(`[SETUP] Erreur Overseerr ${resp.status}, retry...`);
+          console.warn(`[SETUP]   ⚠️  Overseerr ${resp.status}, retry...`);
           retries--;
+          await new Promise(r => setTimeout(r, 500)); // attendre 500ms avant retry
           continue;
         }
 
         const json = await resp.json();
         const pageInfo = json.pageInfo || {};
         totalPages = Math.ceil((pageInfo.results || 0) / pageSize);
+
+        console.log(`[SETUP]   Page ${page}: ${json.data?.length || 0} utilisateurs trouvés`);
 
         if (json.data) {
           users.push(...json.data.map(u => ({
@@ -129,15 +138,16 @@ async function initializeAllUsersForCron() {
 
         page++;
       } catch (err) {
-        console.warn(`[SETUP] Erreur fetch page ${page}:`, err.message);
+        console.warn(`[SETUP]   ⚠️  Erreur fetch page ${page}:`, err.message);
         retries--;
+        await new Promise(r => setTimeout(r, 500));
       }
     }
 
     console.log(`[SETUP] ✅ Récupéré ${users.length} utilisateurs pour le cron job`);
     return users;
   } catch (err) {
-    console.error("[SETUP] Erreur initializeAllUsersForCron:", err.message);
+    console.error("[SETUP] ❌ Erreur initializeAllUsersForCron:", err.message);
     return [];
   }
 }
