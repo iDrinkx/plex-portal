@@ -117,23 +117,29 @@ router.get("/api/subscription", requireAuth, async (req, res) => {
 router.get("/api/stats", requireAuth, async (req, res) => {
   try {
     const cacheKey = `stats:${req.session.user.id}`;
+    console.log("[API/STATS] 🔍 Requête de stats pour user:', req.session.user.username);
     
     const stats = await cache.getOrSet(
       cacheKey,
-      () => getTracearrStats(
-        req.session.user.username,
-        process.env.TRACEARR_URL,
-        process.env.TRACEARR_API_KEY,
-        req.session.user.id,        // plexUserId
-        process.env.PLEX_URL,       // PLEX_URL (pour fallback joinDate)
-        process.env.PLEX_TOKEN,     // PLEX_TOKEN
-        req.session.user.joinedAtTimestamp  // Timestamp depuis Plex OAuth
-      ),
+      () => {
+        console.log("[API/STATS] 📡 Appel getTracearrStats...");
+        return getTracearrStats(
+          req.session.user.username,
+          process.env.TRACEARR_URL,
+          process.env.TRACEARR_API_KEY,
+          req.session.user.id,        // plexUserId
+          process.env.PLEX_URL,       // PLEX_URL (pour fallback joinDate)
+          process.env.PLEX_TOKEN,     // PLEX_TOKEN
+          req.session.user.joinedAtTimestamp  // Timestamp depuis Plex OAuth
+        );
+      },
       60 * 1000 // 60 secondes
     );
 
+    console.log("[API/STATS] ✅ Résultat:', stats);
     res.json(stats);
   } catch (err) {
+    console.error("[API/STATS] ❌ Erreur:', err.message);
     res.status(500).json({ error: "Failed to fetch stats" });
   }
 });

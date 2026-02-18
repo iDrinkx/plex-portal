@@ -3,13 +3,19 @@ const { getPlexJoinDate } = require("./plex");
 
 async function getTracearrStats(username, TRACEARR_URL, TRACEARR_API_KEY, plexUserId, PLEX_URL, PLEX_TOKEN, joinedAtTimestamp = null) {
   try {
-    if (!TRACEARR_URL || !TRACEARR_API_KEY) return null;
+    if (!TRACEARR_URL || !TRACEARR_API_KEY) {
+      console.log("[TRACEARR] ❌ Config manquante");
+      return null;
+    }
+
+    console.log("[TRACEARR] 🔍 Recherche utilisateur:", username);
 
     let page = 1;
     let totalPages = 1;
     let foundUser = null;
 
     while (page <= totalPages) {
+      console.log("[TRACEARR] 📄 Fetch page", page, '/', totalPages);
       const res = await fetch(
         `${TRACEARR_URL}/api/v1/public/users?page=${page}&pageSize=50`,
         {
@@ -20,23 +26,36 @@ async function getTracearrStats(username, TRACEARR_URL, TRACEARR_API_KEY, plexUs
         }
       );
 
-      if (!res.ok) return null;
+      if (!res.ok) {
+        console.log("[TRACEARR] ❌ API error status:", res.status);
+        return null;
+      }
 
       const json = await res.json();
-      if (!json?.data) return null;
+      if (!json?.data) {
+        console.log("[TRACEARR] ❌ Pas de data dans réponse");
+        return null;
+      }
 
       totalPages = Math.ceil(json.meta.total / json.meta.pageSize);
+      console.log("[TRACEARR] 📊 Meta - total:', json.meta.total, 'pageSize:', json.meta.pageSize, 'totalPages:', totalPages);
 
       foundUser = json.data.find(
         u => u.username?.toLowerCase() === username.toLowerCase()
       );
 
-      if (foundUser) break;
+      if (foundUser) {
+        console.log("[TRACEARR] ✅ Utilisateur trouvé!", foundUser.username, 'sessionCount:', foundUser.sessionCount);
+        break;
+      }
 
       page++;
     }
 
-    if (!foundUser) return null;
+    if (!foundUser) {
+      console.log("[TRACEARR] ❌ Utilisateur non trouvé après', page - 1, 'pages");
+      return null;
+    }
 
     // Prioriser Plex pour une date plus fiable
     let joinedAt = null;
@@ -51,13 +70,16 @@ async function getTracearrStats(username, TRACEARR_URL, TRACEARR_API_KEY, plexUs
       joinedAt = foundUser.createdAt || null;
     }
 
-    return {
+    const result = {
       joinedAt,
       lastActivity: foundUser.lastActivityAt || null,
       sessionCount: foundUser.sessionCount || 0
     };
+    console.log("[TRACEARR] ✅ Résultat final:", result);
+    return result;
 
   } catch (err) {
+    console.error("[TRACEARR] ❌ Erreur:", err.message);
     return null;
   }
 }
