@@ -143,21 +143,26 @@ router.get("/api/overseerr", requireAuth, async (req, res) => {
   try {
     const userEmail = req.session.user?.email;
     const username = req.session.user?.username;
+    const plexUserId = req.session.user?.id;
     
     if (!userEmail) {
       return res.status(400).json({ error: "No user email in session" });
     }
 
-    const cacheKey = `overseerr:${userEmail}`;
+    // Clé de cache utilisant l'ID Plex pour plus de certitude
+    const cacheKey = `overseerr:${plexUserId}`;
     
     const overseerr = await cache.getOrSet(
       cacheKey,
-      () => getOverseerrStats(
-        userEmail,
-        username,
-        process.env.OVERSEERR_URL,
-        process.env.OVERSEERR_API_KEY
-      ),
+      () => {
+        console.debug(`[Dashboard] Fetching Overseerr for Plex user ${plexUserId} (${userEmail})`);
+        return getOverseerrStats(
+          userEmail,
+          username,
+          process.env.OVERSEERR_URL,
+          process.env.OVERSEERR_API_KEY
+        );
+      },
       60 * 1000 // 60 secondes
     );
 

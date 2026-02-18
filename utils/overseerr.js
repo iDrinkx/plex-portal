@@ -187,6 +187,8 @@ async function getOverseerrStats(userEmail, username, OVERSEERR_URL, OVERSEERR_A
     }
 
     const userIdNum = overseerrUser.id;
+    console.info(`[Overseerr] ✅ Found Overseerr user ID ${userIdNum} for Plex email: ${userEmail}`);
+    console.debug(`[Overseerr] Overseerr user details: DisplayName="${overseerrUser.displayName}", Email="${overseerrUser.email}"`);
     console.debug(`[Overseerr] Fetching requests for Overseerr user ID: ${userIdNum}`);
 
     // Récupérer TOUTES les demandes en paginant avec skip/take
