@@ -39,15 +39,15 @@ async function getTracearrStats(username, TRACEARR_URL, TRACEARR_API_KEY, plexUs
 
       totalPages = Math.ceil(json.meta.total / json.meta.pageSize);
       console.log("[TRACEARR] Meta - total:", json.meta.total, "pageSize:", json.meta.pageSize, "totalPages:", totalPages);
+      console.log("[TRACEARR] Cherchant utilisateur:", username, "parmi", json.data.length, "users");
 
       foundUser = json.data.find(
         u => u.username?.toLowerCase() === username.toLowerCase()
       );
 
       if (foundUser) {
-        console.log("[TRACEARR] Utilisateur trouvé:", foundUser.username);
-        console.log("[TRACEARR] Donnees completes:", JSON.stringify(foundUser, null, 2));
-        console.log("[TRACEARR] sessionCount field:", foundUser.sessionCount);
+        console.log("[TRACEARR] ✓ Utilisateur trouvé:", foundUser.username);
+        console.log("[TRACEARR] FULL USER OBJECT:", JSON.stringify(foundUser, null, 2));
         break;
       }
 
