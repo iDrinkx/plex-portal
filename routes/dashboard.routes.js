@@ -3,7 +3,7 @@ const router = express.Router();
 const fetch = require("node-fetch");
 
 const { computeSubscription } = require("../utils/wizarr");
-const { getTracearrStats } = require("../utils/tracearr");
+const { getTracearrStats, getTracearrActivity } = require("../utils/tracearr");
 const { getOverseerrStats } = require("../utils/overseerr");
 const { getPlexJoinDate } = require("../utils/plex");
 const CacheManager = require("../utils/cache");
@@ -83,6 +83,10 @@ router.get("/abonnement", requireAuth, (req, res) => {
 
 router.get("/statistiques", requireAuth, (req, res) => {
   res.render("statistiques/index", { user: req.session.user });
+});
+
+router.get("/activite", requireAuth, (req, res) => {
+  res.render("statistiques/activite", { user: req.session.user });
 });
 
 /* ===============================
@@ -170,6 +174,31 @@ router.get("/api/overseerr", requireAuth, async (req, res) => {
   } catch (err) {
     console.error("Overseerr API error:", err.message);
     res.status(500).json({ error: "Failed to fetch overseerr data" });
+  }
+});
+
+/* ===============================
+   🎬 API ACTIVITY (Tracearr)
+=============================== */
+
+router.get("/api/activity", requireAuth, async (req, res) => {
+  try {
+    const cacheKey = `activity:${req.session.user.id}`;
+    
+    const activity = await cache.getOrSet(
+      cacheKey,
+      () => getTracearrActivity(
+        req.session.user.username,
+        process.env.TRACEARR_URL,
+        process.env.TRACEARR_API_KEY
+      ),
+      60 * 1000 // 60 secondes
+    );
+
+    res.json(activity || { user: null, activities: [] });
+  } catch (err) {
+    console.error("Activity API error:", err.message);
+    res.status(500).json({ error: "Failed to fetch activity data" });
   }
 });
 
@@ -268,6 +297,7 @@ router.post("/api/cache/invalidate", requireAuth, (req, res) => {
     cache.invalidate(`subscription:${userId}`);
     cache.invalidate(`stats:${userId}`);
     cache.invalidate(`overseerr:${userId}`);
+    cache.invalidate(`activity:${userId}`);
     
     res.json({ 
       message: "Cache invalidated", 

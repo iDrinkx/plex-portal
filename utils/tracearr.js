@@ -62,4 +62,87 @@ async function getTracearrStats(username, TRACEARR_URL, TRACEARR_API_KEY, plexUs
   }
 }
 
-module.exports = { getTracearrStats };
+async function getTracearrActivity(username, TRACEARR_URL, TRACEARR_API_KEY) {
+  try {
+    if (!TRACEARR_URL || !TRACEARR_API_KEY) return null;
+
+    let page = 1;
+    let totalPages = 1;
+    let foundUser = null;
+
+    // Trouver l'utilisateur
+    while (page <= totalPages) {
+      const res = await fetch(
+        `${TRACEARR_URL}/api/v1/public/users?page=${page}&pageSize=50`,
+        {
+          headers: {
+            Authorization: `Bearer ${TRACEARR_API_KEY}`,
+            Accept: "application/json"
+          }
+        }
+      );
+
+      if (!res.ok) return null;
+
+      const json = await res.json();
+      if (!json?.data) return null;
+
+      totalPages = Math.ceil(json.meta.total / json.meta.pageSize);
+
+      foundUser = json.data.find(
+        u => u.username?.toLowerCase() === username.toLowerCase()
+      );
+
+      if (foundUser) break;
+
+      page++;
+    }
+
+    if (!foundUser) return null;
+
+    // Récupérer l'historique d'activité de l'utilisateur
+    const activityRes = await fetch(
+      `${TRACEARR_URL}/api/v1/public/users/${foundUser.id}/activity?pageSize=100`,
+      {
+        headers: {
+          Authorization: `Bearer ${TRACEARR_API_KEY}`,
+          Accept: "application/json"
+        }
+      }
+    );
+
+    if (!activityRes.ok) {
+      // Fallback: retourner juste l'info utilisateur sans historique
+      return {
+        user: {
+          id: foundUser.id,
+          username: foundUser.username,
+          avatar: foundUser.avatar || null,
+          createdAt: foundUser.createdAt,
+          lastActivityAt: foundUser.lastActivityAt
+        },
+        activities: []
+      };
+    }
+
+    const activityData = await activityRes.json();
+    const activities = Array.isArray(activityData) ? activityData : (activityData.data || []);
+
+    return {
+      user: {
+        id: foundUser.id,
+        username: foundUser.username,
+        avatar: foundUser.avatar || null,
+        createdAt: foundUser.createdAt,
+        lastActivityAt: foundUser.lastActivityAt
+      },
+      activities: activities || []
+    };
+
+  } catch (err) {
+    console.error("Tracearr activity error:", err.message);
+    return null;
+  }
+}
+
+module.exports = { getTracearrStats, getTracearrActivity };

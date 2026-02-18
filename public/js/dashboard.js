@@ -174,13 +174,71 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
+  /* =====================================
+     🎬 ACTIVITY (Tracearr)
+  ===================================== */
+
+  async function loadActivity() {
+    const statusEl = document.getElementById("activityStatus");
+    const contentEl = document.getElementById("activityContent");
+
+    try {
+      let activityData = cacheManager.get("activityCache", STATS_CACHE_DURATION);
+      if (!activityData) {
+        const res = await fetch(basePath + "/api/activity", {
+          headers: { "Accept": "application/json" }
+        });
+        if (!res.ok) throw new Error("activity_api_error");
+        activityData = await res.json();
+        cacheManager.set("activityCache", activityData);
+      }
+
+      const hasActivityData = activityData && activityData.user;
+
+      if (!hasActivityData || !activityData.activities || activityData.activities.length === 0) {
+        statusEl.className = "status-mini loading";
+        statusEl.textContent = "Vide";
+        contentEl.innerHTML = `<p class="activity-loading">Aucune activité pour le moment</p>`;
+        return;
+      }
+
+      statusEl.className = "status-mini active";
+      statusEl.textContent = "OK";
+
+      let html = "";
+
+      // Afficher les 3 dernières activités
+      const recentActivities = activityData.activities.slice(0, 3);
+      
+      html += recentActivities.map(activity => {
+        const typeEmoji = activity.type === 'WATCHED' ? '👀' : 
+                          activity.type === 'ADDED' ? '➕' : 
+                          activity.type === 'UPDATED' ? '🔄' : '📌';
+        const relativeTime = formatRelativeTime(activity.date || activity.createdAt);
+        return `<p style="font-size:13px; margin-bottom:6px;">
+          ${typeEmoji} ${activity.title || 'Activité'}
+          <span style="color:#888;"> • ${relativeTime}</span>
+        </p>`;
+      }).join('');
+
+      contentEl.innerHTML = html;
+
+    } catch (err) {
+      console.error("Activity load error:", err);
+      statusEl.className = "status-mini expired";
+      statusEl.textContent = "Erreur";
+      contentEl.innerHTML = `<p class="activity-loading">Impossible de charger</p>`;
+    }
+  }
+
   /* ===============================
      🚀 LOAD ALL DATA
   =============================== */
 
   await Promise.all([
     loadSubscription(),
-    loadStats()
+    loadStats(),
+    loadActivity()
   ]);
 
 });
