@@ -117,20 +117,39 @@ async function getTracearrActivity(username, TRACEARR_URL, TRACEARR_API_KEY) {
       return null;
     }
 
-    // Récupérer l'historique d'activité de l'utilisateur
-    console.log(`[Tracearr] Fetching activity for user ${foundUser.id}`);
-    const activityRes = await fetch(
+    // Essayer différents endpoints pour récupérer l'historique d'activité
+    const endpoints = [
       `${TRACEARR_URL}/api/v1/public/users/${foundUser.id}/activity?pageSize=100`,
-      {
+      `${TRACEARR_URL}/api/v1/users/${foundUser.id}/activity?pageSize=100`,
+      `${TRACEARR_URL}/api/v1/public/users/${foundUser.id}/history?pageSize=100`,
+      `${TRACEARR_URL}/api/v1/activity?userId=${foundUser.id}&pageSize=100`
+    ];
+
+    let activities = [];
+    let foundEndpoint = null;
+
+    for (const endpoint of endpoints) {
+      console.log(`[Tracearr] Trying endpoint: ${endpoint}`);
+      const activityRes = await fetch(endpoint, {
         headers: {
           Authorization: `Bearer ${TRACEARR_API_KEY}`,
           Accept: "application/json"
         }
-      }
-    );
+      });
 
-    if (!activityRes.ok) {
-      console.log(`[Tracearr] Activity endpoint returned ${activityRes.status} ${activityRes.statusText}`);
+      console.log(`[Tracearr] Response status: ${activityRes.status}`);
+
+      if (activityRes.ok) {
+        const activityData = await activityRes.json();
+        activities = Array.isArray(activityData) ? activityData : (activityData.data || activityData.activities || []);
+        foundEndpoint = endpoint;
+        console.log(`[Tracearr] ✓ Found working endpoint! Got ${activities.length} activities`);
+        break;
+      }
+    }
+
+    if (!foundEndpoint) {
+      console.log(`[Tracearr] ⚠ No working activity endpoint found. Returning user info without activities.`);
       // Fallback: retourner juste l'info utilisateur sans historique
       return {
         user: {
@@ -143,11 +162,6 @@ async function getTracearrActivity(username, TRACEARR_URL, TRACEARR_API_KEY) {
         activities: []
       };
     }
-
-    const activityData = await activityRes.json();
-    const activities = Array.isArray(activityData) ? activityData : (activityData.data || []);
-
-    console.log(`[Tracearr] Got ${activities.length} activities`);
 
     return {
       user: {
