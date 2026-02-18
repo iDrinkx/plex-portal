@@ -777,6 +777,9 @@
       console.log("[DOM] joinedDate element:", joinedEl);
       console.log("[DOM] lastActivity element:", activityEl);
       
+      // Déclarer les variables que nous utiliserons partout
+      let tracearrSessionCount = 0;
+      
       // Vérifier si les données sont en cours de calcul
       if (stats.status === "computing") {
         console.log("[DOM] Stats en cours de calcul - afficher message");
@@ -786,11 +789,12 @@
         const sessionEl2 = document.getElementById("sessionCount2");
         if (sessionEl) sessionEl.textContent = "Calcul en cours...";
         if (sessionEl2) sessionEl2.textContent = "Calcul en cours...";
+        tracearrSessionCount = 0;
       } else {
         if (joinedEl) joinedEl.textContent = stats.joinedAt ? formatFullDate(stats.joinedAt) : "N/A";
         if (activityEl) activityEl.textContent = stats.lastActivity ? formatRelativeTime(stats.lastActivity) : "Aucune";
 
-        const tracearrSessionCount = stats.sessionCount || 0;
+        tracearrSessionCount = stats.sessionCount || 0;
         const sessionEl = document.getElementById("sessionCount");
         const sessionEl2 = document.getElementById("sessionCount2");
         console.log("[DOM] sessionCount element:", sessionEl, "value:", tracearrSessionCount);
@@ -919,6 +923,42 @@
           console.log("[BADGES] Débloqué - Level", level, '(', badgeData.minXp, 'XP)');
         }
       });
+
+      // Rafraîchissement automatique si calcul en cours
+      if (stats.status === "computing") {
+        console.log("[PROFIL] 🔄 Calcul en cours - mise en place du polling...");
+        
+        let pollCount = 0;
+        const maxPolls = 30; // Max 30 essais * 5s = 150 secondes
+        
+        const pollInterval = setInterval(async () => {
+          pollCount++;
+          console.log(`[PROFIL-POLL] Tentative ${pollCount}/${maxPolls} de recharge des données...`);
+          
+          try {
+            const newStatsRes = await fetch(basePath ? `${basePath}/api/stats` : "/api/stats");
+            if (!newStatsRes.ok) throw new Error("API error");
+            
+            const newStats = await newStatsRes.json();
+            console.log("[PROFIL-POLL] Nouvelles données reçues:", newStats);
+            
+            // Si les données sont prêtes (pas "computing"), recharger la page ou mettre à jour les éléments
+            if (newStats.status !== "computing") {
+              console.log("[PROFIL-POLL] ✅ Données complètes! Rechargement...");
+              clearInterval(pollInterval);
+              window.location.reload(); // Rechargement complet pour mettre à jour tout d'un coup
+            }
+          } catch (err) {
+            console.error("[PROFIL-POLL] Erreur polling:", err.message);
+          }
+          
+          // Arrêter après max tentatives
+          if (pollCount >= maxPolls) {
+            console.log("[PROFIL-POLL] Max tentatives atteintes");
+            clearInterval(pollInterval);
+          }
+        }, 5000); // Vérifier toutes les 5 secondes
+      }
 
       console.log("[PROFIL] ✅ Chargement terminé!");
     } catch(err) {
