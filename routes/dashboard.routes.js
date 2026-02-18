@@ -3,7 +3,7 @@ const router = express.Router();
 const fetch = require("node-fetch");
 
 const { computeSubscription } = require("../utils/wizarr");
-const { getTracearrStats, getTracearrActivity } = require("../utils/tracearr");
+const { getTracearrStats } = require("../utils/tracearr");
 const { getOverseerrStats } = require("../utils/overseerr");
 const { getPlexJoinDate } = require("../utils/plex");
 const CacheManager = require("../utils/cache");
@@ -83,10 +83,6 @@ router.get("/abonnement", requireAuth, (req, res) => {
 
 router.get("/statistiques", requireAuth, (req, res) => {
   res.render("statistiques/index", { user: req.session.user });
-});
-
-router.get("/activite", requireAuth, (req, res) => {
-  res.render("statistiques/activite", { user: req.session.user });
 });
 
 /* ===============================
@@ -171,29 +167,7 @@ router.get("/api/overseerr", requireAuth, async (req, res) => {
   }
 });
 
-/* ===============================
-   🎬 API ACTIVITY (Tracearr)
-=============================== */
 
-router.get("/api/activity", requireAuth, async (req, res) => {
-  try {
-    const cacheKey = `activity:${req.session.user.id}`;
-    
-    const activity = await cache.getOrSet(
-      cacheKey,
-      () => getTracearrActivity(
-        req.session.user.username,
-        process.env.TRACEARR_URL,
-        process.env.TRACEARR_API_KEY
-      ),
-      60 * 1000 // 60 secondes
-    );
-
-    res.json(activity || { user: null, activities: [] });
-  } catch (err) {
-    res.status(500).json({ error: "Failed to fetch activity data" });
-  }
-});
 
 /* ===============================
    🔍 API OVERSEERR DEBUG (Test endpoints)
@@ -290,7 +264,6 @@ router.post("/api/cache/invalidate", requireAuth, (req, res) => {
     cache.invalidate(`subscription:${userId}`);
     cache.invalidate(`stats:${userId}`);
     cache.invalidate(`overseerr:${userId}`);
-    cache.invalidate(`activity:${userId}`);
     
     res.json({ 
       message: "Cache invalidated", 
@@ -301,122 +274,6 @@ router.post("/api/cache/invalidate", requireAuth, (req, res) => {
   }
 });
 
-/* ===============================
-   🔍 DIAGNOSTIC TRACEARR
-=============================== */
 
-router.get("/api/tracearr-diagnostic", requireAuth, async (req, res) => {
-  try {
-    const username = req.session.user.username;
-    const TRACEARR_URL = process.env.TRACEARR_URL;
-    const TRACEARR_API_KEY = process.env.TRACEARR_API_KEY;
-
-    if (!TRACEARR_URL || !TRACEARR_API_KEY) {
-      return res.json({ error: "Tracearr not configured" });
-    }
-
-    const results = [];
-
-    // 0. Check available endpoints
-    try {
-      const endpointsRes = await fetch(
-        `${TRACEARR_URL}/api/v1/public/endpoints`,
-        {
-          headers: {
-            Authorization: `Bearer ${TRACEARR_API_KEY}`,
-            Accept: "application/json"
-          }
-        }
-      );
-      const endpointsData = await endpointsRes.json();
-      results.push({
-        step: "Available endpoints",
-        status: endpointsRes.ok ? "✓" : "✗",
-        count: Array.isArray(endpointsData) ? endpointsData.length : Object.keys(endpointsData).length,
-        endpoints: endpointsData
-      });
-    } catch (err) {
-      results.push({ step: "Available endpoints", status: "✗", error: err.message });
-    }
-
-    // 1. Chercher l'utilisateur
-    let foundUser = null;
-    try {
-      const usersRes = await fetch(
-        `${TRACEARR_URL}/api/v1/public/users?page=1&pageSize=100`,
-        {
-          headers: {
-            Authorization: `Bearer ${TRACEARR_API_KEY}`,
-            Accept: "application/json"
-          }
-        }
-      );
-      const usersData = await usersRes.json();
-      foundUser = usersData.data?.find(u => u.username?.toLowerCase() === username.toLowerCase());
-      
-      // Inspecter la structure de l'utilisateur trouvé
-      const userKeys = foundUser ? Object.keys(foundUser) : [];
-      
-      results.push({
-        step: "Find user",
-        status: foundUser ? "✓" : "✗",
-        userId: foundUser?.id,
-        username: foundUser?.username,
-        userDataKeys: userKeys
-      });
-    } catch (err) {
-      results.push({ step: "Find user", status: "✗", error: err.message });
-      return res.json(results);
-    }
-
-    if (!foundUser) {
-      return res.json(results);
-    }
-
-    // 2. Tester les différents endpoints
-    const endpoints = [
-      `${TRACEARR_URL}/api/v1/public/users/${foundUser.id}`,
-      `${TRACEARR_URL}/api/v1/public/users/${foundUser.id}?key=${TRACEARR_API_KEY}`,
-      `${TRACEARR_URL}/api/v1/users/${foundUser.id}`,
-      `${TRACEARR_URL}/api/v1/public/users/${foundUser.id}/activity`,
-      `${TRACEARR_URL}/api/v1/users/${foundUser.id}/activity`,
-      `${TRACEARR_URL}/api/v1/activity?user=${foundUser.id}`,
-      `${TRACEARR_URL}/api/v1/public/activity?user=${foundUser.id}`,
-      `${TRACEARR_URL}/api/v1/watched?user=${foundUser.id}`
-    ];
-
-    for (const endpoint of endpoints) {
-      try {
-        const res2 = await fetch(endpoint, {
-          headers: {
-            Authorization: `Bearer ${TRACEARR_API_KEY}`,
-            Accept: "application/json"
-          }
-        });
-
-        const data = await res2.json();
-        const dataKeys = data ? Object.keys(data).slice(0, 15) : [];
-
-        results.push({
-          endpoint: endpoint.replace(TRACEARR_URL, ""),
-          status: res2.status,
-          ok: res2.ok,
-          dataKeys: dataKeys,
-          dataCount: Array.isArray(data) ? data.length : (data?.data?.length || "N/A"),
-          sample: typeof data === 'object' && !Array.isArray(data) ? JSON.stringify(data).substring(0, 200) : null
-        });
-      } catch (err) {
-        results.push({
-          endpoint: endpoint.replace(TRACEARR_URL, ""),
-          error: err.message
-        });
-      }
-    }
-
-    res.json(results);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
 
 module.exports = router;
