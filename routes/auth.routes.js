@@ -69,6 +69,7 @@ router.get("/auth-complete", async (req, res) => {
   console.info(`  ID: ${user.id}`);
   console.info(`  Email: ${user.email}`);
   console.info(`  Username: ${user.username}`);
+  console.debug(`[Auth] Full user response from plex.tv:`, JSON.stringify(user, null, 2));
 
   // ⚠️ NOTE: Whitelist validation would require access to Plex server's user list,
   // which is not reliably exposed via Plex API. Since the user has successfully 
