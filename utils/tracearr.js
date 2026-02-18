@@ -1,6 +1,7 @@
 const fetch = require("node-fetch");
+const { getPlexJoinDate } = require("./plex");
 
-async function getTracearrStats(username, TRACEARR_URL, TRACEARR_API_KEY) {
+async function getTracearrStats(username, TRACEARR_URL, TRACEARR_API_KEY, plexUserId, PLEX_URL, PLEX_TOKEN) {
   try {
     if (!TRACEARR_URL || !TRACEARR_API_KEY) return null;
 
@@ -37,8 +38,16 @@ async function getTracearrStats(username, TRACEARR_URL, TRACEARR_API_KEY) {
 
     if (!foundUser) return null;
 
+    // Si pas de joinedAt dans Tracearr, essayer Plex
+    let joinedAt = foundUser.createdAt || null;
+    
+    if (!joinedAt && plexUserId && PLEX_URL && PLEX_TOKEN) {
+      const plexJoinDate = await getPlexJoinDate(plexUserId, PLEX_URL, PLEX_TOKEN);
+      joinedAt = plexJoinDate ? plexJoinDate.toISOString() : null;
+    }
+
     return {
-      joinedAt: foundUser.createdAt || null,
+      joinedAt,
       lastActivity: foundUser.lastActivityAt || null
     };
 

@@ -2,6 +2,8 @@ const express = require("express");
 const fetch = require("node-fetch");
 const router = express.Router();
 
+const { isUserAuthorized } = require("../utils/plex");
+
 router.get("/login", async (req, res) => {
 
   const response = await fetch("https://plex.tv/api/v2/pins?strong=true", {
@@ -62,6 +64,43 @@ router.get("/auth-complete", async (req, res) => {
   });
 
   const user = await account.json();
+
+  // ✅ VÉRIFICATION DE SÉCURITÉ: Whitelist des utilisateurs Plex
+  if (process.env.PLEX_URL && process.env.PLEX_TOKEN) {
+    const isAuthorized = await isUserAuthorized(
+      user.id,
+      process.env.PLEX_URL,
+      process.env.PLEX_TOKEN
+    );
+
+    if (!isAuthorized) {
+      console.warn(`[Auth] Unauthorized login attempt from Plex user ${user.id} (${user.email})`);
+      delete req.session.pinId;
+      return res.status(403).send(`
+        <html>
+          <head>
+            <title>Accès refusé</title>
+            <style>
+              body { font-family: Arial, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #1a1a1a; color: #fff; }
+              .container { text-align: center; }
+              h1 { color: #ff6b6b; }
+              p { font-size: 16px; margin: 20px 0; }
+              a { color: #4dabf7; text-decoration: none; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <h1>❌ Accès refusé</h1>
+              <p>Votre compte Plex n'est pas autorisé sur ce serveur.</p>
+              <p><a href="${req.basePath}/">Retour à l'accueil</a></p>
+            </div>
+          </body>
+        </html>
+      `);
+    }
+
+    console.info(`[Auth] Authorized login for Plex user ${user.id} (${user.email})`);
+  }
 
   req.session.user = user;
   delete req.session.pinId;

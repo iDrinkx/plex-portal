@@ -5,6 +5,7 @@ const fetch = require("node-fetch");
 const { computeSubscription } = require("../utils/wizarr");
 const { getTracearrStats } = require("../utils/tracearr");
 const { getOverseerrStats } = require("../utils/overseerr");
+const { getPlexJoinDate } = require("../utils/plex");
 const CacheManager = require("../utils/cache");
 
 /* ===============================
@@ -118,7 +119,10 @@ router.get("/api/stats", requireAuth, async (req, res) => {
       () => getTracearrStats(
         req.session.user.username,
         process.env.TRACEARR_URL,
-        process.env.TRACEARR_API_KEY
+        process.env.TRACEARR_API_KEY,
+        req.session.user.id,        // plexUserId
+        process.env.PLEX_URL,       // PLEX_URL (pour fallback joinDate)
+        process.env.PLEX_TOKEN      // PLEX_TOKEN
       ),
       60 * 1000 // 60 secondes
     );
