@@ -258,6 +258,7 @@ async function getOverseerrStats(userEmail, username, OVERSEERR_URL, OVERSEERR_A
     // Compter par statut
     let pending = 0;
     let approved = 0;
+    let approvedAvailable = 0;
     let available = 0;
     let unavailable = 0;
 
@@ -268,11 +269,15 @@ async function getOverseerrStats(userEmail, username, OVERSEERR_URL, OVERSEERR_A
         pending++;
       } else if (req.status === 2) {
         approved++;
+        // Vérifier si le contenu est disponible
+        if (req.media?.status === 5) {
+          approvedAvailable++;
+        }
       } else if (req.status === 3) {
         unavailable++;
       }
 
-      // Vérifier si le contenu est disponible
+      // Compter les requêtes avec contenu disponible (indépendant du statut)
       if (req.media?.status === 5) {
         available++;
       }
@@ -280,8 +285,8 @@ async function getOverseerrStats(userEmail, username, OVERSEERR_URL, OVERSEERR_A
 
     const result = {
       pending,
-      approved: approved - available,
-      available,
+      approved: approved - approvedAvailable,  // Approuvées mais pas encore disponibles
+      available: approvedAvailable,  // Approuvées ET disponibles
       unavailable,
       total: allRequests.length
     };
