@@ -1,9 +1,36 @@
 const fetch = require("node-fetch");
 const { getPlexJoinDate } = require("./plex");
 const SessionStatsCache = require("./session-stats-cache");
+const TracearrEvents = require("./tracearr-events");  // 📢 EventEmitter pour notifier clients
+
+// 🚩 Charger le cache au démarrage (pour détection δelta intelligente)
+const cachedDataAtBoot = SessionStatsCache.getAll();
+console.log("[TRACEARR-BOOT] 💾 Cache chargé au démarrage avec", Object.keys(cachedDataAtBoot).length, 'utilisateurs');
 
 // 🚩 Drapeau pour indiquer qu'un scan global est en cours
 let GLOBAL_SCAN_IN_PROGRESS = false;
+
+// 🚩 Validation robuste des durées
+const DURATION_VALIDATION = {
+  MAX_SESSION_DURATION_MS: 12 * 60 * 60 * 1000,  // 12 heures max par session
+  MIN_SESSION_DURATION_MS: 0,                      // 0 ms minimum
+  
+  isValid: function(durationMs) {
+    return isFinite(durationMs) && 
+           durationMs >= this.MIN_SESSION_DURATION_MS && 
+           durationMs <= this.MAX_SESSION_DURATION_MS;
+  },
+  
+  sanitize: function(durationMs) {
+    if (!this.isValid(durationMs)) {
+      if (durationMs > this.MAX_SESSION_DURATION_MS) {
+        console.warn("[TRACEARR-DURATION] ⚠️  Durée aberrante rejetée:", durationMs, "ms (>12h)");
+      }
+      return 0;  // Retourner 0 au lieu de rejeter la session
+    }
+    return durationMs;
+  }
+};
 
 /**
  * Compte les sessions ET calcule les stats complètes (heures, films, épisodes)
@@ -375,9 +402,16 @@ async function scanTracearrHistoryForAllUsers(TRACEARR_URL, TRACEARR_API_KEY) {
           };
         }
 
-        // Compter la session
+        // TOUJOURS compter la session
         userStats[username].sessionCount++;
-        userStats[username].totalDurationMs += durationMs;
+
+        // Valider la durée de la session (robuste contre les erreurs d'API)
+        const sanitizedDuration = DURATION_VALIDATION.sanitize(durationMs);
+        
+        if (sanitizedDuration > 0) {
+          // Durée valide - accumuler
+          userStats[username].totalDurationMs += sanitizedDuration;
+        }
 
         // Mettre à jour la session la plus récente
         if (sessionTime) {
@@ -394,13 +428,15 @@ async function scanTracearrHistoryForAllUsers(TRACEARR_URL, TRACEARR_API_KEY) {
           }
         }
 
-        // Compter par type de contenu
-        if (session.mediaType === "movie") {
-          userStats[username].movieDurationMs += durationMs;
-          userStats[username].movieCount++;
-        } else if (session.mediaType === "episode") {
-          userStats[username].episodeDurationMs += durationMs;
-          userStats[username].episodeCount++;
+        // Compter par type de contenu (SEULEMENT si durée valide)
+        if (sanitizedDuration > 0) {
+          if (session.mediaType === "movie") {
+            userStats[username].movieDurationMs += sanitizedDuration;
+            userStats[username].movieCount++;
+          } else if (session.mediaType === "episode") {
+            userStats[username].episodeDurationMs += sanitizedDuration;
+            userStats[username].episodeCount++;
+          }
         }
       }
 
@@ -438,19 +474,45 @@ async function scanTracearrHistoryForAllUsers(TRACEARR_URL, TRACEARR_API_KEY) {
     }
 
     const duration = Math.round((Date.now() - scanStartTime) / 1000);
-    console.log("[TRACEARR-SCAN] ✅ SCAN TERMINÉ");
-    console.log("[TRACEARR-SCAN]   🆕 Nouvelles sessions trouvées:", totalSessionsScanned);
-    console.log("[TRACEARR-SCAN]   📊 Utilisateurs mis à jour:", Object.keys(finalStats).length);
-    console.log("[TRACEARR-SCAN]   📄 Pages scannées (avant arrêt smart):", pagesScannedIntelligently, '/', historyTotalPages);
-    console.log("[TRACEARR-SCAN]   ⏱️  Durée:", duration, 'secondes');
-    console.log("[TRACEARR-SCAN]   💾 Utilisateurs en cache avant:", Object.keys(userCacheLimits).length);
+    const pagesSkipped = historyTotalPages - pagesScannedIntelligently;
+    const percentageOfOptimization = Math.round((pagesSkipped / historyTotalPages) * 100);
     
-    GLOBAL_SCAN_IN_PROGRESS = false;  // 🚩 Désactiver le drapeau
+    console.log("[TRACEARR-SCAN] ✅ SCAN INTELLIGENT TERMINÉ");
+    console.log("[TRACEARR-SCAN]   🆕 Nouvelles sessions trouvées:", totalSessionsScanned);
+    console.log("[TRACEARR-SCAN]   📊 Utilisateurs mis à jour:", Object.keys(finalStats).length, '(cachés)');
+    console.log("[TRACEARR-SCAN]   📄 Pages scannées:", pagesScannedIntelligently, '/', historyTotalPages, `(${percentageOfOptimization}% skippées)`);
+    console.log("[TRACEARR-SCAN]   ⚡ Optimisation delta:", pagesSkipped > 0 ? 'ACTIF' : 'CACHE VIDE');
+    console.log("[TRACEARR-SCAN]   ⏱️  Durée totale:", duration, 'secondes');
+    console.log("[TRACEARR-SCAN]   💾 Utilisateurs en cache avant scan:", Object.keys(userCacheLimits).length);
+    
+    // 🏁 Fin du scan - toujours exécuter le cleanup
+    GLOBAL_SCAN_IN_PROGRESS = false;  // 🚩 Désactiver le drapeau (=IMPORTANT)
+    
+    // 📢 NOTIFIER LES CLIENTS QUE LE SCAN EST TERMINÉ (listeners de /api/stats-wait vont continuer)
+    try {
+      TracearrEvents.emitScanComplete();
+      console.log("[TRACEARR-SCAN] 📢 Événement scan-complete émis aux clients");
+    } catch (eventErr) {
+      console.error("[TRACEARR-SCAN] ⚠️  Erreur émission événement:", eventErr.message);
+    }
+    
     return finalStats;
   } catch (err) {
     console.error("[TRACEARR-SCAN] ❌ Erreur globale:", err.message);
-    GLOBAL_SCAN_IN_PROGRESS = false;  // 🚩 Désactiver le drapeau même en cas d'erreur
-    return {};
+    console.error("[TRACEARR-SCAN] Stack trace:", err.stack);
+    
+    // S'assurer que le flag est désactivé même en cas d'erreur
+    GLOBAL_SCAN_IN_PROGRESS = false;  // 🚩 Désactiver toujours
+    
+    // Émettre l'événement même en cas d'erreur (pour que les clients ne restent pas bloqués)
+    try {
+      TracearrEvents.emitScanComplete();
+      console.log("[TRACEARR-SCAN] 📢 Événement scan-complete émis (mode erreur)");
+    } catch (eventErr) {
+      console.error("[TRACEARR-SCAN] ⚠️  Erreur émission événement (erreur):", eventErr.message);
+    }
+    
+    return {};  // Retourner un objet vide (les données du cache seront toujours utilisées)
   }
 }
 
@@ -611,4 +673,22 @@ async function updateAllUsersSessionCache(TRACEARR_URL, TRACEARR_API_KEY, PLEX_U
   return { successCount, failureCount, duration };
 }
 
-module.exports = { getTracearrStats, countSessionsOptimized, updateUserSessionCache, updateAllUsersSessionCache, updateTracearrAllUsers };
+/**
+ * ⚠️ LEGACY - Ne plus utiliser
+ * Les données n'ont plus besoin d'être pré-scannées au démarrage
+ * Le cache persiste et est rechargé automatiquement
+ */
+async function initTracearrPreScan(TRACEARR_URL, TRACEARR_API_KEY) {
+  console.log("[TRACEARR-PRESCAN] ⚙️  Fonction legacy - non utilisée");
+  // Non-op
+}
+
+module.exports = { 
+  getTracearrStats, 
+  countSessionsOptimized, 
+  updateUserSessionCache, 
+  updateAllUsersSessionCache, 
+  updateTracearrAllUsers,
+  scanTracearrHistoryForAllUsers,  // 🚀 Scan intelligent (utilisé par cron)
+  initTracearrPreScan
+};

@@ -8,6 +8,7 @@ const { getOverseerrStats } = require("../utils/overseerr");
 const { getPlexJoinDate } = require("../utils/plex");
 const { XP_SYSTEM } = require("../utils/xp-system");
 const CacheManager = require("../utils/cache");
+const TracearrEvents = require("../utils/tracearr-events");  // 📢 Import EventEmitter
 
 /* ===============================
    🔐 AUTH
@@ -186,6 +187,47 @@ router.get("/api/stats", requireAuth, async (req, res) => {
       console.error("[API/STATS] Erreur:", err.message);
       res.status(500).json({ error: "Failed to fetch stats" });
     }
+  }
+});
+
+/**
+ * 📢 ENDPOINT SMART WAIT - Long-polling: Attendre que les données soient prêtes
+ * Au lieu de faire 30 polls avec 5 sec chacun, on attend l'événement du serveur
+ * TIMEOUT: 5 minutes max (longue requête HTTP)
+ */
+router.get("/api/stats-wait", requireAuth, async (req, res) => {
+  try {
+    const username = req.session.user.username;
+    console.log("[API/STATS-WAIT] 📢 Demande long-poll pour:", username);
+    
+    // Attendre que le scan finisse (avec timeout de 5 min)
+    const startWait = Date.now();
+    await TracearrEvents.waitForScanComplete(300000);  // 5 min max
+    const waitDuration = Math.round((Date.now() - startWait) / 1000);
+    console.log("[API/STATS-WAIT] ✅ Scan terminé après", waitDuration, 'secondes - Récupération des données...');
+    
+    // Maintenant récupérer les stats (doivent être en cache)
+    const stats = await getTracearrStats(
+      username,
+      process.env.TRACEARR_URL,
+      process.env.TRACEARR_API_KEY,
+      req.session.user.id,
+      process.env.PLEX_URL,
+      process.env.PLEX_TOKEN,
+      req.session.user.joinedAtTimestamp
+    );
+    
+    if (!stats) {
+      console.warn("[API/STATS-WAIT] ⚠️  Aucune donnée trouvée après attente pour:", username);
+      return res.status(404).json({ error: "User stats not found" });
+    }
+    
+    console.log("[API/STATS-WAIT] ✅ Données retournées pour:", username);
+    res.json(stats);
+    
+  } catch (err) {
+    console.error("[API/STATS-WAIT] ❌ Erreur:", err.message);
+    res.status(500).json({ error: "Failed to wait for stats", details: err.message });
   }
 });
 

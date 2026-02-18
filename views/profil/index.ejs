@@ -938,38 +938,60 @@
 
       // Rafraîchissement automatique si calcul en cours
       if (stats.status === "computing") {
-        console.log("[PROFIL] 🔄 Calcul en cours - mise en place du polling...");
+        console.log("[PROFIL] � Calcul en cours - Attente SMART (au lieu de 30 polls)...");
         
-        let pollCount = 0;
-        const maxPolls = 30; // Max 30 essais * 5s = 150 secondes
-        
-        const pollInterval = setInterval(async () => {
-          pollCount++;
-          console.log(`[PROFIL-POLL] Tentative ${pollCount}/${maxPolls} de recharge des données...`);
-          
+        // Attendre que le scan finisse (via long-poll)
+        // Puis mettre à jour les éléments DOM sans reload
+        (async () => {
           try {
-            const newStatsRes = await fetch(basePath ? `${basePath}/api/stats` : "/api/stats");
-            if (!newStatsRes.ok) throw new Error("API error");
+            console.log("[PROFIL-UPDATE] Attente du scan Tracearr...");
+            const waitRes = await fetch(basePath ? `${basePath}/api/stats-wait` : "/api/stats-wait");
             
-            const newStats = await newStatsRes.json();
-            console.log("[PROFIL-POLL] Nouvelles données reçues:", newStats);
+            if (!waitRes.ok) throw new Error("Wait API error");
             
-            // Si les données sont prêtes (pas "computing"), recharger la page ou mettre à jour les éléments
-            if (newStats.status !== "computing") {
-              console.log("[PROFIL-POLL] ✅ Données complètes! Rechargement...");
-              clearInterval(pollInterval);
-              window.location.reload(); // Rechargement complet pour mettre à jour tout d'un coup
+            const readyStats = await waitRes.json();
+            console.log("[PROFIL-UPDATE] ✅ Scan terminé! Mise à jour dynamique...", readyStats);
+            
+            // Update sessionCount
+            const sessionEl = document.getElementById("sessionCount");
+            if (sessionEl && readyStats.sessionCount !== undefined) {
+              sessionEl.textContent = readyStats.sessionCount;
             }
+            
+            // Update xpAmount (recalcul XP)
+            const newSessionCount = readyStats.sessionCount || 0;
+            const newTotalXp = (newSessionCount * 2) + (overseerr.total * 15);
+            const xpAmountEl = document.getElementById("xpAmount");
+            if (xpAmountEl) {
+              xpAmountEl.textContent = newTotalXp;
+            }
+            
+            // Update badges
+            const badgeItems = document.querySelectorAll(".badge-item");
+            badgeItems.forEach(item => {
+              item.classList.remove("unlocked");
+              const level = parseInt(item.dataset.level);
+              const badgeData = XP_SYSTEM.badges[level - 1];
+              if (newTotalXp >= badgeData.minXp) {
+                item.classList.add("unlocked");
+              }
+            });
+            
+            // Update formules
+            const formulaSessionEl = document.getElementById("sessionFormulaXp");
+            const formulaRequestEl = document.getElementById("requestFormulaXp");
+            const formulaTotalEl = document.getElementById("totalXpFormula");
+            
+            if (formulaSessionEl) formulaSessionEl.textContent = `${newSessionCount} × 2 = ${newSessionCount * 2} XP`;
+            if (formulaRequestEl) formulaRequestEl.textContent = `${overseerr.total} × 15 = ${overseerr.total * 15} XP`;
+            if (formulaTotalEl) formulaTotalEl.textContent = `${newTotalXp} XP`;
+            
+            console.log("[PROFIL-UPDATE] ✅ Tous les éléments mis à jour!");
           } catch (err) {
-            console.error("[PROFIL-POLL] Erreur polling:", err.message);
+            console.error("[PROFIL-UPDATE] ❌ Erreur:", err.message);
+            setTimeout(() => window.location.reload(), 5000);
           }
-          
-          // Arrêter après max tentatives
-          if (pollCount >= maxPolls) {
-            console.log("[PROFIL-POLL] Max tentatives atteintes");
-            clearInterval(pollInterval);
-          }
-        }, 5000); // Vérifier toutes les 5 secondes
+        })();
       }
 
       console.log("[PROFIL] ✅ Chargement terminé!");

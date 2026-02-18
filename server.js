@@ -7,6 +7,7 @@ const authRoutes = require("./routes/auth.routes");
 const dashboardRoutes = require("./routes/dashboard.routes");
 const reverseProxyMiddleware = require("./middleware/reverseproxy.middleware");
 const { startSessionCronJob } = require("./utils/cron-session-job");
+const { runHealthCheck } = require("./utils/health-check");  // 🏥 Health check au boot
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -154,7 +155,10 @@ async function initializeAllUsersForCron() {
 
 // Démarrer le serveur et initialiser le cron job
 app.listen(PORT, async () => {
-  console.log("🚀 Server running on port", PORT);
+  console.log("\n🚀 Server running on port", PORT);
+  
+  // 🏥 HEALTH CHECK au démarrage
+  await runHealthCheck();
   
   // Initialiser le cron job avec tous les utilisateurs Overseerr
   console.log("[SETUP] Initialisation du cron job sessions...");

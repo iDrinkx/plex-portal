@@ -1,32 +1,51 @@
 const cron = require('node-cron');
-const { updateAllUsersSessionCache, updateTracearrAllUsers } = require('./tracearr');
+const { scanTracearrHistoryForAllUsers } = require('./tracearr');
 const SessionStatsCache = require('./session-stats-cache');
 
 /**
  * Lance un job cron pour mettre à jour les sessions en cache
- * @param {Array} userList - Liste des utilisateurs {username, id, joinedAtTimestamp}
+ * Utilise le scan intelligent (delta) pour une perf optimale
  */
 function startSessionCronJob(TRACEARR_URL, TRACEARR_API_KEY, PLEX_URL, PLEX_TOKEN, userList = []) {
-  // Job cron: tous les jours à 2h du matin ET au démarrage du serveur (si cache vide)
+  // Job cron: tous les jours à 2h du matin
   const cronJob = cron.schedule('0 2 * * *', async () => {
-    console.log("\n========== [CRON-JOB] DEBUT - Mise a jour du cache sessions ==========");
+    console.log("\n========== [CRON-JOB] 🕐 DEBUT MISE A JOUR CACHE (2h du matin) ==========");
     console.log("[CRON-JOB] Timestamp:", new Date().toISOString());
 
-    // Priorite 1: Utiliser updateTracearrAllUsers pour scanner TOUS les utilisateurs Tracearr
-    if (TRACEARR_URL && TRACEARR_API_KEY) {
-      console.log("[CRON-JOB] Precalcul pour tous les utilisateurs Tracearr");
-      await updateTracearrAllUsers(TRACEARR_URL, TRACEARR_API_KEY, PLEX_URL, PLEX_TOKEN);
-    } else {
-      console.log("[CRON-JOB] Tracearr URL ou API Key manquants");
+    if (!TRACEARR_URL || !TRACEARR_API_KEY) {
+      console.error("[CRON-JOB] ❌ Tracearr URL ou API Key manquants - Skipped");
+      console.log("========== [CRON-JOB] FIN ==========\n");
+      return;
+    }
+
+    try {
+      console.log("[CRON-JOB] 🚀 Lancement scan intelligent (delta mode)");
+      const scanStartTime = Date.now();
+      
+      // Utiliser le scan intelligent qui arrête quand il atteint le cache existant
+      const result = await scanTracearrHistoryForAllUsers(TRACEARR_URL, TRACEARR_API_KEY);
+      
+      const duration = Math.round((Date.now() - scanStartTime) / 1000);
+      const cachedCount = SessionStatsCache.getKeys().length;
+      
+      console.log("[CRON-JOB] ✅ SCAN CRON TERMINÉ");
+      console.log("[CRON-JOB]   📊 Utilisateurs traités:", Object.keys(result).length);
+      console.log("[CRON-JOB]   💾 Total en cache:", cachedCount);
+      console.log("[CRON-JOB]   ⏱️  Durée:", duration, 'secondes');
+      console.log("[CRON-JOB]   📢 Les données mises à jour seront visibles aux clients connectés");
+      
+    } catch (err) {
+      console.error("[CRON-JOB] ❌ Erreur scan cron:", err.message);
+      console.error("[CRON-JOB] Stack:", err.stack);
     }
     
     console.log("========== [CRON-JOB] FIN ==========\n");
   });
 
-  console.log("[CRON] Job session cache schedule: 0 2 * * * (tous les jours a 2h)");
-  console.log("[CRON] Cache existant avec", SessionStatsCache.getKeys().length, "utilisateurs");
-  console.log("[CRON] Les données seront mises à jour par le cron job chaque nuit à 2h");
-  console.log("[CRON] Les calculs à la demande (avec polling) seront faits lors de la première connexion d'un utilisateur");
+  console.log("[CRON] 🕐 Job cron schedule: 0 2 * * * (tous les jours à 2h)");
+  console.log("[CRON] 💾 Cache au démarrage:", SessionStatsCache.getKeys().length, 'utilisateurs');
+  console.log("[CRON] 📊 Utilisateurs détectés (Overseerr):", userList.length);
+  console.log("[CRON] ⚙️  Mode: Scan intelligent avec delta sync (arrêt automatique au cache)");
   
   return cronJob;
 }
