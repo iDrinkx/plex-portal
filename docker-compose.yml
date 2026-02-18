@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  plex-portal:
+    build: .
+    container_name: plex-portal
+    ports:
+      - "3000:3000"
+    
+    environment:
+      # ⚠️ Obligatoire - Changez cette valeur en production!
+      SESSION_SECRET: "change-me-to-a-secure-key"
+      
+      # === Optionnel ===
+      # L'app détecte automatiquement si elle est derrière un reverse proxy
+      # via les headers X-Forwarded-* (envoyés par ngx proxy manager, Traefik, etc)
+      
+      # Vous pouvez override manuellement si nécessaire:
+      # APP_URL: "https://example.com"        # Auto-détecté via X-Forwarded-*
+      # BASE_PATH: "/plex-portal"             # Auto-détecté via X-Forwarded-Prefix
+      # PORT: "3000"
+      # DEBUG: "true"                         # Affiche les logs de détection
+      
+      # Intégrations optionnelles:
+      # WIZARR_URL: "http://wizarr.local"
+      # WIZARR_API_KEY: "your-key"
+      # TRACEARR_URL: "http://tracearr.local"
+      # TRACEARR_API_KEY: "your-key"
+    
+    volumes:
+      # Logo et fichiers de config
+      - ./config:/config
+    
+    restart: unless-stopped
+    
+    # Optionnel: réseau custom
+    # networks:
+    #   - plex-network
+
+# Optionnel
+# networks:
+#   plex-network:
+#     driver: bridge

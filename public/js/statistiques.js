@@ -1,5 +1,6 @@
 document.addEventListener("DOMContentLoaded", async () => {
 
+  const basePath = window.APP_BASE_PATH || "";
   const container = document.getElementById("statsContainer");
 
   try {
@@ -14,7 +15,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (cached && cacheTime && now - cacheTime < 30000) {
       data = JSON.parse(cached);
     } else {
-      const res = await fetch("/api/stats");
+      const res = await fetch(basePath + "/api/stats");
       if (!res.ok) throw new Error("API error");
 
       data = await res.json();

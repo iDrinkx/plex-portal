@@ -17,7 +17,8 @@ router.get("/login", async (req, res) => {
 
   req.session.pinId = data.id;
 
-  const forwardUrl = process.env.APP_URL + "/auth-complete";
+  // Construire l'URL de callback automatiquement
+  const forwardUrl = req.appUrl + "/auth-complete";
 
   res.redirect(
     `https://app.plex.tv/auth#?clientID=plex-portal-app&code=${data.code}&forwardUrl=${encodeURIComponent(forwardUrl)}`
@@ -26,7 +27,7 @@ router.get("/login", async (req, res) => {
 
 router.get("/auth-complete", async (req, res) => {
 
-  if (!req.session.pinId) return res.redirect("/");
+  if (!req.session.pinId) return res.redirect(req.basePath + "/");
 
   let authToken = null;
 
@@ -51,7 +52,7 @@ router.get("/auth-complete", async (req, res) => {
     await new Promise(r => setTimeout(r, 1000));
   }
 
-  if (!authToken) return res.redirect("/");
+  if (!authToken) return res.redirect(req.basePath + "/");
 
   const account = await fetch("https://plex.tv/api/v2/user", {
     headers: {
@@ -65,12 +66,12 @@ router.get("/auth-complete", async (req, res) => {
   req.session.user = user;
   delete req.session.pinId;
 
-  res.redirect("/dashboard");
+  res.redirect(req.basePath + "/dashboard");
 });
 
 router.get("/logout", (req, res) => {
   req.session.destroy(() => {
-    res.redirect("/");
+    res.redirect(req.basePath + "/");
   });
 });
 

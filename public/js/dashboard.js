@@ -1,11 +1,13 @@
 document.addEventListener("DOMContentLoaded", async () => {
 
+  const basePath = window.APP_BASE_PATH || "";
+
   /* ===============================
      📅 SUBSCRIPTION
   =============================== */
 
   try {
-    const res = await fetch("/api/subscription");
+    const res = await fetch(basePath + "/api/subscription");
     if (!res.ok) throw new Error();
     const sub = await res.json();
 
@@ -41,7 +43,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (cached && cacheTime && now - cacheTime < 30000) {
       data = JSON.parse(cached);
     } else {
-      const res = await fetch("/api/stats", {
+      const res = await fetch(basePath + "/api/stats", {
         headers: { "Accept": "application/json" }
       });
 

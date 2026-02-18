@@ -3,8 +3,11 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <link rel="stylesheet" href="/css/style.css" />
+  <link rel="stylesheet" href="<%= basePath %>/css/style.css" />
   <title>Plex-Portal</title>
+  <script>
+    window.APP_BASE_PATH = "<%= basePath %>";
+  </script>
 </head>
 <body>
 
@@ -12,20 +15,20 @@
   <nav class="navbar">
 
     <!-- Logo -->
-    <a href="/dashboard" class="brand">
-      <img class="brand-logo" src="/config/logo.png" alt="MonPlex"/>
+    <a href="<%= basePath %>/dashboard" class="brand">
+      <img class="brand-logo" src="<%= basePath %>/config/logo.png" alt="MonPlex"/>
     </a>
 
     <!-- Desktop Menu -->
     <div class="nav-center desktop-menu">
-      <a href="/dashboard" class="nav-link">Dashboard</a>
-      <a href="/abonnement" class="nav-link">Abonnement</a>
-      <a href="/statistiques" class="nav-link">Statistiques</a>
+      <a href="<%= basePath %>/dashboard" class="nav-link">Dashboard</a>
+      <a href="<%= basePath %>/abonnement" class="nav-link">Abonnement</a>
+      <a href="<%= basePath %>/statistiques" class="nav-link">Statistiques</a>
     </div>
 
     <!-- Desktop Logout -->
     <div class="nav-right desktop-menu">
-      <a class="logout-btn" href="/logout">Déconnexion</a>
+      <a class="logout-btn" href="<%= basePath %>/logout">Déconnexion</a>
     </div>
 
     <!-- Burger Mobile -->
@@ -38,10 +41,10 @@
 
   <!-- Mobile Menu -->
   <div class="mobile-menu" id="mobileMenu">
-    <a href="/dashboard">Dashboard</a>
-    <a href="/abonnement">Abonnement</a>
-    <a href="/statistiques">Statistiques</a>
-    <a href="/logout" class="logout-mobile">Déconnexion</a>
+    <a href="<%= basePath %>/dashboard">Dashboard</a>
+    <a href="<%= basePath %>/abonnement">Abonnement</a>
+    <a href="<%= basePath %>/statistiques">Statistiques</a>
+    <a href="<%= basePath %>/logout" class="logout-mobile">Déconnexion</a>
   </div>
 
 <% } %>

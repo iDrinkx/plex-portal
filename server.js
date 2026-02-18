@@ -5,9 +5,10 @@ const path = require("path");
 
 const authRoutes = require("./routes/auth.routes");
 const dashboardRoutes = require("./routes/dashboard.routes");
+const reverseProxyMiddleware = require("./middleware/reverseproxy.middleware");
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 /* =========================
    SESSION
@@ -26,6 +27,12 @@ app.use(session({
 }));
 
 /* =========================
+   REVERSE PROXY DETECTION
+========================= */
+
+app.use(reverseProxyMiddleware);
+
+/* =========================
    STATIC FILES
 ========================= */
 
@@ -38,6 +45,7 @@ app.use(express.static("/config"));
 
 app.use((req, res, next) => {
   res.locals.user = req.session.user || null;
+  res.locals.basePath = req.basePath || "";
   next();
 });
 
@@ -60,7 +68,8 @@ app.use("/", dashboardRoutes);
 
 app.get("/", (req, res) => {
   if (req.session.user) {
-    return res.redirect("/dashboard");
+    const redirectUrl = req.basePath ? `${req.basePath}/dashboard` : "/dashboard";
+    return res.redirect(redirectUrl);
   }
   res.render("login");
 });
@@ -70,5 +79,5 @@ app.get("/", (req, res) => {
 ========================= */
 
 app.listen(PORT, () => {
-  console.log("🚀 Server running on port 3000");
+  console.log("🚀 Server running on port", PORT);
 });
