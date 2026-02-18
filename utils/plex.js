@@ -132,24 +132,42 @@ async function isUserAuthorized(plexUserId, PLEX_URL, PLEX_TOKEN) {
 async function getPlexJoinDate(plexUserId, PLEX_URL, PLEX_TOKEN) {
   try {
     if (!PLEX_URL || !PLEX_TOKEN || !plexUserId) {
+      console.warn("[Plex JoinDate] Missing config:", { hasUrl: !!PLEX_URL, hasToken: !!PLEX_TOKEN, hasUserId: !!plexUserId });
       return null;
     }
+
+    console.debug(`[Plex JoinDate] Fetching join date for user ID: ${plexUserId}`);
 
     // Essayer de récupérer depuis les données de la bibliothèque
     // La seule façon fiable est via l'API /accounts
     const users = await getPlexUsers(PLEX_URL, PLEX_TOKEN);
-    const user = users.find(u => u.id === parseInt(plexUserId));
+    console.debug(`[Plex JoinDate] Received ${users.length} users from Plex API`);
+    
+    const userIdNum = parseInt(plexUserId);
+    console.debug(`[Plex JoinDate] Looking for user ID: ${userIdNum}`);
+    
+    const user = users.find(u => u.id === userIdNum);
+
+    if (!user) {
+      console.warn(`[Plex JoinDate] User ID ${userIdNum} NOT FOUND in Plex users list`);
+      console.warn(`[Plex JoinDate] Available user IDs: ${users.map(u => `${u.id} (${u.email})`).join(', ')}`);
+      return null;
+    }
+
+    console.debug(`[Plex JoinDate] Found user: ID=${user.id}, Email=${user.email}`);
+    console.debug(`[Plex JoinDate] Raw createdAt value: ${user.createdAt} (type: ${typeof user.createdAt})`);
 
     if (user?.createdAt) {
       const joinDate = new Date(user.createdAt * 1000);
-      console.debug(`[Plex] User ${plexUserId} joined on ${joinDate.toISOString()}`);
+      console.info(`[Plex JoinDate] User ${plexUserId} joined on ${joinDate.toISOString()}`);
       return joinDate;
     }
 
+    console.warn(`[Plex JoinDate] User found but no createdAt timestamp`);
     return null;
 
   } catch (err) {
-    console.error("[Plex] Error fetching join date:", err.message);
+    console.error("[Plex JoinDate] Error fetching join date:", err.message, err.stack);
     return null;
   }
 }

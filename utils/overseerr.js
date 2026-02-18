@@ -78,12 +78,6 @@ async function findOverseerrUserByEmail(email, OVERSEERR_URL, OVERSEERR_API_KEY,
 
     console.debug(`[Overseerr] Total users fetched: ${allUsers.length}`);
 
-    // Debug: afficher TOUS les utilisateurs
-    const allUsersList = allUsers
-      .map(u => `ID ${u.id}: displayName="${u.displayName}", username="${u.username}", email="${u.email}"`)
-      .join("\n  ");
-    console.debug(`[Overseerr] All users in system:\n  ${allUsersList}`);
-
     // Chercher l'utilisateur avec cet email
     let found = allUsers.find(u => u.email && u.email.toLowerCase() === email.toLowerCase());
 
@@ -118,11 +112,7 @@ async function findOverseerrUserByEmail(email, OVERSEERR_URL, OVERSEERR_API_KEY,
       }
     }
 
-    // Debug: afficher tous les utilisateurs disponibles
-    const usersList = allUsers
-      .map(u => `ID ${u.id}: displayName="${u.displayName}", username="${u.username}", email="${u.email}"`)
-      .join("\n  ");
-    console.warn(`[Overseerr] User not found. All ${allUsers.length} users in system:\n  ${usersList}`);
+    console.warn(`[Overseerr] User not found (searched for email: ${email}, username: ${username})`);
 
     return null;
 
