@@ -2,6 +2,9 @@ const fetch = require("node-fetch");
 const { getPlexJoinDate } = require("./plex");
 const SessionStatsCache = require("./session-stats-cache");
 
+// 🚩 Drapeau pour indiquer qu'un scan global est en cours
+let GLOBAL_SCAN_IN_PROGRESS = false;
+
 /**
  * Compte les sessions ET calcule les stats complètes (heures, films, épisodes)
  */
@@ -173,6 +176,16 @@ async function getTracearrStats(username, TRACEARR_URL, TRACEARR_API_KEY, plexUs
       };
     }
 
+    // ⚠️ Si un scan global est en cours et le cache est vide, retourner "computing"
+    // Cela évite de lancer un scan individuel qui doublerait les requêtes
+    if (GLOBAL_SCAN_IN_PROGRESS) {
+      console.log("[TRACEARR] 🔄 Scan global en cours - retour status 'computing' pour", username);
+      return {
+        status: "computing",
+        message: "Les données des sessions sont en cours de calcul global... (rechargez dans quelques minutes)"
+      };
+    }
+
     console.log("[TRACEARR] Pas de cache - fetch depuis API");
 
     // Récupérer l'utilisateur pour ses infos de base
@@ -264,6 +277,8 @@ async function updateUserSessionCache(username, TRACEARR_URL, TRACEARR_API_KEY, 
  */
 async function scanTracearrHistoryForAllUsers(TRACEARR_URL, TRACEARR_API_KEY) {
   try {
+    GLOBAL_SCAN_IN_PROGRESS = true;  // 🚩 Activer le drapeau
+    
     console.log("\n[TRACEARR-SCAN] 🚀 DÉBUT SCAN OPTIMISÉ - Une seule passe pour TOUS les utilisateurs");
     const scanStartTime = Date.now();
     
@@ -380,9 +395,11 @@ async function scanTracearrHistoryForAllUsers(TRACEARR_URL, TRACEARR_API_KEY) {
     console.log("[TRACEARR-SCAN]   Utilisateurs trouvés:", Object.keys(finalStats).length);
     console.log("[TRACEARR-SCAN]   Durée:", duration, 'secondes');
     
+    GLOBAL_SCAN_IN_PROGRESS = false;  // 🚩 Désactiver le drapeau
     return finalStats;
   } catch (err) {
     console.error("[TRACEARR-SCAN] ❌ Erreur globale:", err.message);
+    GLOBAL_SCAN_IN_PROGRESS = false;  // 🚩 Désactiver le drapeau même en cas d'erreur
     return {};
   }
 }
