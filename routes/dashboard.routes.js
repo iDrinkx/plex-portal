@@ -117,12 +117,12 @@ router.get("/api/subscription", requireAuth, async (req, res) => {
 router.get("/api/stats", requireAuth, async (req, res) => {
   try {
     const cacheKey = `stats:${req.session.user.id}`;
-    console.log("[API/STATS] 🔍 Requête de stats pour user:', req.session.user.username);
+    console.log("[API/STATS] Requête de stats pour user:", req.session.user.username);
     
     const stats = await cache.getOrSet(
       cacheKey,
       () => {
-        console.log("[API/STATS] 📡 Appel getTracearrStats...");
+        console.log("[API/STATS] Appel getTracearrStats...");
         return getTracearrStats(
           req.session.user.username,
           process.env.TRACEARR_URL,
@@ -136,10 +136,10 @@ router.get("/api/stats", requireAuth, async (req, res) => {
       60 * 1000 // 60 secondes
     );
 
-    console.log("[API/STATS] ✅ Résultat:', stats);
+    console.log("[API/STATS] Resultat final:", stats);
     res.json(stats);
   } catch (err) {
-    console.error("[API/STATS] ❌ Erreur:', err.message);
+    console.error("[API/STATS] Erreur:", err.message);
     res.status(500).json({ error: "Failed to fetch stats" });
   }
 });

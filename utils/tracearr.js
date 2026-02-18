@@ -4,18 +4,18 @@ const { getPlexJoinDate } = require("./plex");
 async function getTracearrStats(username, TRACEARR_URL, TRACEARR_API_KEY, plexUserId, PLEX_URL, PLEX_TOKEN, joinedAtTimestamp = null) {
   try {
     if (!TRACEARR_URL || !TRACEARR_API_KEY) {
-      console.log("[TRACEARR] ❌ Config manquante");
+      console.log("[TRACEARR] Config manquante");
       return null;
     }
 
-    console.log("[TRACEARR] 🔍 Recherche utilisateur:", username);
+    console.log("[TRACEARR] Recherche utilisateur:", username);
 
     let page = 1;
     let totalPages = 1;
     let foundUser = null;
 
     while (page <= totalPages) {
-      console.log("[TRACEARR] 📄 Fetch page", page, '/', totalPages);
+      console.log("[TRACEARR] Fetch page", page, "/", totalPages);
       const res = await fetch(
         `${TRACEARR_URL}/api/v1/public/users?page=${page}&pageSize=50`,
         {
@@ -27,25 +27,25 @@ async function getTracearrStats(username, TRACEARR_URL, TRACEARR_API_KEY, plexUs
       );
 
       if (!res.ok) {
-        console.log("[TRACEARR] ❌ API error status:", res.status);
+        console.log("[TRACEARR] API error status:", res.status);
         return null;
       }
 
       const json = await res.json();
       if (!json?.data) {
-        console.log("[TRACEARR] ❌ Pas de data dans réponse");
+        console.log("[TRACEARR] Pas de data dans réponse");
         return null;
       }
 
       totalPages = Math.ceil(json.meta.total / json.meta.pageSize);
-      console.log("[TRACEARR] 📊 Meta - total:', json.meta.total, 'pageSize:', json.meta.pageSize, 'totalPages:', totalPages);
+      console.log("[TRACEARR] Meta - total:", json.meta.total, "pageSize:", json.meta.pageSize, "totalPages:", totalPages);
 
       foundUser = json.data.find(
         u => u.username?.toLowerCase() === username.toLowerCase()
       );
 
       if (foundUser) {
-        console.log("[TRACEARR] ✅ Utilisateur trouvé!", foundUser.username, 'sessionCount:', foundUser.sessionCount);
+        console.log("[TRACEARR] Utilisateur trouvé:", foundUser.username, "sessionCount:", foundUser.sessionCount);
         break;
       }
 
@@ -53,7 +53,7 @@ async function getTracearrStats(username, TRACEARR_URL, TRACEARR_API_KEY, plexUs
     }
 
     if (!foundUser) {
-      console.log("[TRACEARR] ❌ Utilisateur non trouvé après', page - 1, 'pages");
+      console.log("[TRACEARR] Utilisateur non trouvé apres", page - 1, "pages");
       return null;
     }
 
@@ -75,11 +75,11 @@ async function getTracearrStats(username, TRACEARR_URL, TRACEARR_API_KEY, plexUs
       lastActivity: foundUser.lastActivityAt || null,
       sessionCount: foundUser.sessionCount || 0
     };
-    console.log("[TRACEARR] ✅ Résultat final:", result);
+    console.log("[TRACEARR] Resultat final:", result);
     return result;
 
   } catch (err) {
-    console.error("[TRACEARR] ❌ Erreur:", err.message);
+    console.error("[TRACEARR] Erreur:", err.message);
     return null;
   }
 }
