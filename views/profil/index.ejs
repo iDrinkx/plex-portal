@@ -610,23 +610,39 @@
 
   async function loadTracearrStats() {
     try {
+      console.log("[STATS] Démarrage fetch...");
+      const url = basePath + "/api/stats";
+      console.log("[STATS] URL cible:", url);
+      
       let data = cacheManager.get("statsCache");
 
       if (!data) {
-        const res = await fetch(basePath + "/api/stats");
-        if (!res.ok) throw new Error("API error");
+        console.log("[STATS] Cache miss - requête API");
+        const res = await fetch(url);
+        console.log("[STATS] Réponse reçue - status:", res.status, "ok:", res.ok);
+        
+        if (!res.ok) {
+          const text = await res.text();
+          console.error("[STATS] ❌ Erreur API:", res.status, text);
+          return null;
+        }
 
         data = await res.json();
+        console.log("[STATS] ✅ JSON parsé:", data);
         cacheManager.set("statsCache", data);
+      } else {
+        console.log("[STATS] Cache hit");
       }
 
       if (!data || (!data.joinedAt && !data.lastActivity && !data.sessionCount)) {
+        console.warn("[STATS] ⚠️ Données invalides:", data);
         return null;
       }
 
+      console.log("[STATS] ✅ Données valides retournées");
       return data;
     } catch (err) {
-      console.error("Tracearr error:", err);
+      console.error("[STATS] ❌ Erreur catch:", err.message, err);
       return null;
     }
   }
@@ -637,17 +653,37 @@
 
   async function loadOverseerrStats() {
     try {
+      console.log("[OVERSEERR] Démarrage fetch...");
+      const url = basePath + "/api/overseerr";
+      console.log("[OVERSEERR] URL cible:", url);
+      
       let data = cacheManager.get("overseerrCache");
 
       if (!data) {
-        const res = await fetch(basePath + "/api/overseerr");
-        if (!res.ok) throw new Error("API error");
+        console.log("[OVERSEERR] Cache miss - requête API");
+        const res = await fetch(url);
+        console.log("[OVERSEERR] Réponse reçue - status:", res.status, "ok:", res.ok);
+        
+        if (!res.ok) {
+          const text = await res.text();
+          console.error("[OVERSEERR] ❌ Erreur API:", res.status, text);
+          return {
+            pending: 0,
+            approved: 0,
+            available: 0,
+            total: 0
+          };
+        }
 
         data = await res.json();
+        console.log("[OVERSEERR] ✅ JSON parsé:", data);
         cacheManager.set("overseerrCache", data);
+      } else {
+        console.log("[OVERSEERR] Cache hit");
       }
 
       if (!data) {
+        console.warn("[OVERSEERR] ⚠️ Données null, retour défaut");
         return {
           pending: 0,
           approved: 0,
@@ -656,6 +692,7 @@
         };
       }
 
+      console.log("[OVERSEERR] ✅ Données valides retournées - total:", data.total);
       return {
         pending: data.pending || 0,
         approved: data.approved || 0,
@@ -664,8 +701,13 @@
         total: data.total || 0
       };
     } catch (err) {
-      console.error("Overseerr error:", err);
-      return null;
+      console.error("[OVERSEERR] ❌ Erreur catch:", err.message, err);
+      return {
+        pending: 0,
+        approved: 0,
+        available: 0,
+        total: 0
+      };
     }
   }
 
@@ -675,12 +717,24 @@
 
   async function loadSubscription() {
     try {
-      const res = await fetch("/api/subscription");
-      if (!res.ok) throw new Error("API error");
+      console.log("[SUB] Démarrage fetch...");
+      const url = "/api/subscription";
+      console.log("[SUB] URL cible:", url);
+      
+      const res = await fetch(url);
+      console.log("[SUB] Réponse reçue - status:", res.status, "ok:", res.ok);
+      
+      if (!res.ok) {
+        const text = await res.text();
+        console.error("[SUB] ❌ Erreur API:", res.status, text);
+        return null;
+      }
+      
       const data = await res.json();
+      console.log("[SUB] ✅ JSON parsé:", data);
       return data;
     } catch (err) {
-      console.error("Subscription error:", err);
+      console.error("[SUB] ❌ Erreur catch:", err.message, err);
       return null;
     }
   }
@@ -690,59 +744,103 @@
   =============================== */
 
   document.addEventListener("DOMContentLoaded", async () => {
+    console.log("[PROFIL] ========== DÉBUT CHARGEMENT ==========");
+    console.log("[PROFIL] basePath:", basePath);
+    console.log("[PROFIL] userId:", userId);
+    
     renderBadges();
 
     try {
+      console.log("[PROFIL] Lancement Promise.all avec 3 fetch...");
       const [tracearrData, overseerrData, subscriptionData] = await Promise.all([
         loadTracearrStats(),
         loadOverseerrStats(),
         loadSubscription()
       ]);
+      
+      console.log("[PROFIL] Promise.all complétée");
 
       const stats = tracearrData || {};
       const overseerr = overseerrData || { total: 0, pending: 0, approved: 0, available: 0 };
       const subscription = subscriptionData || {};
 
+      console.log("[PROFIL] tracearrData:", tracearrData);
+      console.log("[PROFIL] overseerrData:", overseerrData);
+      console.log("[PROFIL] subscriptionData:", subscriptionData);
+
       // Afficher les stats Tracearr
-      document.getElementById("joinedDate").textContent = stats.joinedAt ? formatFullDate(stats.joinedAt) : "N/A";
-      document.getElementById("lastActivity").textContent = stats.lastActivity ? formatRelativeTime(stats.lastActivity) : "Aucune";
+      const joinedEl = document.getElementById("joinedDate");
+      const activityEl = document.getElementById("lastActivity");
+      console.log("[DOM] joinedDate element:", joinedEl);
+      console.log("[DOM] lastActivity element:", activityEl);
+      
+      if (joinedEl) joinedEl.textContent = stats.joinedAt ? formatFullDate(stats.joinedAt) : "N/A";
+      if (activityEl) activityEl.textContent = stats.lastActivity ? formatRelativeTime(stats.lastActivity) : "Aucune";
 
       const tracearrSessionCount = stats.sessionCount || 0;
-      document.getElementById("sessionCount").textContent = tracearrSessionCount;
-      document.getElementById("sessionCount2").textContent = tracearrSessionCount + " sessions";
+      const sessionEl = document.getElementById("sessionCount");
+      const sessionEl2 = document.getElementById("sessionCount2");
+      console.log("[DOM] sessionCount element:", sessionEl, "value:", tracearrSessionCount);
+      
+      if (sessionEl) sessionEl.textContent = tracearrSessionCount;
+      if (sessionEl2) sessionEl2.textContent = tracearrSessionCount + " sessions";
 
       // Afficher les stats Overseerr
-      document.getElementById("totalRequests").textContent = overseerr.total;
-      document.getElementById("approvedRequests").textContent = overseerr.approved;
-      document.getElementById("pendingRequests").textContent = overseerr.pending;
-      document.getElementById("availableRequests").textContent = overseerr.available;
-      document.getElementById("requestCount2").textContent = overseerr.total + " demandes";
+      const totalReqEl = document.getElementById("totalRequests");
+      const approvedEl = document.getElementById("approvedRequests");
+      const pendingEl = document.getElementById("pendingRequests");
+      const availableEl = document.getElementById("availableRequests");
+      const reqCountEl = document.getElementById("requestCount2");
+      console.log("[DOM] Overseerr elements found - total:", !!totalReqEl, "approved:", !!approvedEl);
+      console.log("[OVERSEERR DATA]", overseerr);
+      
+      if (totalReqEl) totalReqEl.textContent = overseerr.total;
+      if (approvedEl) approvedEl.textContent = overseerr.approved;
+      if (pendingEl) pendingEl.textContent = overseerr.pending;
+      if (availableEl) availableEl.textContent = overseerr.available;
+      if (reqCountEl) reqCountEl.textContent = overseerr.total + " demandes";
 
       // Calculer l'XP
       const totalXp = tracearrSessionCount * 2 + (overseerr.total || 0) * 15;
+      console.log("[XP] Calcul: " + tracearrSessionCount + "*2 + " + (overseerr.total||0) + "*15 = " + totalXp);
+      
       const badge = XP_SYSTEM.getBadgeByXp(totalXp);
       const progress = XP_SYSTEM.getProgressToNextBadge(totalXp);
+      console.log("[BADGE] Badge calculé:", badge.name);
 
       // Couleur avatar selon badge
       const avatarEl = document.getElementById("profileAvatar");
       const badgeRing = document.getElementById("badgeRing");
+      console.log("[DOM] avatarEl:", !!avatarEl, "badgeRing:", !!badgeRing);
+      
       if (avatarEl) {
         avatarEl.style.borderColor = badge.borderColor;
+        console.log("[AVATAR] Couleur appliquée:", badge.borderColor);
       }
       if (badgeRing) {
         badgeRing.style.borderColor = badge.borderColor;
       }
 
       // Afficher badge et XP
-      document.getElementById("xpBadge").textContent = `${badge.icon} ${badge.name}`;
-      document.getElementById("xpBadge").style.background = badge.bgColor;
-      document.getElementById("xpBadge").style.color = badge.color;
-      document.getElementById("xpBadge").style.borderColor = badge.borderColor;
-      document.getElementById("xpAmount").textContent = `${totalXp} XP`;
+      const xpBadgeEl = document.getElementById("xpBadge");
+      const xpAmountEl = document.getElementById("xpAmount");
+      console.log("[DOM] xpBadge:", !!xpBadgeEl, "xpAmount:", !!xpAmountEl);
+      
+      if (xpBadgeEl) {
+        xpBadgeEl.textContent = `${badge.icon} ${badge.name}`;
+        xpBadgeEl.style.background = badge.bgColor;
+        xpBadgeEl.style.color = badge.color;
+        xpBadgeEl.style.borderColor = badge.borderColor;
+      }
+      if (xpAmountEl) {
+        xpAmountEl.textContent = `${totalXp} XP`;
+      }
 
       // Barre de progression
       const progressBar = document.getElementById("progressBar");
       const xpNeeded = document.getElementById("xpNeeded");
+      console.log("[DOM] progressBar:", !!progressBar, "xpNeeded:", !!xpNeeded);
+      
       if (progressBar) {
         progressBar.style.width = progress.progressPercent + "%";
         progressBar.style.backgroundColor = badge.color;
@@ -752,11 +850,19 @@
       }
 
       // Formules XP
-      document.getElementById("sessionFormulaXp").textContent = `${tracearrSessionCount} × 2 = ${tracearrSessionCount * 2} XP`;
-      document.getElementById("requestFormulaXp").textContent = `${overseerr.total} × 15 = ${overseerr.total * 15} XP`;
-      document.getElementById("totalXpFormula").textContent = `${totalXp} XP`;
+      const formulaSessionEl = document.getElementById("sessionFormulaXp");
+      const formulaRequestEl = document.getElementById("requestFormulaXp");
+      const formulaTotalEl = document.getElementById("totalXpFormula");
+      console.log("[DOM] FormulaSessions:", !!formulaSessionEl, "Requests:", !!formulaRequestEl);
+      
+      if (formulaSessionEl) formulaSessionEl.textContent = `${tracearrSessionCount} × 2 = ${tracearrSessionCount * 2} XP`;
+      if (formulaRequestEl) formulaRequestEl.textContent = `${overseerr.total} × 15 = ${overseerr.total * 15} XP`;
+      if (formulaTotalEl) formulaTotalEl.textContent = `${totalXp} XP`;
 
       // Afficher abonnement
+      const subCardEl = document.getElementById("subscriptionCard");
+      console.log("[SUB] subscriptionCard element:", !!subCardEl, "data:", subscription);
+      
       if (subscription && subscription.label) {
         const subHtml = `
           <div class="stat-row">
@@ -776,21 +882,25 @@
           </div>
           ` : ''}
         `;
-        document.getElementById("subscriptionCard").innerHTML = subHtml;
+        if (subCardEl) {
+          subCardEl.innerHTML = subHtml;
+          console.log("[SUB] HTML mis à jour");
+        }
       }
 
       // Activer les badges débloqués
       const badgeItems = document.querySelectorAll(".badge-item");
+      console.log("[BADGES] Nombre de badges trouvés:", badgeItems.length, "Total XP:", totalXp);
+      
       badgeItems.forEach(item => {
         const level = parseInt(item.dataset.level);
         const badgeData = XP_SYSTEM.badges[level - 1];
         if (totalXp >= badgeData.minXp) {
           item.classList.add("unlocked");
+          console.log("[BADGES] Débloqué - Level", level, '(', badgeData.minXp, 'XP)');
         }
       });
 
-    } catch (err) {
-      console.error("Error loading profile data:", err);
-    }
+      console.log("[PROFIL] ✅ Chargement terminé!");
   });
 </script>
