@@ -297,11 +297,6 @@ router.post("/api/cache/invalidate", requireAuth, (req, res) => {
       stats: cache.stats() 
     });
   } catch (err) {
-    res.json({ 
-      message: "Cache invalidated", 
-      stats: cache.stats() 
-    });
-  } catch (err) {
     res.status(500).json({ error: "Failed to invalidate cache" });
   }
 });
