@@ -1,6 +1,6 @@
 const cron = require('node-cron');
 const { scanTracearrHistoryForAllUsers } = require('./tracearr');
-const SessionStatsCache = require('./session-stats-cache');
+const SessionStatsCache = require('./session-stats-cache-db');  // 🗄️ Utiliser SQLite
 
 /**
  * Lance un job cron pour mettre à jour les sessions en cache

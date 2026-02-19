@@ -8,6 +8,7 @@ const dashboardRoutes = require("./routes/dashboard.routes");
 const reverseProxyMiddleware = require("./middleware/reverseproxy.middleware");
 const { startSessionCronJob } = require("./utils/cron-session-job");
 const { runHealthCheck } = require("./utils/health-check");  // 🏥 Health check au boot
+const { initDatabase } = require("./utils/database");  // 🗄️  Database initialization
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -156,6 +157,15 @@ async function initializeAllUsersForCron() {
 // Démarrer le serveur et initialiser le cron job
 app.listen(PORT, async () => {
   console.log("\n🚀 Server running on port", PORT);
+  
+  // 🗄️  INITIALISER LA BASE DE DONNÉES
+  try {
+    initDatabase();
+    console.log("[SETUP] ✅ Base de données SQLite initialisée");
+  } catch (err) {
+    console.error("[SETUP] ❌ Erreur initialisation DB:", err.message);
+    process.exit(1);
+  }
   
   // 🏥 HEALTH CHECK au démarrage
   await runHealthCheck();

@@ -1,11 +1,11 @@
 const fetch = require("node-fetch");
 const { getPlexJoinDate } = require("./plex");
-const SessionStatsCache = require("./session-stats-cache");
+const SessionStatsCache = require("./session-stats-cache-db");  // 🗄️ Utiliser SQLite au lieu de JSON
 const TracearrEvents = require("./tracearr-events");  // 📢 EventEmitter pour notifier clients
 
-// 🚩 Charger le cache au démarrage (pour détection δelta intelligente)
-const cachedDataAtBoot = SessionStatsCache.getAll();
-console.log("[TRACEARR-BOOT] 💾 Cache chargé au démarrage avec", Object.keys(cachedDataAtBoot).length, 'utilisateurs');
+// 🚩 Charger les utilisateurs connus de la DB au démarrage (pour détection δelta intelligente)
+const DatabaseModule = require("./database");
+console.log("[TRACEARR-BOOT] 💾 Cache DB initialisé (SQLite persistant)");
 
 // 🚩 Drapeau pour indiquer qu'un scan global est en cours
 let GLOBAL_SCAN_IN_PROGRESS = false;

@@ -3,7 +3,7 @@
  * Lance des vérifications pour s'assurer que tout est configuré correctement
  */
 
-const SessionStatsCache = require('./session-stats-cache');
+const SessionStatsCache = require('./session-stats-cache-db');  // 🗄️ Utiliser SQLite
 const TracearrEvents = require('./tracearr-events');
 
 async function runHealthCheck() {
