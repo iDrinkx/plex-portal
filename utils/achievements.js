@@ -219,6 +219,21 @@ const ACHIEVEMENTS = {
       }),
       unlockedDate: null,
       category: "films"
+    },
+    {
+      id: "cinema-god",
+      name: "Dieu du Cinéma",
+      icon: "🏛️",
+      description: "1000 films regardés au total",
+      condition: (data) => data.movieCount >= 1000,
+      conditionText: "1000 films regardés au total",
+      getProgress: (data) => ({
+        current: Math.min(data.movieCount, 1000),
+        total: 1000,
+        percent: Math.min(Math.round((data.movieCount / 1000) * 100), 100)
+      }),
+      unlockedDate: null,
+      category: "films"
     }
   ],
 
@@ -282,8 +297,21 @@ const ACHIEVEMENTS = {
         percent: Math.min(Math.round((data.episodeCount / 1000) * 100), 100)
       }),
       unlockedDate: null,
-      category: "series"
-    }
+      category: "series"    },
+    {
+      id: "series-overlord",
+      name: "Overlord des Séries",
+      icon: "👑",
+      description: "2000 épisodes regardés au total",
+      condition: (data) => data.episodeCount >= 2000,
+      conditionText: "2000 épisodes regardés au total",
+      getProgress: (data) => ({
+        current: Math.min(data.episodeCount, 2000),
+        total: 2000,
+        percent: Math.min(Math.round((data.episodeCount / 2000) * 100), 100)
+      }),
+      unlockedDate: null,
+      category: "series"    }
   ],
 
   // 📅 MENSUELS

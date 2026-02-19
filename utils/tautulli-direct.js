@@ -408,12 +408,14 @@ function getAchievementUnlockDates(username, joinedAtTimestamp) {
     dates['film-critic']       = nthSession(100, 'movie');
     dates['cinema-master']     = nthSession(250, 'movie');
     dates['hollywood-legend']  = nthSession(500, 'movie');
+    dates['cinema-god']        = nthSession(1000,'movie');
 
     // Séries
     dates['binge-watcher']        = nthSession(10,   'episode');
     dates['series-addict']        = nthSession(100,  'episode');
     dates['series-master']        = nthSession(500,  'episode');
     dates['serial-killer-legend'] = nthSession(1000, 'episode');
+    dates['series-overlord']      = nthSession(2000, 'episode');
 
   } catch (err) {
     console.error("[TAUTULLI-DIRECT] ❌ Erreur unlock dates:", err.message);
