@@ -7,6 +7,7 @@ const { getTautulliStats } = require("../utils/tautulli");
 const { getOverseerrStats } = require("../utils/overseerr");
 const { getPlexJoinDate } = require("../utils/plex");
 const { XP_SYSTEM } = require("../utils/xp-system");
+const { ACHIEVEMENTS } = require("../utils/achievements");
 const CacheManager = require("../utils/cache");
 const TautulliEvents = require("../utils/tautulli-events");  // 📢 Import EventEmitter
 
@@ -120,8 +121,68 @@ router.get("/statistiques", requireAuth, (req, res) => {
   res.render("statistiques/index", { user: req.session.user, basePath: req.basePath });
 });
 
-router.get("/badges", requireAuth, (req, res) => {
-  res.render("badges", { user: req.session.user, basePath: req.basePath, XP_SYSTEM });
+router.get("/badges", requireAuth, async (req, res) => {
+  try {
+    // Récupérer les stats de l'utilisateur
+    const stats = await getTautulliStats(
+      req.session.user.username,
+      process.env.TAUTULLI_URL,
+      process.env.TAUTULLI_API_KEY,
+      req.session.user.id,
+      process.env.PLEX_URL,
+      process.env.PLEX_TOKEN,
+      req.session.user.joinedAtTimestamp
+    );
+
+    // Préparer les données pour les achievements
+    const data = {
+      totalHours: stats.watchStats?.totalHours || 0,
+      movieCount: stats.watchStats?.movieCount || 0,
+      episodeCount: stats.watchStats?.episodeCount || 0,
+      sessionCount: stats.sessionCount || 0,
+      daysSince: Math.floor((Date.now() - (req.session.user.joinedAtTimestamp * 1000)) / (1000 * 60 * 60 * 24))
+    };
+
+    // Structurer les achievements par catégorie
+    const achievementsByCategory = {
+      temporels: { icon: "🎁", name: "Temporels", achievements: ACHIEVEMENTS.temporels },
+      activites: { icon: "🔥", name: "Activité", achievements: ACHIEVEMENTS.activites },
+      films: { icon: "🎬", name: "Films", achievements: ACHIEVEMENTS.films },
+      series: { icon: "📺", name: "Séries", achievements: ACHIEVEMENTS.series },
+      mensuels: { icon: "📅", name: "Mensuels", achievements: ACHIEVEMENTS.mensuels },
+      secrets: { icon: "🔒", name: "Secrets", achievements: ACHIEVEMENTS.secrets }
+    };
+
+    // Ajouter le statut unlocked à chaque achievement
+    const unlockedAchievements = ACHIEVEMENTS.getUnlocked(data);
+    for (const category in achievementsByCategory) {
+      achievementsByCategory[category].achievements = achievementsByCategory[category].achievements.map(achievement => ({
+        ...achievement,
+        unlocked: unlockedAchievements.includes(achievement)
+      }));
+    }
+
+    // Obtenir les stats globales
+    const stats_global = ACHIEVEMENTS.getStats(data);
+
+    res.render("badges", {
+      user: req.session.user,
+      basePath: req.basePath,
+      XP_SYSTEM,
+      ACHIEVEMENTS: achievementsByCategory,
+      stats: stats_global
+    });
+  } catch (err) {
+    console.error("[BADGES] Erreur:", err.message);
+    res.render("badges", {
+      user: req.session.user,
+      basePath: req.basePath,
+      XP_SYSTEM,
+      ACHIEVEMENTS: {},
+      stats: { total: 0, unlocked: 0, locked: 0, progress: 0 },
+      error: "Erreur lors du chargement des achievements"
+    });
+  }
 });
 
 /* ===============================
