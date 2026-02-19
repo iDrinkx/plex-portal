@@ -394,18 +394,6 @@ const ACHIEVEMENTS = {
       isSecret: false
     },
     {
-      id: "beta-tester",
-      name: "Beta Tester",
-      icon: "🧪",
-      description: "Utilisateur expert Dark TV en phase beta",
-      condition: (data) => false,
-      conditionText: "Utilisateur expert Dark TV en phase beta",
-      getProgress: (data) => ({ current: 0, total: 1, percent: 0 }),
-      unlockedDate: null,
-      category: "secrets",
-      isSecret: false
-    },
-    {
       id: "dark-knight",
       name: "Chevalier Noir",
       icon: "🗡️",

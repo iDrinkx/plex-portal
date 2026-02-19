@@ -369,112 +369,173 @@ function getAchievementUnlockDates(username, joinedAtTimestamp) {
 
 /**
  * 🔍 Évaluer les succès secrets auto-détectables depuis l'historique Tautulli
- * Retourne { achievementId: 'dd/mm/yyyy' } pour chaque succès nouvellement débloqué
- * @param {string} username
- * @param {number} joinedAtTimestamp
- * @param {string[]} toCheckIds - IDs des succès à vérifier (optimisation : seulement ceux pas encore en DB)
  */
 function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckIds = []) {
   const results = {};
   if (!tautulliDb || toCheckIds.length === 0) return results;
 
   const norm = username.toLowerCase();
-  const fmt = (ts) => ts ? new Date(ts * 1000).toLocaleDateString('fr-FR') : null;
-  const fmtMs = (ms) => ms ? new Date(ms).toLocaleDateString('fr-FR') : null;
+  const fmt  = (ts) => ts ? new Date(ts * 1000).toLocaleDateString('fr-FR') : null;
   const today = new Date().toLocaleDateString('fr-FR');
 
-  // Helper : count distinct films dont le titre matche un LIKE, retourne {count, lastStopped}
-  const countMoviesByTitle = (likePattern) => {
+  // ── Vérifier si session_history_metadata existe et le join fonctionne
+  let useMetadata = false;
+  try {
+    tautulliDb.prepare(`SELECT shm.title FROM session_history_metadata shm LIMIT 1`).get();
+    useMetadata = true;
+  } catch(e) {
+    console.warn('[TAUTULLI-DIRECT] ⚠️  session_history_metadata non accessible, fallback rating_key:', e.message);
+  }
+
+  /**
+   * Compte les films distincts dont le titre (ou grandparent) matche un pattern LIKE.
+   * Accepte plusieurs patterns OR (EN + FR).
+   */
+  const countMoviesByLike = (patterns) => {
     try {
-      const row = tautulliDb.prepare(`
-        SELECT COUNT(DISTINCT shm.title) as cnt, MAX(sh.stopped) as last_stopped
-        FROM session_history sh
-        JOIN users u ON sh.user_id = u.user_id
-        JOIN session_history_metadata shm ON sh.id = shm.id
-        WHERE LOWER(u.username) = ?
-          AND sh.stopped > sh.started
-          AND sh.media_type = 'movie'
-          AND shm.title LIKE ? ESCAPE '\\'
-      `).get(norm, likePattern);
+      const orClauses = patterns.map(() =>
+        useMetadata ? 'LOWER(shm.title) LIKE ?' : 'LOWER(shm.title) LIKE ?'
+      ).join(' OR ');
+
+      let sql, params;
+      if (useMetadata) {
+        sql = `
+          SELECT COUNT(DISTINCT LOWER(shm.title)) as cnt, MAX(sh.stopped) as last_stopped
+          FROM session_history sh
+          JOIN users u ON sh.user_id = u.user_id
+          JOIN session_history_metadata shm ON sh.id = shm.id
+          WHERE LOWER(u.username) = ?
+            AND sh.stopped > sh.started
+            AND sh.media_type = 'movie'
+            AND (${orClauses})
+        `;
+        params = [norm, ...patterns.map(p => p.toLowerCase())];
+      } else {
+        // Fallback : join via metadata table (rating_key)
+        const orFallback = patterns.map(() => 'LOWER(m.title) LIKE ?').join(' OR ');
+        sql = `
+          SELECT COUNT(DISTINCT LOWER(m.title)) as cnt, MAX(sh.stopped) as last_stopped
+          FROM session_history sh
+          JOIN users u ON sh.user_id = u.user_id
+          LEFT JOIN metadata_items m ON sh.rating_key = m.rating_key
+          WHERE LOWER(u.username) = ?
+            AND sh.stopped > sh.started
+            AND sh.media_type = 'movie'
+            AND (${orFallback})
+        `;
+        params = [norm, ...patterns.map(p => p.toLowerCase())];
+      }
+      const row = tautulliDb.prepare(sql).get(...params);
       return row || { cnt: 0, last_stopped: null };
-    } catch(e) { return { cnt: 0, last_stopped: null }; }
+    } catch(e) {
+      console.error('[TAUTULLI-DIRECT] ❌ countMoviesByLike error:', e.message);
+      return { cnt: 0, last_stopped: null };
+    }
   };
 
-  // Helper : count distinct films parmi une liste de titres exacts
-  const countMoviesByTitles = (titles) => {
+  /**
+   * Compte les films dont le titre exact (EN ou FR) est dans la liste fournie.
+   */
+  const countMoviesByExactTitles = (titles) => {
     try {
       const placeholders = titles.map(() => '?').join(', ');
-      const row = tautulliDb.prepare(`
-        SELECT COUNT(DISTINCT shm.title) as cnt, MAX(sh.stopped) as last_stopped
-        FROM session_history sh
-        JOIN users u ON sh.user_id = u.user_id
-        JOIN session_history_metadata shm ON sh.id = shm.id
-        WHERE LOWER(u.username) = ?
-          AND sh.stopped > sh.started
-          AND sh.media_type = 'movie'
-          AND shm.title IN (${placeholders})
-      `).get(norm, ...titles);
+      let sql, params;
+      if (useMetadata) {
+        sql = `
+          SELECT COUNT(DISTINCT LOWER(shm.title)) as cnt, MAX(sh.stopped) as last_stopped
+          FROM session_history sh
+          JOIN users u ON sh.user_id = u.user_id
+          JOIN session_history_metadata shm ON sh.id = shm.id
+          WHERE LOWER(u.username) = ?
+            AND sh.stopped > sh.started
+            AND sh.media_type = 'movie'
+            AND LOWER(shm.title) IN (${placeholders})
+        `;
+      } else {
+        sql = `
+          SELECT COUNT(DISTINCT LOWER(m.title)) as cnt, MAX(sh.stopped) as last_stopped
+          FROM session_history sh
+          JOIN users u ON sh.user_id = u.user_id
+          LEFT JOIN metadata_items m ON sh.rating_key = m.rating_key
+          WHERE LOWER(u.username) = ?
+            AND sh.stopped > sh.started
+            AND sh.media_type = 'movie'
+            AND LOWER(m.title) IN (${placeholders})
+        `;
+      }
+      params = [norm, ...titles.map(t => t.toLowerCase())];
+      const row = tautulliDb.prepare(sql).get(...params);
       return row || { cnt: 0, last_stopped: null };
-    } catch(e) { return { cnt: 0, last_stopped: null }; }
+    } catch(e) {
+      console.error('[TAUTULLI-DIRECT] ❌ countMoviesByExactTitles error:', e.message);
+      return { cnt: 0, last_stopped: null };
+    }
   };
+
+  console.log(`[TAUTULLI-DIRECT] 🔍 Évaluation secrets pour ${norm}: [${toCheckIds.join(', ')}]`);
 
   try {
     for (const id of toCheckIds) {
-      let row, date;
+      let row;
       switch (id) {
 
-        // ⚡ Potterhead — 8 films Harry Potter regardés
+        // ⚡ Potterhead — 8 films Harry Potter (EN: "Harry Potter...", FR: "Harry Potter...")
         case 'potter-head': {
-          row = countMoviesByTitle('Harry Potter%');
+          // Même préfixe EN et FR
+          row = countMoviesByLike(['harry potter%']);
+          console.log(`[TAUTULLI-DIRECT] potter-head: ${row.cnt}/8 films HP`);
           if (row.cnt >= 8) results[id] = fmt(row.last_stopped) || today;
           break;
         }
 
-        // 🦸 Avenger — Les 4 films Avengers regardés
+        // 🦸 Avenger — Les 4 films Avengers (EN & FR variants)
         case 'avenger': {
-          const avengers = [
-            'The Avengers', 'Avengers: Age of Ultron',
-            'Avengers: Infinity War', 'Avengers: Endgame'
-          ];
-          row = countMoviesByTitles(avengers);
-          if (row.cnt >= 4) results[id] = fmt(row.last_stopped) || today;
+          row = countMoviesByLike(['%avengers%']);
+          // On cherche les 4 films principaux dans les résultats
+          const avengersEN = ['the avengers', 'avengers: age of ultron', 'avengers: infinity war', 'avengers: endgame'];
+          const avengersAlt = ['avengers', "avengers : l'ère d'ultron", 'avengers : infinity war', 'avengers : endgame',
+                               'avengers: l\'ère d\'ultron'];
+          const rowExact = countMoviesByExactTitles([...avengersEN, ...avengersAlt]);
+          console.log(`[TAUTULLI-DIRECT] avenger: ${rowExact.cnt}/4 films Avengers`);
+          if (rowExact.cnt >= 4) results[id] = fmt(rowExact.last_stopped) || today;
+          // Fallback LIKE si exact échoue (titres légèrement différents)
+          else if (row.cnt >= 4) results[id] = fmt(row.last_stopped) || today;
           break;
         }
 
-        // 🗡️ Chevalier Noir — 4 films Star Wars regardés (trilogie originale + 1)
+        // 🗡️ Chevalier Noir — 4 films Star Wars
         case 'dark-knight': {
-          row = countMoviesByTitle('%Star Wars%');
+          row = countMoviesByLike(['%star wars%']);
+          console.log(`[TAUTULLI-DIRECT] dark-knight: ${row.cnt}/4 films Star Wars`);
           if (row.cnt >= 4) results[id] = fmt(row.last_stopped) || today;
           break;
         }
 
-        // 🧑‍⚖️ Maître Jedi — 7 films Star Wars regardés (saga complète)
+        // 🧑‍⚖️ Maître Jedi — 7 films Star Wars
         case 'black-knight': {
-          row = countMoviesByTitle('%Star Wars%');
+          row = countMoviesByLike(['%star wars%']);
+          console.log(`[TAUTULLI-DIRECT] black-knight: ${row.cnt}/7 films Star Wars`);
           if (row.cnt >= 7) results[id] = fmt(row.last_stopped) || today;
           break;
         }
 
-        // 👑 Tolkiendil — La trilogie du Seigneur des Anneaux regardée
+        // 👑 Tolkiendil — Trilogie Seigneur des Anneaux (EN & FR)
         case 'tolkiendil': {
-          row = countMoviesByTitle('%Lord of the Rings%');
+          row = countMoviesByLike(['%lord of the rings%', '%seigneur des anneaux%']);
+          console.log(`[TAUTULLI-DIRECT] tolkiendil: ${row.cnt}/3 films LOTR`);
           if (row.cnt >= 3) results[id] = fmt(row.last_stopped) || today;
           break;
         }
 
-        // 🐵 Évolutionniste — La trilogie La Planète des Singes regardée
+        // 🐵 Évolutionniste — Trilogie Planète des Singes (EN & FR)
         case 'evolutionist': {
-          const apes = [
-            'Rise of the Planet of the Apes',
-            'Dawn of the Planet of the Apes',
-            'War for the Planet of the Apes'
-          ];
-          row = countMoviesByTitles(apes);
+          row = countMoviesByLike(['%planet of the apes%', '%planète des singes%', '%planet des singes%']);
+          console.log(`[TAUTULLI-DIRECT] evolutionist: ${row.cnt}/3 films Apes`);
           if (row.cnt >= 3) results[id] = fmt(row.last_stopped) || today;
           break;
         }
 
-        // 🌙 Spectateur de Minuit — Regarder quelque chose entre 00h et 01h
+        // 🌙 Spectateur de Minuit — Session commencée entre 00h et 01h
         case 'midnight-watcher': {
           try {
             const r = tautulliDb.prepare(`
@@ -485,11 +546,11 @@ function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckIds = []
               ORDER BY sh.started ASC LIMIT 1
             `).get(norm);
             if (r) results[id] = fmt(r.started) || today;
-          } catch(e) {}
+          } catch(e) { console.error('[TAUTULLI-DIRECT] midnight-watcher error:', e.message); }
           break;
         }
 
-        // ⚔️ Guerrier du Week-end — 20h+ en un seul week-end (Sam+Dim)
+        // ⚔️ Guerrier du Week-end — 20h+ regardées un seul week-end (Sam+Dim)
         case 'weekend-warrior': {
           try {
             const r = tautulliDb.prepare(`
@@ -501,12 +562,11 @@ function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckIds = []
               JOIN users u ON sh.user_id = u.user_id
               WHERE LOWER(u.username) = ? AND sh.stopped > sh.started
                 AND CAST(strftime('%w', datetime(sh.started, 'unixepoch', 'localtime')) AS INTEGER) IN (0, 6)
-              GROUP BY week
-              HAVING hours >= 20
+              GROUP BY week HAVING hours >= 20
               ORDER BY week ASC LIMIT 1
             `).get(norm);
             if (r) results[id] = fmt(r.last_stopped) || today;
-          } catch(e) {}
+          } catch(e) { console.error('[TAUTULLI-DIRECT] weekend-warrior error:', e.message); }
           break;
         }
 
@@ -521,17 +581,22 @@ function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckIds = []
               ORDER BY sh.started ASC LIMIT 1
             `).get(norm);
             if (r) results[id] = fmt(r.started) || today;
-          } catch(e) {}
+          } catch(e) { console.error('[TAUTULLI-DIRECT] countdown-pajama error:', e.message); }
           break;
         }
+
+        default:
+          break;
       }
     }
   } catch (err) {
-    console.error("[TAUTULLI-DIRECT] ❌ Erreur évaluation secrets:", err.message);
+    console.error('[TAUTULLI-DIRECT] ❌ Erreur évaluation secrets:', err.message);
   }
 
   if (Object.keys(results).length > 0) {
-    console.log("[TAUTULLI-DIRECT] 🔓 Nouveaux secrets débloqués pour", norm + ":", Object.keys(results).join(', '));
+    console.log('[TAUTULLI-DIRECT] 🔓 Nouveaux secrets débloqués pour', norm + ':', Object.keys(results).join(', '));
+  } else {
+    console.log('[TAUTULLI-DIRECT] ℹ️  Aucun nouveau secret débloqué pour', norm);
   }
   return results;
 }
