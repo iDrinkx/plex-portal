@@ -465,9 +465,21 @@ async function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckId
    * Compte les films regardés par l'utilisateur via une liste de {title, year}.
    * Le matching par titre+année est robuste aux re-scans Plex qui changent les GUIDs.
    */
-  const countMoviesByTitleYear = (movies) => {
+  const countMoviesByTitleYear = (movies, debugId) => {
     if (!movies || !movies.length) return { cnt: 0, last_stopped: null };
     try {
+      // 🔍 DEBUG: titres attendus vs titres regardés par l'user en DB
+      if (debugId) {
+        console.log(`[TAUTULLI-DIRECT] 🔍 [${debugId}] Titres Plex API:`, movies.map(m => `"${m.title}" (${m.year})`));
+        const dbTitles = tautulliDb.prepare(`
+          SELECT DISTINCT shm.title, shm.year
+          FROM session_history sh
+          JOIN session_history_metadata shm ON sh.id = shm.id
+          WHERE LOWER(sh.user) = ? AND sh.media_type = 'movie'
+          ORDER BY sh.stopped DESC LIMIT 10
+        `).all(norm);
+        console.log(`[TAUTULLI-DIRECT] 🔍 [${debugId}] Derniers films en DB:`, dbTitles.map(r => `"${r.title}" (${r.year})`));
+      }
       const orClauses = movies.map(() => '(LOWER(shm.title) = ? AND shm.year = ?)').join(' OR ');
       const params = [norm, ...movies.flatMap(m => [m.title.toLowerCase(), m.year])];
       const row = tautulliDb.prepare(`
@@ -497,7 +509,7 @@ async function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckId
     if (conf?.ratingKey) {
       const movies = await getCollectionItems(conf.ratingKey);
       if (movies && movies.length > 0) {
-        const row = countMoviesByTitleYear(movies);
+        const row = countMoviesByTitleYear(movies, id);
         const required = minRequired ?? movies.length;
         console.log(`[TAUTULLI-DIRECT] ${id} (collection): ${row.cnt}/${required} films`);
         if (row.cnt >= required) return fmt(row.last_stopped) || today;
