@@ -882,6 +882,47 @@
 
       console.log("[PROFIL] ✅ Données chargées - Tautulli:", tautulliData);
 
+      // ===== AFFICHER LES STATS DE VISIONNAGE (Watch Stats) =====
+      if (tautulliData && tautulliData.watchStats) {
+        const watchStats = tautulliData.watchStats;
+        console.log("[WATCH-STATS] 📊 Mise à jour des compteurs:", watchStats);
+        
+        // Heures
+        const hoursEl = document.getElementById('counterHours');
+        if (hoursEl) {
+          const hours = Math.round(watchStats.totalHours * 10) / 10;
+          hoursEl.textContent = hours;
+          hoursEl.setAttribute('data-target', hours);
+          console.log("[WATCH-STATS] ✅ Heures:", hours);
+        }
+        
+        // Films
+        const moviesEl = document.getElementById('counterMovies');
+        if (moviesEl) {
+          moviesEl.textContent = watchStats.movieCount || 0;
+          moviesEl.setAttribute('data-target', watchStats.movieCount || 0);
+          console.log("[WATCH-STATS] ✅ Films:", watchStats.movieCount);
+        }
+        
+        // Épisodes
+        const episodesEl = document.getElementById('counterEpisodes');
+        if (episodesEl) {
+          episodesEl.textContent = watchStats.episodeCount || 0;
+          episodesEl.setAttribute('data-target', watchStats.episodeCount || 0);
+          console.log("[WATCH-STATS] ✅ Épisodes:", watchStats.episodeCount);
+        }
+        
+        // Sessions (Lectures Totales)
+        const sessionsEl = document.getElementById('counterSessions');
+        if (sessionsEl) {
+          sessionsEl.textContent = tautulliData.sessionCount || 0;
+          sessionsEl.setAttribute('data-target', tautulliData.sessionCount || 0);
+          console.log("[WATCH-STATS] ✅ Sessions:", tautulliData.sessionCount);
+        }
+        
+        console.log("[WATCH-STATS] 🎉 Compteurs mis à jour");
+      }
+
       // Afficher les stats Tautulli
       const joinedEl = document.getElementById("joinedDate");
       const activityEl = document.getElementById("lastActivity");
