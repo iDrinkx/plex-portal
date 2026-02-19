@@ -46,17 +46,6 @@ const ACHIEVEMENTS = {
       }),
       unlockedDate: null,
       category: "temporels"
-    },
-    {
-      id: "og",
-      name: "OG",
-      icon: "⭐",
-      description: "Premier visionnage en 2024 lors du lancement",
-      condition: (data) => false,
-      conditionText: "Premier visionnage en 2024 lors du lancement",
-      getProgress: (data) => ({ current: 0, total: 1, percent: 0 }),
-      unlockedDate: null,
-      category: "temporels"
     }
   ],
 

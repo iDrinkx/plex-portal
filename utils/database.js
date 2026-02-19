@@ -225,6 +225,9 @@ function runMigrations() {
       if (r1.changes > 0 || r2.changes > 0) {
         console.log(`[DB] 🔄 Migration: "clever-girl" → "jurassic-survivor" (${r1.changes} unlocks, ${r2.changes} progress)`);
       }
+      // Supprimer le badge og (retiré de l'application)
+      db.prepare(`DELETE FROM user_achievements WHERE achievement_id = ?`).run('og');
+      db.prepare(`DELETE FROM achievement_progress WHERE achievement_id = ?`).run('og');
       // Supprimer le badge dark-knight (remplacé par black-knight uniquement)
       const d1 = db.prepare(`DELETE FROM user_achievements WHERE achievement_id = ?`).run('dark-knight');
       const d2 = db.prepare(`DELETE FROM achievement_progress WHERE achievement_id = ?`).run('dark-knight');
