@@ -65,12 +65,6 @@ async function getCollectionItemGuids(collectionRatingKey) {
     }).filter(Boolean);
     collectionCache[collectionRatingKey] = { guids, ts: now };
     console.log(`[TAUTULLI-DIRECT] 📚 Collection ${collectionRatingKey}: ${guids.length} GUIDs cachés`);
-    // Debug: afficher les 2 premiers GUIDs et un échantillon DB pour vérifier le format
-    if (guids.length > 0 && tautulliDb) {
-      console.log(`[TAUTULLI-DIRECT] 🔍 Exemple GUID Plex:`, guids[0]);
-      const dbSample = tautulliDb.prepare(`SELECT guid FROM session_history_metadata WHERE media_type = 'movie' LIMIT 1`).get();
-      console.log(`[TAUTULLI-DIRECT] 🔍 Exemple GUID DB:`, dbSample?.guid);
-    }
     return guids;
   } catch(e) {
     console.error(`[TAUTULLI-DIRECT] ❌ Erreur collection Plex ${collectionRatingKey}:`, e.message);
@@ -476,27 +470,16 @@ async function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckId
     if (!guids || !guids.length) return { cnt: 0, last_stopped: null };
     try {
       const ph = guids.map(() => '?').join(', ');
-      // Trouver les rating_keys correspondant à ces GUIDs dans les métadonnées
-      const keys = tautulliDb.prepare(`
-        SELECT DISTINCT rating_key FROM session_history_metadata
-        WHERE guid IN (${ph})
-      `).all(...guids);
-      // Debug : afficher combien de rating_keys trouvés
-      console.log(`[TAUTULLI-DIRECT] 🔍 GUIDs soumis: ${guids.length}, rating_keys trouvés en DB: ${keys.length}`);
-      if (!keys.length) {
-        // Essai avec LIKE sur le premier GUID pour diagnoc
-        const sample = tautulliDb.prepare(`SELECT guid, rating_key FROM session_history_metadata WHERE media_type='movie' AND guid LIKE 'plex://%' LIMIT 3`).all();
-        console.log(`[TAUTULLI-DIRECT] 🔍 Échantillon guid DB:`, sample.map(r => r.guid));
-        return { cnt: 0, last_stopped: null };
-      }
-      const ratingKeys = keys.map(k => k.rating_key);
-      const ph2 = ratingKeys.map(() => '?').join(', ');
+      // JOIN sur sh.id = shm.id (session ID stable), filtrer par GUID et sh.user
       const row = tautulliDb.prepare(`
-        SELECT COUNT(DISTINCT sh.rating_key) as cnt, MAX(sh.stopped) as last_stopped
+        SELECT COUNT(DISTINCT shm.guid) as cnt, MAX(sh.stopped) as last_stopped
         FROM session_history sh
-        WHERE LOWER(sh.user) = ? AND sh.stopped > sh.started
-          AND sh.media_type = 'movie' AND sh.rating_key IN (${ph2})
-      `).get(norm, ...ratingKeys);
+        JOIN session_history_metadata shm ON sh.id = shm.id
+        WHERE LOWER(sh.user) = ?
+          AND sh.stopped > sh.started
+          AND sh.media_type = 'movie'
+          AND shm.guid IN (${ph})
+      `).get(norm, ...guids);
       return row || { cnt: 0, last_stopped: null };
     } catch(e) {
       console.error('[TAUTULLI-DIRECT] ❌ countMoviesByGuids error:', e.message);
