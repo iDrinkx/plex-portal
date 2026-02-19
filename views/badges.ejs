@@ -335,7 +335,7 @@
                 <!-- SECRET VERROUILLÉ : on ne révèle rien -->
                 <div class="achievement-secret-text">🔒 Badge secret</div>
               <% } else if (achievement.revocable) { %>
-                <!-- BADGE COLLECTION : description + barre de progression -->
+                <!-- BADGE COLLECTION : toujours visible, barre de progression si dispo -->
                 <div class="achievement-description"><%= achievement.description %></div>
                 <% const prog = typeof progressMap !== 'undefined' && progressMap && progressMap[achievement.id]; %>
                 <% if (prog && prog.total > 0) { %>
@@ -345,8 +345,6 @@
                   <div class="achievement-progress-bar">
                     <div class="achievement-progress-fill" style="width: <%= Math.min(100, Math.round((prog.current / prog.total) * 100)) %>%"></div>
                   </div>
-                <% } else { %>
-                  <div class="achievement-secret-text">🔒 Badge secret</div>
                 <% } %>
               <% } else { %>
                 <!-- NON-SECRET VERROUILLÉ -->

@@ -269,7 +269,7 @@ router.get("/badges", requireAuth, async (req, res) => {
     if (secretsToCheck.length > 0 && isTautulliReady()) {
       // Lancer sans await : rendu immédiat, unlock/revoke persisté pour la prochaine visite
       evaluateSecretAchievements(username, joinedAtTs, secretsToCheck)
-        .then(newSecrets => {
+        .then(({ unlocked: newSecrets, progress: newProgress }) => {
           // Débloquer les nouveaux succès
           for (const [id, date] of Object.entries(newSecrets)) {
             if (dbUserId) {
@@ -283,6 +283,12 @@ router.get("/badges", requireAuth, async (req, res) => {
                 UserAchievementQueries.revoke(dbUserId, id);
                 console.log(`[BADGES] 🔒 Badge "${id}" révoqué pour ${username} (condition non remplie)`);
               } catch(e) {}
+            }
+          }
+          // Sauvegarder la progression des badges collection
+          if (dbUserId && newProgress) {
+            for (const [id, prog] of Object.entries(newProgress)) {
+              try { AchievementProgressQueries.save(dbUserId, id, prog.current, prog.total); } catch(e) {}
             }
           }
           if (Object.keys(newSecrets).length > 0) {
