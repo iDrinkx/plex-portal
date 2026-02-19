@@ -8,7 +8,7 @@ const { getOverseerrStats } = require("../utils/overseerr");
 const { getPlexJoinDate } = require("../utils/plex");
 const { XP_SYSTEM } = require("../utils/xp-system");
 const { ACHIEVEMENTS } = require("../utils/achievements");
-const { UserAchievementQueries } = require("../utils/database");
+const { UserAchievementQueries, UserQueries } = require("../utils/database");
 const { getAchievementUnlockDates, evaluateSecretAchievements, isTautulliReady } = require("../utils/tautulli-direct");
 const CacheManager = require("../utils/cache");
 const TautulliEvents = require("../utils/tautulli-events");  // 📢 Import EventEmitter
@@ -137,7 +137,13 @@ router.get("/profil", requireAuth, async (req, res) => {
     };
 
     // Compter les badges débloqués (avec succ\u00e8s manuels depuis la DB)
-    const userUnlockedMap = UserAchievementQueries.getForUser(req.session.user.id);
+    const dbUser = UserQueries.upsert(
+      req.session.user.username,
+      req.session.user.id || null,
+      req.session.user.email || null,
+      req.session.user.joinedAt || req.session.user.joinedAtTimestamp || null
+    );
+    const userUnlockedMap = dbUser ? UserAchievementQueries.getForUser(dbUser.id) : {};
     const unlockedAchievements = ACHIEVEMENTS.getUnlocked(data, userUnlockedMap);
     const allAchievements = ACHIEVEMENTS.getAll();
 
@@ -208,22 +214,38 @@ router.get("/badges", requireAuth, async (req, res) => {
     const joinedAtTs = req.session.user.joinedAtTimestamp;
     const today = new Date().toLocaleDateString('fr-FR');
 
-    // ── 1. Unlocks déjà en cache DB (rapide, aucune requête Tautulli)
-    const userUnlockedMap = UserAchievementQueries.getForUser(userId);
+    // S'assurer que l'utilisateur existe dans notre DB (upsert silencieux)
+    let dbUserId = null;
+    try {
+      const dbUser = UserQueries.upsert(
+        username,
+        req.session.user.id || null,
+        req.session.user.email || null,
+        req.session.user.joinedAt || joinedAtTs || null
+      );
+      dbUserId = dbUser ? dbUser.id : null;
+    } catch(e) {
+      // Fallback: lecture seule si upsert échoue
+      try { dbUserId = UserQueries.getByUsername(username)?.id || null; } catch(_) {}
+    }
 
-    // ── 2. Évaluer les succès NON-SECRETS non encore en DB (conditions sur data)
+    // ── 1. Unlocks déjà en cache DB (rapide, aucune requête Tautulli)
+    const userUnlockedMap = dbUserId ? UserAchievementQueries.getForUser(dbUserId) : {};
+
+    // ── 2. Évaluer les succès NON-SECRETS (conditions sur data)
     const allAchievements = ACHIEVEMENTS.getAll();
     const computedDates = getAchievementUnlockDates(username, joinedAtTs);
 
     for (const a of allAchievements) {
       if (userUnlockedMap[a.id]) continue;          // déjà en cache → skip
-      if (a.isSecret) continue;                     // secrets admin-only → skip
+      if (a.isSecret) continue;                     // secrets via Tautulli uniquement
       if (a.category === 'secrets') continue;       // secrets auto traités ci-dessous
       if (!a.condition(data)) continue;             // condition non remplie → skip
-      // Condition remplie et pas encore en DB → persister
       const date = computedDates[a.id] || today;
-      UserAchievementQueries.unlock(userId, a.id, date, 'auto');
-      userUnlockedMap[a.id] = date;
+      if (dbUserId) {
+        try { UserAchievementQueries.unlock(dbUserId, a.id, date, 'auto'); } catch(e) {}
+      }
+      userUnlockedMap[a.id] = date;                 // toujours afficher même sans DB
     }
 
     // ── 3. Évaluer les succès secrets auto-détectables non encore en DB
@@ -234,8 +256,10 @@ router.get("/badges", requireAuth, async (req, res) => {
     if (secretsToCheck.length > 0 && isTautulliReady()) {
       const newSecrets = evaluateSecretAchievements(username, joinedAtTs, secretsToCheck);
       for (const [id, date] of Object.entries(newSecrets)) {
-        UserAchievementQueries.unlock(userId, id, date, 'auto');
-        userUnlockedMap[id] = date;
+        if (dbUserId) {
+          try { UserAchievementQueries.unlock(dbUserId, id, date, 'auto'); } catch(e) {}
+        }
+        userUnlockedMap[id] = date;                 // toujours afficher même sans DB
       }
     }
 
