@@ -147,7 +147,10 @@
 
   <!-- SECTION BADGES -->
   <div class="badges-section">
-    <h2>🏆 Progression des Badges</h2>
+    <div class="badges-header-with-link">
+      <h2>🏆 Progression des Badges</h2>
+      <a href="<%= basePath %>/badges" class="view-more-link">Voir plus →</a>
+    </div>
     <div class="badges-container" id="badgesContainer"></div>
   </div>
 
@@ -388,6 +391,33 @@
     margin-top: 0;
     margin-bottom: 20px;
     color: #fff;
+  }
+
+  .badges-header-with-link {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+
+  .badges-header-with-link h2 {
+    margin: 0;
+  }
+
+  .view-more-link {
+    color: #DAA520;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    padding: 8px 16px;
+    border-radius: 6px;
+    border: 1px solid rgba(218, 165, 32, 0.3);
+  }
+
+  .view-more-link:hover {
+    background: rgba(218, 165, 32, 0.2);
+    border-color: rgba(218, 165, 32, 0.6);
   }
 
   .badges-container {
