@@ -34,15 +34,15 @@ const COLLECTION_MIN = {
 };
 
 /**
- * Récupère les GUIDs Plex des films d'une collection.
- * Le GUID (plex://movie/xxx) est stable même si le rating_key change après ré-indexation.
+ * Récupère les films d'une collection Plex sous forme {title, year}.
+ * title+year est stable même si le rating_key ou le GUID change après ré-indexation.
  * Résultat mis en cache 24h.
  */
-async function getCollectionItemGuids(collectionRatingKey) {
+async function getCollectionItems(collectionRatingKey) {
   const now = Date.now();
   const cached = collectionCache[collectionRatingKey];
   if (cached && (now - cached.ts) < COLLECTION_CACHE_TTL) {
-    return cached.guids;
+    return cached.movies;
   }
 
   const PLEX_URL = process.env.PLEX_URL;
@@ -58,14 +58,14 @@ async function getCollectionItemGuids(collectionRatingKey) {
     const resp = await fetch(url, { headers: { Accept: 'application/json' } });
     const json = await resp.json();
     const items = json?.MediaContainer?.Metadata || [];
-    // Extraire le GUID canonique plex:// depuis le tableau Guid ou le champ guid
-    const guids = items.map(item => {
-      const plexGuid = (item.Guid || []).find(g => g.id && g.id.startsWith('plex://'));
-      return plexGuid ? plexGuid.id : (item.guid || null);
-    }).filter(Boolean);
-    collectionCache[collectionRatingKey] = { guids, ts: now };
-    console.log(`[TAUTULLI-DIRECT] 📚 Collection ${collectionRatingKey}: ${guids.length} GUIDs cachés`);
-    return guids;
+    // Extraire titre + année (stables, indépendants des re-scans de métadonnées)
+    const movies = items.map(item => ({
+      title: item.title,
+      year: item.year ?? null,
+    })).filter(m => m.title);
+    collectionCache[collectionRatingKey] = { movies, ts: now };
+    console.log(`[TAUTULLI-DIRECT] 📚 Collection ${collectionRatingKey}: ${movies.length} films cachés`);
+    return movies;
   } catch(e) {
     console.error(`[TAUTULLI-DIRECT] ❌ Erreur collection Plex ${collectionRatingKey}:`, e.message);
     return null;
@@ -462,42 +462,27 @@ async function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckId
   };
 
   /**
-   * Compte les films regardés par l'utilisateur via une liste de GUIDs Plex.
-   * Cherche dans session_history_metadata par GUID pour récupérer les rating_keys
-   * effectivement enregistrés, puis vérifie dans session_history.
+   * Compte les films regardés par l'utilisateur via une liste de {title, year}.
+   * Le matching par titre+année est robuste aux re-scans Plex qui changent les GUIDs.
    */
-  const countMoviesByGuids = (guids) => {
-    if (!guids || !guids.length) return { cnt: 0, last_stopped: null };
+  const countMoviesByTitleYear = (movies) => {
+    if (!movies || !movies.length) return { cnt: 0, last_stopped: null };
     try {
-      // 🔍 DEBUG: Vérifier les colonnes de session_history_metadata
-      const cols = tautulliDb.prepare(`PRAGMA table_info(session_history_metadata)`).all();
-      console.log('[TAUTULLI-DIRECT] 🔍 Colonnes session_history_metadata:', cols.map(c => c.name).join(', '));
-
-      // 🔍 DEBUG: Voir un sample de colonnes ID pour l'user
-      const sampleRow = tautulliDb.prepare(`
-        SELECT shm.guid, shm.title
-        FROM session_history sh
-        JOIN session_history_metadata shm ON sh.id = shm.id
-        WHERE LOWER(sh.user) = ? AND sh.media_type = 'movie'
-        LIMIT 3
-      `).all(norm);
-      console.log('[TAUTULLI-DIRECT] 🔍 Sample rows:', JSON.stringify(sampleRow));
-      console.log('[TAUTULLI-DIRECT] 🔍 GUIDs Plex API (sample):', guids.slice(0, 3));
-
-      const ph = guids.map(() => '?').join(', ');
-      // JOIN sur sh.id = shm.id (session ID stable), filtrer par GUID et sh.user
+      const orClauses = movies.map(() => '(LOWER(shm.title) = ? AND shm.year = ?)').join(' OR ');
+      const params = [norm, ...movies.flatMap(m => [m.title.toLowerCase(), m.year])];
       const row = tautulliDb.prepare(`
-        SELECT COUNT(DISTINCT shm.guid) as cnt, MAX(sh.stopped) as last_stopped
+        SELECT COUNT(DISTINCT LOWER(shm.title) || COALESCE(shm.year,'')) as cnt,
+               MAX(sh.stopped) as last_stopped
         FROM session_history sh
         JOIN session_history_metadata shm ON sh.id = shm.id
         WHERE LOWER(sh.user) = ?
           AND sh.stopped > sh.started
           AND sh.media_type = 'movie'
-          AND shm.guid IN (${ph})
-      `).get(norm, ...guids);
+          AND (${orClauses})
+      `).get(...params);
       return row || { cnt: 0, last_stopped: null };
     } catch(e) {
-      console.error('[TAUTULLI-DIRECT] ❌ countMoviesByGuids error:', e.message);
+      console.error('[TAUTULLI-DIRECT] ❌ countMoviesByTitleYear error:', e.message);
       return { cnt: 0, last_stopped: null };
     }
   };
@@ -508,18 +493,18 @@ async function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckId
    */
   const checkCollection = async (id, fallbackPatterns, minRequired = null) => {
     const conf = COLLECTION_KEYS[id];
-    // Essai via API Plex (GUIDs stables, indépendants des re-scans)
+    // Essai via API Plex (titre+année, stable même après re-scans)
     if (conf?.ratingKey) {
-      const guids = await getCollectionItemGuids(conf.ratingKey);
-      if (guids && guids.length > 0) {
-        const row = countMoviesByGuids(guids);
-        const required = minRequired ?? guids.length;
+      const movies = await getCollectionItems(conf.ratingKey);
+      if (movies && movies.length > 0) {
+        const row = countMoviesByTitleYear(movies);
+        const required = minRequired ?? movies.length;
         console.log(`[TAUTULLI-DIRECT] ${id} (collection): ${row.cnt}/${required} films`);
         if (row.cnt >= required) return fmt(row.last_stopped) || today;
         return null;
       }
     }
-    // Fallback : matching par titre LIKE
+    // Fallback : matching par titre LIKE (si API Plex indisponible)
     if (fallbackPatterns && minRequired) {
       const row = countMoviesByLike(fallbackPatterns);
       console.log(`[TAUTULLI-DIRECT] ${id} (fallback titre): ${row.cnt}/${minRequired} films`);
