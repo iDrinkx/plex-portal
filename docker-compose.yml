@@ -29,9 +29,10 @@ services:
       # Chemin vers la DB Tautulli pour lectures optimisées
       TAUTULLI_DB_PATH: "/tautulli-data/tautulli.db"
       
-      # Alternative: API Tautulli (si DB non accessible)
-      # TAUTULLI_URL: "http://tautulli.local"
-      # TAUTULLI_API_KEY: "your-key"
+      # ⭐ TAUTULLI API - Nécessaire pour la détection des collections (succès franchise)
+      # Active la résolution dynamique des films dans chaque collection (Jurassic, HP, etc.)
+      # TAUTULLI_URL: "http://tautulli.local:8181"
+      # TAUTULLI_API_KEY: "your-api-key"
       
       # OVERSEERR_URL: "http://overseerr.local"
       # OVERSEERR_API_KEY: "your-key"

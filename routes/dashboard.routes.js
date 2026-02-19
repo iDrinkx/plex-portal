@@ -254,7 +254,7 @@ router.get("/badges", requireAuth, async (req, res) => {
       .map(a => a.id);
 
     if (secretsToCheck.length > 0 && isTautulliReady()) {
-      const newSecrets = evaluateSecretAchievements(username, joinedAtTs, secretsToCheck);
+      const newSecrets = await evaluateSecretAchievements(username, joinedAtTs, secretsToCheck);
       for (const [id, date] of Object.entries(newSecrets)) {
         if (dbUserId) {
           try { UserAchievementQueries.unlock(dbUserId, id, date, 'auto'); } catch(e) {}
@@ -699,38 +699,49 @@ router.get("/api/debug/secrets", requireAuth, (req, res) => {
   const norm = (req.session.user.username || '').toLowerCase();
   const out = { username: norm };
 
-  // 1. Toutes les rating_keys HP dans session_history_metadata
+  // Tables disponibles
   try {
-    const keys = tDb.prepare(`
-      SELECT DISTINCT rating_key, title FROM session_history_metadata
-      WHERE LOWER(title) LIKE 'harry potter%'
-    `).all();
-    out.hp_rating_keys = keys;
-  } catch(e) { out.hp_rating_keys_error = e.message; }
+    const tables = tDb.prepare(`SELECT name FROM sqlite_master WHERE type='table' ORDER BY name`).all();
+    out.tables = tables.map(t => t.name);
+  } catch(e) { out.tables_error = e.message; }
 
-  // 2. Sessions de l'utilisateur avec ces rating_keys
-  if (out.hp_rating_keys && out.hp_rating_keys.length) {
-    const ratingKeys = out.hp_rating_keys.map(k => k.rating_key);
-    const placeholders = ratingKeys.map(() => '?').join(', ');
+  // Chercher une table collections
+  for (const t of ['collections', 'library_collections', 'plex_collections', 'metadata_items']) {
     try {
-      const sessions = tDb.prepare(`
-        SELECT sh.rating_key, sh.stopped, sh.media_type
-        FROM session_history sh
-        JOIN users u ON sh.user_id = u.user_id
-        WHERE LOWER(u.username) = ?
-          AND sh.media_type = 'movie'
-          AND sh.rating_key IN (${placeholders})
-      `).all(norm, ...ratingKeys);
-      out.hp_user_sessions = sessions;
-      out.hp_distinct_count = new Set(sessions.map(s => s.rating_key)).size;
-    } catch(e) { out.hp_user_sessions_error = e.message; }
+      const cols = tDb.prepare(`PRAGMA table_info(${t})`).all();
+      if (cols.length) {
+        out[`table_${t}_columns`] = cols.map(c => c.name);
+        const sample = tDb.prepare(`SELECT * FROM ${t} LIMIT 3`).all();
+        out[`table_${t}_sample`] = sample;
+      }
+    } catch(e) {}
   }
 
-  // 3. username exact dans la table users (vérif)
+  // Test: via rating_key=10292 (HP) dans session_history_metadata
   try {
-    const users = tDb.prepare(`SELECT user_id, username, friendly_name FROM users WHERE LOWER(username) = ?`).all(norm);
-    out.matched_users = users;
-  } catch(e) { out.matched_users_error = e.message; }
+    const row = tDb.prepare(`SELECT * FROM session_history_metadata WHERE rating_key = 10292 LIMIT 1`).get();
+    out.hp_collection_key_test = row ? 'trouvé dans metadata' : 'absent de metadata';
+  } catch(e) { out.hp_collection_key_test = e.message; }
+
+  // Chercher les titres connus dans session_history_metadata pour trouver leurs rating_keys
+  const searches = [
+    { name: 'avengers', pattern: '%avengers%' },
+    { name: 'star_wars', pattern: '%star wars%' },
+    { name: 'lotr', pattern: '%seigneur%anneaux%' },
+    { name: 'singes', pattern: '%planète des singes%' },
+    { name: 'jurassic', pattern: '%jurassic%' },
+    { name: 'harry_potter', pattern: 'harry potter%' },
+  ];
+  out.rating_keys_by_title = {};
+  for (const s of searches) {
+    try {
+      const rows = tDb.prepare(`
+        SELECT rating_key, title FROM session_history_metadata
+        WHERE LOWER(title) LIKE ? GROUP BY rating_key
+      `).all(s.pattern);
+      out.rating_keys_by_title[s.name] = rows.map(r => ({ key: r.rating_key, title: r.title }));
+    } catch(e) {}
+  }
 
   tDb.close();
   res.json(out);

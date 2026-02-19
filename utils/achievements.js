@@ -334,12 +334,12 @@ const ACHIEVEMENTS = {
   // 🔒 SECRETS
   secrets: [
     {
-      id: "avenger",
-      name: "Avenger",
+      id: "marvel-fan",
+      name: "Marvel Fan",
       icon: "🦸",
-      description: "Fan de l'univers de Marvel",
+      description: "A regardé toute la collection Marvel Cinematic Universe",
       condition: (data) => false,
-      conditionText: "Fan de l'univers de Marvel",
+      conditionText: "A regardé toute la collection Marvel Cinematic Universe",
       getProgress: (data) => ({ current: 0, total: 1, percent: 0 }),
       unlockedDate: null,
       category: "secrets",

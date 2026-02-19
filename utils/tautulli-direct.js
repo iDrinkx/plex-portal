@@ -9,6 +9,63 @@ const path = require('path');
 
 let tautulliDb = null;
 
+// ── Cache mémoire des rating_keys par collection (durée: 24h)
+const collectionCache = {};
+const COLLECTION_CACHE_TTL = 24 * 60 * 60 * 1000;
+
+/**
+ * 🗂️ Registry des collections Tautulli par achievement ID
+ * rating_key = identifiant Tautulli de la collection (visible dans l'URL /info?rating_key=...)
+ */
+const COLLECTION_KEYS = {
+  'potter-head':  { ratingKey: 10292 },  // Harry Potter - Saga
+  'clever-girl':  { ratingKey: 12634 },  // Jurassic Park - Saga
+  'marvel-fan':   { ratingKey: 306781 }, // Marvel Cinematic Universe
+  'dark-knight':  { ratingKey: 14715 },  // Star Wars (4 films min)
+  'black-knight': { ratingKey: 14715 },  // Star Wars (7 films min)
+  'tolkiendil':   { ratingKey: 17699 },  // Le Seigneur des Anneaux
+  'evolutionist': { ratingKey: 15344 },  // La Planète des Singes
+};
+
+// Pour dark-knight/black-knight : seuils minimum sur la même collection Star Wars
+const COLLECTION_MIN = {
+  'dark-knight':  4,
+  'black-knight': 7,
+};
+
+/**
+ * Récupère les rating_keys des films d'une collection via l'API Tautulli.
+ * Résultat mis en cache 24h. Renvoie null si API non configurée.
+ */
+async function getCollectionItemKeys(collectionRatingKey) {
+  const now = Date.now();
+  const cached = collectionCache[collectionRatingKey];
+  if (cached && (now - cached.ts) < COLLECTION_CACHE_TTL) {
+    return cached.keys;
+  }
+
+  const TAUTULLI_URL = process.env.TAUTULLI_URL;
+  const TAUTULLI_API_KEY = process.env.TAUTULLI_API_KEY;
+
+  if (!TAUTULLI_URL || !TAUTULLI_API_KEY) {
+    return null; // API non configurée → fallback titre
+  }
+
+  try {
+    const url = `${TAUTULLI_URL}/api/v2?apikey=${TAUTULLI_API_KEY}&cmd=get_children&rating_key=${collectionRatingKey}`;
+    const resp = await fetch(url);
+    const json = await resp.json();
+    const children = json?.response?.data?.children_list || [];
+    const keys = children.map(c => c.rating_key).filter(Boolean);
+    collectionCache[collectionRatingKey] = { keys, ts: now };
+    console.log(`[TAUTULLI-DIRECT] 📚 Collection ${collectionRatingKey}: ${keys.length} films cachés`);
+    return keys;
+  } catch(e) {
+    console.error(`[TAUTULLI-DIRECT] ❌ Erreur get_children collection ${collectionRatingKey}:`, e.message);
+    return null;
+  }
+}
+
 /**
  * Initialiser la connexion à la DB Tautulli
  * En lecture seule pour éviter tout risque de corruption
@@ -370,7 +427,7 @@ function getAchievementUnlockDates(username, joinedAtTimestamp) {
 /**
  * 🔍 Évaluer les succès secrets auto-détectables depuis l'historique Tautulli
  */
-function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckIds = []) {
+async function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckIds = []) {
   const results = {};
   if (!tautulliDb || toCheckIds.length === 0) return results;
 
@@ -379,37 +436,24 @@ function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckIds = []
   const today = new Date().toLocaleDateString('fr-FR');
 
   /**
-   * Compte les films distincts regardés par l'utilisateur dont le titre matche un pattern LIKE.
-   * Stratégie : session_history_metadata sert de lookup (rating_key par titre),
-   * puis on compte les sessions dans session_history via sh.rating_key (pas de JOIN id=id).
+   * Compte les films regardés par l'utilisateur via le titre (LIKE patterns).
+   * session_history_metadata = lookup rating_key, session_history = sessions user.
    */
   const countMoviesByLike = (patterns) => {
     try {
       const orClauses = patterns.map(() => 'LOWER(shm.title) LIKE ?').join(' OR ');
-
-      // Étape 1 : obtenir les rating_keys correspondant aux titres (tous utilisateurs)
-      const keysSql = `
-        SELECT DISTINCT rating_key FROM session_history_metadata shm
-        WHERE ${orClauses}
-      `;
-      const keys = tautulliDb.prepare(keysSql).all(...patterns.map(p => p.toLowerCase()));
-
+      const keys = tautulliDb.prepare(`
+        SELECT DISTINCT rating_key FROM session_history_metadata shm WHERE ${orClauses}
+      `).all(...patterns.map(p => p.toLowerCase()));
       if (!keys.length) return { cnt: 0, last_stopped: null };
-
       const ratingKeys = keys.map(k => k.rating_key);
-      const placeholders = ratingKeys.map(() => '?').join(', ');
-
-      // Étape 2 : compter les rating_keys DISTINCTS regardés par cet utilisateur
-      const sql = `
+      const ph = ratingKeys.map(() => '?').join(', ');
+      const row = tautulliDb.prepare(`
         SELECT COUNT(DISTINCT sh.rating_key) as cnt, MAX(sh.stopped) as last_stopped
-        FROM session_history sh
-        JOIN users u ON sh.user_id = u.user_id
-        WHERE LOWER(u.username) = ?
-          AND sh.stopped > sh.started
-          AND sh.media_type = 'movie'
-          AND sh.rating_key IN (${placeholders})
-      `;
-      const row = tautulliDb.prepare(sql).get(norm, ...ratingKeys);
+        FROM session_history sh JOIN users u ON sh.user_id = u.user_id
+        WHERE LOWER(u.username) = ? AND sh.stopped > sh.started
+          AND sh.media_type = 'movie' AND sh.rating_key IN (${ph})
+      `).get(norm, ...ratingKeys);
       return row || { cnt: 0, last_stopped: null };
     } catch(e) {
       console.error('[TAUTULLI-DIRECT] ❌ countMoviesByLike error:', e.message);
@@ -418,111 +462,104 @@ function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckIds = []
   };
 
   /**
-   * Compte les films dont le titre exact (EN ou FR) est dans la liste fournie.
-   * Même stratégie : lookup rating_key via metadata, puis count dans session_history.
+   * Compte les films regardés par l'utilisateur via une liste de rating_keys.
    */
-  const countMoviesByExactTitles = (titles) => {
+  const countMoviesByKeys = (ratingKeys) => {
+    if (!ratingKeys || !ratingKeys.length) return { cnt: 0, last_stopped: null };
     try {
-      const placeholdersTitles = titles.map(() => '?').join(', ');
-
-      // Étape 1 : rating_keys correspondant aux titres exacts
-      const keysSql = `
-        SELECT DISTINCT rating_key FROM session_history_metadata
-        WHERE LOWER(title) IN (${placeholdersTitles})
-      `;
-      const keys = tautulliDb.prepare(keysSql).all(...titles.map(t => t.toLowerCase()));
-
-      if (!keys.length) return { cnt: 0, last_stopped: null };
-
-      const ratingKeys = keys.map(k => k.rating_key);
-      const placeholders = ratingKeys.map(() => '?').join(', ');
-
-      // Étape 2 : compter les rating_keys DISTINCTS regardés par cet utilisateur
-      const sql = `
+      const ph = ratingKeys.map(() => '?').join(', ');
+      const row = tautulliDb.prepare(`
         SELECT COUNT(DISTINCT sh.rating_key) as cnt, MAX(sh.stopped) as last_stopped
-        FROM session_history sh
-        JOIN users u ON sh.user_id = u.user_id
-        WHERE LOWER(u.username) = ?
-          AND sh.stopped > sh.started
-          AND sh.media_type = 'movie'
-          AND sh.rating_key IN (${placeholders})
-      `;
-      const row = tautulliDb.prepare(sql).get(norm, ...ratingKeys);
+        FROM session_history sh JOIN users u ON sh.user_id = u.user_id
+        WHERE LOWER(u.username) = ? AND sh.stopped > sh.started
+          AND sh.media_type = 'movie' AND sh.rating_key IN (${ph})
+      `).get(norm, ...ratingKeys);
       return row || { cnt: 0, last_stopped: null };
     } catch(e) {
-      console.error('[TAUTULLI-DIRECT] ❌ countMoviesByExactTitles error:', e.message);
+      console.error('[TAUTULLI-DIRECT] ❌ countMoviesByKeys error:', e.message);
       return { cnt: 0, last_stopped: null };
     }
+  };
+
+  /**
+   * Évalue un succès de type "toute la collection regardée".
+   * Priorité : API Tautulli (collection rating_key) → fallback titres LIKE.
+   */
+  const checkCollection = async (id, fallbackPatterns, minRequired = null) => {
+    const conf = COLLECTION_KEYS[id];
+    // Essai via API Tautulli (collection exacte, taille dynamique)
+    if (conf?.ratingKey) {
+      const keys = await getCollectionItemKeys(conf.ratingKey);
+      if (keys && keys.length > 0) {
+        const row = countMoviesByKeys(keys);
+        const required = minRequired ?? keys.length; // seuil min ou toute la collection
+        console.log(`[TAUTULLI-DIRECT] ${id} (collection): ${row.cnt}/${required} films`);
+        if (row.cnt >= required) return fmt(row.last_stopped) || today;
+        return null;
+      }
+    }
+    // Fallback : matching par titre LIKE + seuil requis
+    if (fallbackPatterns && minRequired) {
+      const row = countMoviesByLike(fallbackPatterns);
+      console.log(`[TAUTULLI-DIRECT] ${id} (fallback titre): ${row.cnt}/${minRequired} films`);
+      if (row.cnt >= minRequired) return fmt(row.last_stopped) || today;
+    }
+    return null;
   };
 
   console.log(`[TAUTULLI-DIRECT] 🔍 Évaluation secrets pour ${norm}: [${toCheckIds.join(', ')}]`);
 
   try {
     for (const id of toCheckIds) {
-      let row;
+      let date;
       switch (id) {
 
-        // 🦕 Survivant du Parc — Les 6 films Jurassic (Park + World)
+        // 🦕 Survivant du Parc — Toute la saga Jurassic
         case 'clever-girl': {
-          row = countMoviesByLike(['%jurassic%']);
-          console.log(`[TAUTULLI-DIRECT] clever-girl: ${row.cnt}/6 films Jurassic`);
-          if (row.cnt >= 6) results[id] = fmt(row.last_stopped) || today;
+          date = await checkCollection(id, ['%jurassic%'], 7);
+          if (date) results[id] = date;
           break;
         }
 
-        // ⚡ Potterhead — 8 films Harry Potter (EN: "Harry Potter...", FR: "Harry Potter...")
+        // ⚡ Potterhead — Les 8 films Harry Potter
         case 'potter-head': {
-          // Même préfixe EN et FR
-          row = countMoviesByLike(['harry potter%']);
-          console.log(`[TAUTULLI-DIRECT] potter-head: ${row.cnt}/8 films HP`);
-          if (row.cnt >= 8) results[id] = fmt(row.last_stopped) || today;
+          date = await checkCollection(id, ['harry potter%'], 8);
+          if (date) results[id] = date;
           break;
         }
 
-        // 🦸 Avenger — Les 4 films Avengers (EN & FR variants)
-        case 'avenger': {
-          row = countMoviesByLike(['%avengers%']);
-          // On cherche les 4 films principaux dans les résultats
-          const avengersEN = ['the avengers', 'avengers: age of ultron', 'avengers: infinity war', 'avengers: endgame'];
-          const avengersAlt = ['avengers', "avengers : l'ère d'ultron", 'avengers : infinity war', 'avengers : endgame',
-                               'avengers: l\'ère d\'ultron'];
-          const rowExact = countMoviesByExactTitles([...avengersEN, ...avengersAlt]);
-          console.log(`[TAUTULLI-DIRECT] avenger: ${rowExact.cnt}/4 films Avengers`);
-          if (rowExact.cnt >= 4) results[id] = fmt(rowExact.last_stopped) || today;
-          // Fallback LIKE si exact échoue (titres légèrement différents)
-          else if (row.cnt >= 4) results[id] = fmt(row.last_stopped) || today;
+        // 🦸 Marvel Fan — Toute la collection MCU
+        case 'marvel-fan': {
+          date = await checkCollection(id, ['%marvel%', '%avengers%']);
+          if (date) results[id] = date;
           break;
         }
 
-        // 🗡️ Chevalier Noir — 4 films Star Wars
+        // 🗡️ Chevalier Noir — 4 films Star Wars minimum
         case 'dark-knight': {
-          row = countMoviesByLike(['%star wars%']);
-          console.log(`[TAUTULLI-DIRECT] dark-knight: ${row.cnt}/4 films Star Wars`);
-          if (row.cnt >= 4) results[id] = fmt(row.last_stopped) || today;
+          date = await checkCollection(id, ['%star wars%'], COLLECTION_MIN['dark-knight']);
+          if (date) results[id] = date;
           break;
         }
 
-        // 🧑‍⚖️ Maître Jedi — 7 films Star Wars
+        // 🧑‍⚖️ Maître Jedi — 7 films Star Wars minimum
         case 'black-knight': {
-          row = countMoviesByLike(['%star wars%']);
-          console.log(`[TAUTULLI-DIRECT] black-knight: ${row.cnt}/7 films Star Wars`);
-          if (row.cnt >= 7) results[id] = fmt(row.last_stopped) || today;
+          date = await checkCollection(id, ['%star wars%'], COLLECTION_MIN['black-knight']);
+          if (date) results[id] = date;
           break;
         }
 
-        // 👑 Tolkiendil — Trilogie Seigneur des Anneaux (EN & FR)
+        // 👑 Tolkiendil — Trilogie Seigneur des Anneaux
         case 'tolkiendil': {
-          row = countMoviesByLike(['%lord of the rings%', '%seigneur des anneaux%']);
-          console.log(`[TAUTULLI-DIRECT] tolkiendil: ${row.cnt}/3 films LOTR`);
-          if (row.cnt >= 3) results[id] = fmt(row.last_stopped) || today;
+          date = await checkCollection(id, ['%lord of the rings%', '%seigneur des anneaux%'], 3);
+          if (date) results[id] = date;
           break;
         }
 
-        // 🐵 Évolutionniste — Trilogie Planète des Singes (EN & FR)
+        // 🐵 Évolutionniste — Trilogie Planète des Singes
         case 'evolutionist': {
-          row = countMoviesByLike(['%planet of the apes%', '%planète des singes%', '%planet des singes%']);
-          console.log(`[TAUTULLI-DIRECT] evolutionist: ${row.cnt}/3 films Apes`);
-          if (row.cnt >= 3) results[id] = fmt(row.last_stopped) || today;
+          date = await checkCollection(id, ['%planet of the apes%', '%planète des singes%'], 3);
+          if (date) results[id] = date;
           break;
         }
 
