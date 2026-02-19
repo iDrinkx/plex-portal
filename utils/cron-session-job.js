@@ -54,10 +54,10 @@ function startSessionCronJob(TAUTULLI_URL, TAUTULLI_API_KEY, PLEX_URL, PLEX_TOKE
 /**
  * Lance une mise à jour manuelle du cache (pour tester ou forcer)
  */
-async function updateAllManual(TRACEARR_URL, TRACEARR_API_KEY, PLEX_URL, PLEX_TOKEN, userList) {
+async function updateAllManual(TAUTULLI_URL, TAUTULLI_API_KEY, PLEX_URL, PLEX_TOKEN, userList) {
   console.log("\n========== [MANUAL-UPDATE] DEBUT - Mise a jour manuelle des sessions ==========");
   
-  const result = await updateAllUsersSessionCache(TRACEARR_URL, TRACEARR_API_KEY, PLEX_URL, PLEX_TOKEN, userList);
+  const result = await scanTautulliHistoryForAllUsers(TAUTULLI_URL, TAUTULLI_API_KEY);
   
   console.log("========== [MANUAL-UPDATE] FIN ==========\n");
   return result;

@@ -66,10 +66,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   };
 
   /* ===============================
-     📊 LOAD TRACEARR STATS
+     📊 LOAD TAUTULLI STATS
   =============================== */
 
-  async function loadTracearrStats() {
+  async function loadTautulliStats() {
     try {
       let data = cacheManager.get("statsCache");
 
@@ -95,7 +95,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       return { joined, last };
     } catch (err) {
-      console.error("Tracearr error:", err);
+      console.error("Tautulli error:", err);
       return null;
     }
   }
@@ -137,23 +137,23 @@ document.addEventListener("DOMContentLoaded", async () => {
   =============================== */
 
   try {
-    const [tracearrData, overseerrData] = await Promise.all([
-      loadTracearrStats(),
+    const [tautulliData, overseerrData] = await Promise.all([
+      loadTautulliStats(),
       loadOverseerrStats()
     ]);
 
     let html = "";
 
-    if (tracearrData) {
+    if (tautulliData) {
       html += `
         <div style="margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid #333;">
           <div class="subscription-row">
             <span class="label">📅 Membre depuis</span>
-            <span class="value">${tracearrData.joined}</span>
+            <span class="value">${tautulliData.joined}</span>
           </div>
           <div class="subscription-row">
             <span class="label">🕒 Dernière activité</span>
-            <span class="value">${tracearrData.last}</span>
+            <span class="value">${tautulliData.last}</span>
           </div>
         </div>
       `;
@@ -179,7 +179,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       `;
     }
 
-    if (!tracearrData && !overseerrData) {
+    if (!tautulliData && !overseerrData) {
       html = "<p>Aucune donnée disponible.</p>";
     }
 

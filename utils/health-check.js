@@ -43,7 +43,7 @@ async function runHealthCheck() {
   // ✅ Vérifier l'EventEmitter
   console.log("[HC] 📢 Vérification EventEmitter...");
   try {
-    if (TracearrEvents && TracearrEvents.on) {
+    if (TautulliEvents && TautulliEvents.on) {
       console.log("[HC]   ✅ EventEmitter opérationnel");
       checks.push({ name: "EventEmitter", status: "✅ OK", detail: "À l'écoute des événements" });
     } else {
@@ -60,8 +60,8 @@ async function runHealthCheck() {
   // ✅ Vérifier les variables d'environnement
   console.log("[HC] ⚙️  Vérification configuration...");
   const configChecks = {
-    TRACEARR_URL: process.env.TRACEARR_URL ? "✅" : "❌",
-    TRACEARR_API_KEY: process.env.TRACEARR_API_KEY ? "✅" : "❌",
+    TAUTULLI_URL: process.env.TAUTULLI_URL ? "✅" : "❌",
+    TAUTULLI_API_KEY: process.env.TAUTULLI_API_KEY ? "✅" : "❌",
     PLEX_URL: process.env.PLEX_URL ? "✅" : "❌",
     PLEX_TOKEN: process.env.PLEX_TOKEN ? "✅" : "❌",
     WIZARR_URL: process.env.WIZARR_URL ? "✅" : "⚠️",

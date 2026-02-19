@@ -287,15 +287,15 @@ WIZARR_URL=http://192.168.10.100:5290
 WIZARR_API_KEY=your-key
 ```
 
-### Tracearr (Statistiques de visionnage)
+### Tautulli (Statistiques de visionnage)
 
-1. IP interne Tracearr: `192.168.10.100:7500`
-2. Obtenir la clé API dans Tracearr: Settings ➜ API
+1. IP interne Tautulli: `192.168.10.100:8181`
+2. Obtenir la clé API dans Tautulli: Web Interface ➜ Settings ➜ API
 
 Ajouter aux environment variables:
 ```
-TRACEARR_URL=http://192.168.10.100:7500
-TRACEARR_API_KEY=your-key
+TAUTULLI_URL=http://192.168.10.100:8181
+TAUTULLI_API_KEY=your-key
 ```
 
 ---

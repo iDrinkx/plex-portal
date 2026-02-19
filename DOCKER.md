@@ -58,8 +58,8 @@ services:
 | `BASE_PATH` | ❌ | Auto-détecté via headers |
 | `WIZARR_URL` | ❌ | URL Wizarr (optionnel) |
 | `WIZARR_API_KEY` | ❌ | Clé API Wizarr |
-| `TRACEARR_URL` | ❌ | URL Tracearr (optionnel) |
-| `TRACEARR_API_KEY` | ❌ | Clé API Tracearr |
+| `TAUTULLI_URL` | ❌ | URL Tautulli (optionnel) |
+| `TAUTULLI_API_KEY` | ❌ | Clé API Tautulli |
 | `DEBUG` | ❌ | Affiche logs de détection |
 
 ---
@@ -207,12 +207,12 @@ environment:
   WIZARR_API_KEY: "your-key"
 ```
 
-### Tracearr
+### Tautulli
 
 ```yaml
 environment:
-  TRACEARR_URL: "http://192.168.10.100:7500"
-  TRACEARR_API_KEY: "your-key"
+  TAUTULLI_URL: "http://192.168.10.100:8181"
+  TAUTULLI_API_KEY: "your-key"
 ```
 
 ---

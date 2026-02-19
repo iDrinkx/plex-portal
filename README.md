@@ -7,7 +7,7 @@ Application web pour gérer votre accès Plex, afficher les abonnements et les s
 - 🔐 **Authentification Plex** - Connectez-vous avec votre compte Plex
 - 📊 **Dashboard** - Affichage des informations d'accès
 - 💳 **Gestion des abonnements** - Affichage des abonnements Wizarr (optionnel)
-- 📈 **Statistiques** - Historique de visionnage via Tracearr (optionnel)
+- 📈 **Statistiques** - Historique de visionnage via Tautulli (optionnel)
 - 🌐 **Support Reverse Proxy Automatique** - Détection auto via headers X-Forwarded-*
 - 🚀 **Configuration Minimale** - Juste` SESSION_SECRET` en env var!
 
@@ -19,7 +19,7 @@ Application web pour gérer votre accès Plex, afficher les abonnements et les s
 
 - Docker & Docker Compose
 - Compte Plex
-- _(Optionnel)_ Wizarr ou Tracearr
+- _(Optionnel)_ Wizarr ou Tautulli
 
 ### Démarrer en local (30 secondes!)
 
@@ -89,7 +89,7 @@ plex-portal/
 │
 ├── utils/
 │   ├── wizarr.js
-│   └── tracearr.js
+│   └── tautulli.js
 │
 ├── config/
 │   └── logo.png
@@ -148,8 +148,8 @@ environment:
   DEBUG: "true"                         # Affiche logs
   WIZARR_URL: "http://wizarr.local"
   WIZARR_API_KEY: "key"
-  TRACEARR_URL: "http://tracearr.local"
-  TRACEARR_API_KEY: "key"
+  TAUTULLI_URL: "http://tautulli.local"
+  TAUTULLI_API_KEY: "key"
 ```
 
 ---
@@ -277,8 +277,8 @@ SESSION_SECRET=your-secret-key             # Clé secrète sessions
 BASE_PATH=/plex-portal                     # Si derrière reverse proxy
 WIZARR_URL=http://wizarr.local             # Instance Wizarr
 WIZARR_API_KEY=your-key                    # Clé API Wizarr
-TRACEARR_URL=http://tracearr.local         # Instance Tracearr
-TRACEARR_API_KEY=your-key                  # Clé API Tracearr
+TAUTULLI_URL=http://tautulli.local         # Instance Tautulli
+TAUTULLI_API_KEY=your-key                  # Clé API Tautulli
 ```
 
 ---
@@ -392,4 +392,4 @@ Ce projet est sous [MIT License](LICENSE)
 
 - [Plex](https://plex.tv/) - Pour leur API
 - [Wizarr](https://github.com/wizarr-io/wizarr) - Gestion des invitations
-- [Tracearr](https://github.com/Fladro/Tracearr) - Statistiques de visionnage
+- [Tautulli](https://github.com/Tautulli/Tautulli) - Statistiques de visionnage

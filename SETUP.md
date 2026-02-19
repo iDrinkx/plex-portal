@@ -172,15 +172,15 @@ ports:
 
 ## 📊 Options avancées (optionnel)
 
-Si vous avez Wizarr ou Tracearr:
+Si vous avez Wizarr ou Tautulli:
 
 ```yaml
 environment:
   SESSION_SECRET: "your-key"
   WIZARR_URL: "http://192.168.10.100:5290"
   WIZARR_API_KEY: "your-key"
-  TRACEARR_URL: "http://192.168.10.100:7500"
-  TRACEARR_API_KEY: "your-key"
+  TAUTULLI_URL: "http://192.168.10.100:8181"
+  TAUTULLI_API_KEY: "your-key"
   DEBUG: "true"  # Affiche logs de détection
 ```
 

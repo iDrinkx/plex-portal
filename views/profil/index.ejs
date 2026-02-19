@@ -603,10 +603,10 @@
   }
 
   /* ===============================
-     📊 LOAD TRACEARR STATS
+     📊 LOAD TAUTULLI STATS
   =============================== */
 
-  async function loadTracearrStats() {
+  async function loadTautulliStats() {
     try {
       console.log("[STATS] Démarrage fetch...");
       const url = basePath + "/api/stats";
@@ -770,7 +770,7 @@
         loadSubscription()
       ]);
       
-      // ÉTAPE 2: Afficher immédiatement Overseerr + Wizarr (sans attendre Tracearr)
+      // ÉTAPE 2: Afficher immédiatement Overseerr + Wizarr (sans attendre Tautulli)
       const overseerrData = overseerrRes.status === 'fulfilled' ? overseerrRes.value || { total: 0, pending: 0, approved: 0, available: 0 } : { total: 0, pending: 0, approved: 0, available: 0 };
       const subscriptionData = subscriptionRes.status === 'fulfilled' ? subscriptionRes.value || {} : {};
       
@@ -820,26 +820,26 @@
         subCardEl.innerHTML = `<p style="color: #aaa;">Aucune donnée d'abonnement disponible</p>`;
       }
       
-      // ÉTAPE 3: Charger Tracearr en PARALLÈLE (peut prendre du temps)
-      console.log("[PROFIL] Chargement Tracearr en arrière-plan (avec polling)...");
-      const tracearrRes = await Promise.allSettled([loadTracearrStats()]);
+      // ÉTAPE 3: Charger Tautulli en PARALLÈLE (peut prendre du temps)
+      console.log("[PROFIL] Chargement Tautulli en arrière-plan (avec polling)...");
+      const tautulliRes = await Promise.allSettled([loadTautulliStats()]);
       
-      // Extraire les données Tracearr du promise
-      const tracearrData = tracearrRes[0].status === 'fulfilled' ? tracearrRes[0].value || {} : {};
-      const stats = tracearrData;
+      // Extraire les données Tautulli du promise
+      const tautulliData = tautulliRes[0].status === 'fulfilled' ? tautulliRes[0].value || {} : {};
+      const stats = tautulliData;
       const overseerr = overseerrData;
       const subscription = subscriptionData;
 
-      console.log("[PROFIL] ✅ Données chargées - Tracearr:", tracearrData);
+      console.log("[PROFIL] ✅ Données chargées - Tautulli:", tautulliData);
 
-      // Afficher les stats Tracearr
+      // Afficher les stats Tautulli
       const joinedEl = document.getElementById("joinedDate");
       const activityEl = document.getElementById("lastActivity");
       console.log("[DOM] joinedDate element:", joinedEl);
       console.log("[DOM] lastActivity element:", activityEl);
       
       // Déclarer les variables que nous utiliserons partout
-      let tracearrSessionCount = 0;
+      let tautulliSessionCount = 0;
       
       // Vérifier si les données sont en cours de calcul
       if (stats.status === "computing") {
@@ -850,23 +850,23 @@
         const sessionEl2 = document.getElementById("sessionCount2");
         if (sessionEl) sessionEl.textContent = "Calcul en cours...";
         if (sessionEl2) sessionEl2.textContent = "Calcul en cours...";
-        tracearrSessionCount = 0;
+        tautulliSessionCount = 0;
       } else {
         if (joinedEl) joinedEl.textContent = stats.joinedAt ? formatFullDate(stats.joinedAt) : "N/A";
         if (activityEl) activityEl.textContent = stats.lastActivity ? formatRelativeTime(stats.lastActivity) : "Aucune";
 
-        tracearrSessionCount = stats.sessionCount || 0;
+        tautulliSessionCount = stats.sessionCount || 0;
         const sessionEl = document.getElementById("sessionCount");
         const sessionEl2 = document.getElementById("sessionCount2");
-        console.log("[DOM] sessionCount element:", sessionEl, "value:", tracearrSessionCount);
+        console.log("[DOM] sessionCount element:", sessionEl, "value:", tautulliSessionCount);
         
-        if (sessionEl) sessionEl.textContent = tracearrSessionCount;
-        if (sessionEl2) sessionEl2.textContent = tracearrSessionCount + " sessions";
+        if (sessionEl) sessionEl.textContent = tautulliSessionCount;
+        if (sessionEl2) sessionEl2.textContent = tautulliSessionCount + " sessions";
       }
 
       // Calculer l'XP
-      const totalXp = tracearrSessionCount * 2 + (overseerr.total || 0) * 15;
-      console.log("[XP] Calcul: " + tracearrSessionCount + "*2 + " + (overseerr.total||0) + "*15 = " + totalXp);
+      const totalXp = tautulliSessionCount * 2 + (overseerr.total || 0) * 15;
+      console.log("[XP] Calcul: " + tautulliSessionCount + "*2 + " + (overseerr.total||0) + "*15 = " + totalXp);
       
       const badge = XP_SYSTEM.getBadgeByXp(totalXp);
       const progress = XP_SYSTEM.getProgressToNextBadge(totalXp);
@@ -919,7 +919,7 @@
       const formulaTotalEl = document.getElementById("totalXpFormula");
       console.log("[DOM] FormulaSessions:", !!formulaSessionEl, "Requests:", !!formulaRequestEl);
       
-      if (formulaSessionEl) formulaSessionEl.textContent = `${tracearrSessionCount} × 2 = ${tracearrSessionCount * 2} XP`;
+      if (formulaSessionEl) formulaSessionEl.textContent = `${tautulliSessionCount} × 2 = ${tautulliSessionCount * 2} XP`;
       if (formulaRequestEl) formulaRequestEl.textContent = `${overseerr.total} × 15 = ${overseerr.total * 15} XP`;
       if (formulaTotalEl) formulaTotalEl.textContent = `${totalXp} XP`;
 
@@ -944,7 +944,7 @@
         // Puis mettre à jour les éléments DOM sans reload
         (async () => {
           try {
-            console.log("[PROFIL-UPDATE] Attente du scan Tracearr...");
+            console.log("[PROFIL-UPDATE] Attente du scan Tautulli...");
             const waitRes = await fetch(basePath ? `${basePath}/api/stats-wait` : "/api/stats-wait");
             
             if (!waitRes.ok) throw new Error("Wait API error");

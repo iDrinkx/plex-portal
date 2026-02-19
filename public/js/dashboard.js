@@ -125,7 +125,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   /* =====================================
-     📊 STATS (Tracearr + Overseerr)
+     📊 STATS (Tautulli + Overseerr)
   ===================================== */
 
   async function loadStats() {
@@ -133,15 +133,15 @@ document.addEventListener("DOMContentLoaded", async () => {
     const contentEl = document.getElementById("statsContent");
 
     try {
-      // Charger Tracearr stats
-      let tracearrData = cacheManager.get("statsCache", STATS_CACHE_DURATION);
-      if (!tracearrData) {
+      // Charger Tautulli stats
+      let tautulliData = cacheManager.get("statsCache", STATS_CACHE_DURATION);
+      if (!tautulliData) {
         const res = await fetch(basePath + "/api/stats", {
           headers: { "Accept": "application/json" }
         });
         if (!res.ok) throw new Error("stats_api_error");
-        tracearrData = await res.json();
-        cacheManager.set("statsCache", tracearrData);
+        tautulliData = await res.json();
+        cacheManager.set("statsCache", tautulliData);
       }
 
       // Charger Overseerr stats
@@ -156,10 +156,10 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
 
       // Vérifier si on a au moins une donnée
-      const hasTracearrData = tracearrData && (tracearrData.joinedAt || tracearrData.lastActivity);
+      const hasTautulliData = tautulliData && (tautulliData.joinedAt || tautulliData.lastActivity);
       const hasOverseerrData = overseerrData && overseerrData.total > 0;
 
-      if (!hasTracearrData && !hasOverseerrData) {
+      if (!hasTautulliData && !hasOverseerrData) {
         statusEl.className = "status-mini loading";
         statusEl.textContent = "Indispo";
         contentEl.innerHTML = `<p class="subscription-loading">Données indisponibles.</p>`;
@@ -171,9 +171,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       let html = "";
 
-      // Afficher derniere activité Tracearr en format relatif
-      if (hasTracearrData && tracearrData.lastActivity) {
-        const last = formatRelativeTime(tracearrData.lastActivity);
+      // Afficher derniere activité Tautulli en format relatif
+      if (hasTautulliData && tautulliData.lastActivity) {
+        const last = formatRelativeTime(tautulliData.lastActivity);
         html += `<p style="font-size:14px; margin-bottom:6px;">🕒 Dernière activité : <strong>${last}</strong></p>`;
       }
 
@@ -202,14 +202,14 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (!avatarEl) return;
 
       // Charger stats et overseerr
-      let tracearrData = cacheManager.get("statsCache", STATS_CACHE_DURATION);
-      if (!tracearrData) {
+      let tautulliData = cacheManager.get("statsCache", STATS_CACHE_DURATION);
+      if (!tautulliData) {
         const res = await fetch(basePath + "/api/stats", {
           headers: { "Accept": "application/json" }
         });
         if (!res.ok) return;
-        tracearrData = await res.json();
-        cacheManager.set("statsCache", tracearrData);
+        tautulliData = await res.json();
+        cacheManager.set("statsCache", tautulliData);
       }
 
       let overseerrData = cacheManager.get("overseerrCache", STATS_CACHE_DURATION);
@@ -223,7 +223,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
 
       // Calculer l'XP
-      const sessionCount = tracearrData?.sessionCount || 0;
+      const sessionCount = tautulliData?.sessionCount || 0;
       const totalRequests = overseerrData?.total || 0;
       const totalXp = sessionCount * 2 + totalRequests * 15;
 
