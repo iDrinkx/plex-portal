@@ -145,10 +145,10 @@
     </div>
   </div>
 
-  <!-- SECTION BADGES -->
+  <!-- SECTION SUCCÈS -->
   <div class="badges-section">
     <div class="badges-header-with-link">
-      <h2>🏆 Progression des Badges</h2>
+      <h2>🏆 Progression des Succès</h2>
       <a href="<%= basePath %>/badges" class="view-more-link">Voir plus →</a>
     </div>
     <div class="badges-container" id="badgesContainer"></div>
@@ -178,7 +178,7 @@
 
         <div class="xp-source">
           <div class="source-header">
-            <span class="source-name">🏅 Badges débloqués</span>
+            <span class="source-name">🏅 Succès débloqués</span>
             <span class="source-value" id="xpBadgesValue">0</span>
           </div>
           <div class="source-bar">
@@ -218,7 +218,7 @@
         <div class="detail-card badges-card">
           <div class="detail-icon">🏅</div>
           <div class="detail-info">
-            <div class="detail-label">Badges débloqués</div>
+            <div class="detail-label">Succès débloqués</div>
             <div class="detail-value" id="detailProfilBadges"><%= unlockedBadgesCount %><%= totalBadgesCount ? '/' + totalBadgesCount : '' %></div>
           </div>
         </div>
@@ -1235,9 +1235,13 @@
       const xpBadgesBar = document.getElementById("xpBadgesBar");
       const xpBadgesPercent = document.getElementById("xpBadgesPercent");
       
+      // Barre = % de l'XP succès dans le total XP (cohérent avec les autres barres)
+      const totalBadges = <%= totalBadgesCount || 0 %>;
+      const successesUnlockedLabel = totalBadges > 0 ? unlockedBadgesCount + "/" + totalBadges + " succès" : unlockedBadgesCount + " succès";
+      
       if (xpBadgesValue) xpBadgesValue.textContent = badgesXp.toLocaleString() + " XP";
       if (xpBadgesBar) xpBadgesBar.style.width = badgesPercent + "%";
-      if (xpBadgesPercent) xpBadgesPercent.textContent = badgesPercent + "%";
+      if (xpBadgesPercent) xpBadgesPercent.textContent = badgesPercent + "% XP ("+successesUnlockedLabel+")";
 
       const xpAncienneteValue = document.getElementById("xpAncienneteValue");
       const xpAncienneteBar = document.getElementById("xpAncienneteBar");
