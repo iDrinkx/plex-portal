@@ -6,7 +6,7 @@ const XP_SYSTEM = {
       name: "Bronze",
       icon: "🔵",
       minXp: 0,
-      maxXp: 100,
+      maxXp: 500,
       color: "#5B9BD5",
       bgColor: "rgba(91, 155, 213, 0.1)",
       borderColor: "#5B9BD5"
@@ -15,8 +15,8 @@ const XP_SYSTEM = {
       level: 2,
       name: "Argent",
       icon: "⚪",
-      minXp: 100,
-      maxXp: 300,
+      minXp: 500,
+      maxXp: 1500,
       color: "#C0C0C0",
       bgColor: "rgba(192, 192, 192, 0.1)",
       borderColor: "#C0C0C0"
@@ -25,8 +25,8 @@ const XP_SYSTEM = {
       level: 3,
       name: "Or",
       icon: "🟡",
-      minXp: 300,
-      maxXp: 700,
+      minXp: 1500,
+      maxXp: 3500,
       color: "#E5A00D",
       bgColor: "rgba(229, 160, 13, 0.1)",
       borderColor: "#E5A00D"
@@ -35,8 +35,8 @@ const XP_SYSTEM = {
       level: 4,
       name: "Platine",
       icon: "💎",
-      minXp: 700,
-      maxXp: 1500,
+      minXp: 3500,
+      maxXp: 7000,
       color: "#00D9FF",
       bgColor: "rgba(0, 217, 255, 0.1)",
       borderColor: "#00D9FF"
@@ -45,8 +45,8 @@ const XP_SYSTEM = {
       level: 5,
       name: "Diamant",
       icon: "💎",
-      minXp: 1500,
-      maxXp: Infinity,
+      minXp: 7000,
+      maxXp: 10000,
       color: "#FF1493",
       bgColor: "rgba(255, 20, 147, 0.1)",
       borderColor: "#FF1493"
