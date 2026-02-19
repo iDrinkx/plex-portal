@@ -205,11 +205,14 @@ app.listen(PORT, async () => {
     try {
       const allStats = await loadAllUserStatsFromTautulli();
       console.log("[SETUP] ✅ Données Tautulli prêtes pour " + (allStats?.length || 0) + " utilisateurs");
+      if (allStats && allStats.length > 0) {
+        console.log("[SETUP]   Sample utilisateur:", allStats[0]?.username, "- sessions:", allStats[0]?.sessionCount);
+      }
     } catch (err) {
       console.warn("[SETUP] ⚠️  Impossible de charger les stats Tautulli:", err.message);
     }
   } else {
-    console.warn("[SETUP] ⚠️  Tautulli non configuré - certaines fonctionnalités désactivées");
+    console.warn("[SETUP] ⚠️  Tautulli DB non configuré - configure TAUTULLI_DB_PATH pour activer");
   }
   
   // 🏥 HEALTH CHECK au démarrage

@@ -43,6 +43,8 @@ async function getTautulliStats(username, TAUTULLI_URL, TAUTULLI_API_KEY, plexUs
     try {
       const { getUserStatsFromTautulli, isTautulliReady } = require("./tautulli-direct");
       
+      console.log("[TAUTULLI] 🔍 Vérification DB Tautulli - user:", normalizedUsername, "ready:", isTautulliReady());
+      
       if (isTautulliReady()) {
         const directStats = getUserStatsFromTautulli(normalizedUsername);
         if (directStats && directStats.sessionCount > 0) {

@@ -16,6 +16,8 @@ let tautulliDb = null;
 function initTautulliDatabase() {
   const TAUTULLI_DB_PATH = process.env.TAUTULLI_DB_PATH;
   
+  console.log("[TAUTULLI-DB] 🔍 Vérification TAUTULLI_DB_PATH:", TAUTULLI_DB_PATH || "NON CONFIGURÉ");
+  
   if (!TAUTULLI_DB_PATH) {
     console.warn("[TAUTULLI-DB] ⚠️  TAUTULLI_DB_PATH non configuré - fonctionnalités Tautulli désactivées");
     return false;
@@ -28,6 +30,7 @@ function initTautulliDatabase() {
     return true;
   } catch (err) {
     console.error("[TAUTULLI-DB] ❌ Erreur connexion Tautulli DB:", err.message);
+    console.error("[TAUTULLI-DB] ❌ Vérifiez que le chemin existe et est accessible");
     return false;
   }
 }
