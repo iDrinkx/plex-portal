@@ -807,16 +807,14 @@ router.get("/api/debug/tautulli-users", requireAuth, (req, res) => {
   const tDb = new Database(TAUTULLI_DB_PATH, { readonly: true });
   const myUsername = (req.session.user.username || '').toLowerCase();
   try {
-    // Tous les usernames distincts dans session_history
-    const users = tDb.prepare(`SELECT DISTINCT user, friendly_name FROM session_history ORDER BY user`).all();
     // Colonnes de session_history
     const cols = tDb.prepare(`PRAGMA table_info(session_history)`).all().map(c => c.name);
+    // Tous les usernames distincts dans session_history (colonnes dispo seulement)
+    const userCols = cols.filter(c => c.toLowerCase().includes('user') || c.toLowerCase().includes('name'));
+    const users = tDb.prepare(`SELECT DISTINCT ${userCols.join(', ')} FROM session_history ORDER BY user`).all();
     // Chercher _idrink ou variantes
     const matches = users.filter(u =>
-      (u.user || '').toLowerCase().includes('drink') ||
-      (u.friendly_name || '').toLowerCase().includes('drink') ||
-      (u.user || '').toLowerCase() === myUsername ||
-      (u.friendly_name || '').toLowerCase() === myUsername
+      Object.values(u).some(v => (v || '').toString().toLowerCase().includes('drink') || (v || '').toString().toLowerCase() === myUsername)
     );
     tDb.close();
     res.json({ my_session_username: myUsername, all_users: users, possible_matches: matches, sh_columns: cols });
