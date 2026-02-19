@@ -103,23 +103,6 @@ async function getTautulliStats(username, TAUTULLI_URL, TAUTULLI_API_KEY, plexUs
     // ⚠️ Pas de données trouvées
     console.log("[TAUTULLI] ⚠️  Pas de données pour cet utilisateur");
     return null;
-      return null;
-    }
-
-    console.log("[TAUTULLI] ✅ Utilisateur trouvé dans le scan:", username);
-    
-    const result = {
-      joinedAt: null,
-      lastActivity: sessionData.lastSessionTimestamp || null,
-      sessionCount: sessionData.sessionCount,
-      lastSessionTimestamp: sessionData.lastSessionTimestamp,
-      watchStats: sessionData.watchStats
-    };
-
-    // 💾 SAUVEGARDER DANS LE CACHE
-    SessionStatsCache.set(normalizedUsername, result);
-    
-    return result;
 
   } catch (err) {
     console.error("[TAUTULLI] Erreur:", err.message);
