@@ -336,9 +336,11 @@
                 <div class="achievement-secret-text">🔒 Badge secret</div>
               <% } else { %>
                 <!-- NON-SECRET VERROUILLÉ -->
+                <% const emptyData = { daysSince: 0, sessionCount: 0, totalHours: 0, movieCount: 0, episodeCount: 0 }; %>
+                <% const progInfo = achievement.getProgress ? achievement.getProgress(emptyData) : { current: 0, total: 100, percent: 0 }; %>
                 <div class="achievement-description"><%= achievement.conditionText %></div>
                 <div class="achievement-progress" id="progress-<%= achievement.id %>">
-                  <span class="current">0</span> / <span class="total">100</span> (<span class="percent">0</span>%)
+                  <span class="current">0</span> / <span class="total"><%= progInfo.total %></span> (<span class="percent">0</span>%)
                 </div>
                 <div class="achievement-progress-bar">
                   <div class="achievement-progress-fill" id="fill-<%= achievement.id %>" style="width: 0%"></div>
@@ -361,12 +363,16 @@
     fetch('<%= basePath %>/api/stats')
       .then(res => res.json())
       .then(stats => {
+        // Utiliser stats.joinedAt (API) en priorité, sinon joinedAtTimestamp de session
+        const joinedAtMs = stats.joinedAt
+          ? new Date(stats.joinedAt).getTime()
+          : (<%= user.joinedAtTimestamp || 0 %> * 1000);
         const data = {
           totalHours: stats.watchStats?.totalHours || 0,
           movieCount: stats.watchStats?.movieCount || 0,
           episodeCount: stats.watchStats?.episodeCount || 0,
           sessionCount: stats.sessionCount || 0,
-          daysSince: Math.floor((Date.now() - (<%= user.joinedAtTimestamp %> * 1000)) / (1000 * 60 * 60 * 24))
+          daysSince: joinedAtMs > 0 ? Math.floor((Date.now() - joinedAtMs) / (1000 * 60 * 60 * 24)) : 0
         };
 
         console.log("[BADGES-JS] Data:", data);
@@ -376,10 +382,12 @@
         updateProgress('first-anniversary', Math.min(data.daysSince, 365), 365);
         updateProgress('veteran', Math.min(data.daysSince, 730), 730);
         updateProgress('old-timer', Math.min(data.daysSince, 1825), 1825);
+        updateProgress('og', 0, 1);
 
         // Activités
         updateProgress('first-watch', Math.min(data.sessionCount, 1), 1);
         updateProgress('regular', Math.min(data.sessionCount, 7), 7);
+        updateProgress('night-owl', 0, 30);
         updateProgress('early-bird', Math.min(data.sessionCount, 50), 50);
         updateProgress('centurion', Math.min(Math.round(data.totalHours), 100), 100);
         updateProgress('marathoner', Math.min(Math.round(data.totalHours), 500), 500);
@@ -396,6 +404,10 @@
         updateProgress('series-addict', Math.min(data.episodeCount, 100), 100);
         updateProgress('series-master', Math.min(data.episodeCount, 500), 500);
         updateProgress('serial-killer-legend', Math.min(data.episodeCount, 1000), 1000);
+
+        // Mensuels (pas de données temps réel, affichage statique)
+        updateProgress('busy-month', 0, 50);
+        updateProgress('intense-month', 0, 100);
       })
       .catch(err => console.error('[BADGES-JS] Erreur:', err));
 

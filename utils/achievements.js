@@ -36,8 +36,8 @@ const ACHIEVEMENTS = {
       id: "old-timer",
       name: "Vieux de la Veille",
       icon: "👴",
-      description: "Plus de 10 ans d'ancienneté sur Dark TV",
-      condition: (data) => data.daysSince >= 3650,
+      description: "Plus de 5 ans d'ancienneté sur Dark TV",
+      condition: (data) => data.daysSince >= 1825,
       conditionText: "Plus de 5 ans d'ancienneté sur Dark TV",
       getProgress: (data) => ({
         current: Math.min(data.daysSince, 1825),
