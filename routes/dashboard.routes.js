@@ -692,7 +692,6 @@ router.post("/api/sync-tautulli-history", requireAuth, async (req, res) => {
 =============================== */
 router.get("/api/debug/secrets", requireAuth, (req, res) => {
   const { isTautulliReady } = require("../utils/tautulli-direct");
-  const { getDb } = require("../utils/database");
   if (!isTautulliReady()) return res.json({ error: 'Tautulli DB non disponible' });
 
   const Database = require('better-sqlite3');
@@ -700,54 +699,45 @@ router.get("/api/debug/secrets", requireAuth, (req, res) => {
   const norm = (req.session.user.username || '').toLowerCase();
   const out = {};
 
-  // Test 1 : session_history_metadata existe ?
+  // Colonnes de session_history_metadata
   try {
-    const sample = tDb.prepare(`SELECT id, title FROM session_history_metadata LIMIT 5`).all();
-    out.metadata_sample = sample;
-  } catch(e) { out.metadata_error = e.message; }
+    const cols = tDb.prepare(`PRAGMA table_info(session_history_metadata)`).all();
+    out.metadata_columns = cols.map(c => c.name);
+  } catch(e) { out.metadata_columns_error = e.message; }
 
-  // Test 2 : Films regardés par cet utilisateur (via metadata)
+  // Colonnes de session_history
   try {
-    const movies = tDb.prepare(`
-      SELECT shm.title, sh.media_type, sh.stopped
-      FROM session_history sh
-      JOIN users u ON sh.user_id = u.user_id
-      JOIN session_history_metadata shm ON sh.id = shm.id
-      WHERE LOWER(u.username) = ? AND sh.media_type = 'movie'
-      ORDER BY sh.stopped DESC LIMIT 20
-    `).all(norm);
-    out.movies_via_metadata = movies;
-  } catch(e) { out.movies_via_metadata_error = e.message; }
+    const cols = tDb.prepare(`PRAGMA table_info(session_history)`).all();
+    out.history_columns = cols.map(c => c.name);
+  } catch(e) {}
 
-  // Test 3 : Films regardés via rating_key (fallback)
+  // Exemple d'une ligne complète de session_history_metadata (film)
   try {
-    const movies2 = tDb.prepare(`
-      SELECT sh.rating_key, sh.media_type, sh.stopped
-      FROM session_history sh
-      JOIN users u ON sh.user_id = u.user_id
-      WHERE LOWER(u.username) = ? AND sh.media_type = 'movie'
-      ORDER BY sh.stopped DESC LIMIT 20
-    `).all(norm);
-    out.movies_via_session_history = movies2;
-  } catch(e) { out.movies_session_error = e.message; }
+    const row = tDb.prepare(`
+      SELECT shm.* FROM session_history_metadata shm
+      JOIN session_history sh ON sh.id = shm.id
+      WHERE sh.media_type = 'movie' LIMIT 1
+    `).get();
+    out.metadata_movie_sample = row;
+  } catch(e) { out.metadata_movie_sample_error = e.message; }
 
-  // Test 4 : Chercher Harry Potter spécifiquement
+  // HP dans session_history_metadata (tous users, toutes colonnes)
   try {
     const hp = tDb.prepare(`
-      SELECT shm.title, sh.stopped
-      FROM session_history sh
-      JOIN users u ON sh.user_id = u.user_id
-      JOIN session_history_metadata shm ON sh.id = shm.id
-      WHERE LOWER(u.username) = ? AND LOWER(shm.title) LIKE 'harry potter%'
-    `).all(norm);
-    out.harry_potter = hp;
-  } catch(e) { out.harry_potter_error = e.message; }
+      SELECT shm.* FROM session_history_metadata shm
+      WHERE LOWER(shm.title) LIKE '%harry%' OR LOWER(shm.title) LIKE '%potter%'
+      LIMIT 5
+    `).all();
+    out.hp_metadata_rows = hp;
+  } catch(e) { out.hp_metadata_error = e.message; }
 
-  // Test 5 : Tables disponibles dans la DB Tautulli
+  // recently_added — contient-il les collections ?
   try {
-    const tables = tDb.prepare(`SELECT name FROM sqlite_master WHERE type='table' ORDER BY name`).all();
-    out.tables = tables.map(t => t.name);
-  } catch(e) { out.tables_error = e.message; }
+    const cols = tDb.prepare(`PRAGMA table_info(recently_added)`).all();
+    out.recently_added_columns = cols.map(c => c.name);
+    const sample = tDb.prepare(`SELECT * FROM recently_added LIMIT 3`).all();
+    out.recently_added_sample = sample;
+  } catch(e) { out.recently_added_error = e.message; }
 
   tDb.close();
   res.json(out);
