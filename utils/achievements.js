@@ -96,13 +96,13 @@ const ACHIEVEMENTS = {
       id: "night-owl",
       name: "Oiseau de Nuit",
       icon: "🦉",
-      description: "Plus de 30 visionages entre 22h et 6h",
-      condition: (data) => false,
-      conditionText: "Plus de 30 visionages entre 22h et 6h",
+      description: "Plus de 30 visionnages entre 22h et 6h",
+      condition: (data) => (data.nightCount || 0) >= 30,
+      conditionText: "Plus de 30 visionnages entre 22h et 6h",
       getProgress: (data) => ({
-        current: 0,
+        current: Math.min(data.nightCount || 0, 30),
         total: 30,
-        percent: 0
+        percent: Math.min(Math.round(((data.nightCount || 0) / 30) * 100), 100)
       }),
       unlockedDate: null,
       category: "activites"
@@ -112,12 +112,12 @@ const ACHIEVEMENTS = {
       name: "Lève-Tôt",
       icon: "🐦",
       description: "Plus de 50 visionnages entre 6h et 9h",
-      condition: (data) => data.sessionCount >= 50,
+      condition: (data) => (data.morningCount || 0) >= 50,
       conditionText: "Plus de 50 visionnages entre 6h et 9h",
       getProgress: (data) => ({
-        current: Math.min(data.sessionCount, 50),
+        current: Math.min(data.morningCount || 0, 50),
         total: 50,
-        percent: Math.min(Math.round((data.sessionCount / 50) * 100), 100)
+        percent: Math.min(Math.round(((data.morningCount || 0) / 50) * 100), 100)
       }),
       unlockedDate: null,
       category: "activites"
@@ -304,9 +304,13 @@ const ACHIEVEMENTS = {
       name: "Mois Chargé",
       icon: "📊",
       description: "50 heures de visionnage en un seul mois",
-      condition: (data) => false,
+      condition: (data) => (data.monthlyHours || 0) >= 50,
       conditionText: "50 heures de visionnage en un seul mois",
-      getProgress: (data) => ({ current: 0, total: 50, percent: 0 }),
+      getProgress: (data) => ({
+        current: Math.min(Math.round((data.monthlyHours || 0) * 10) / 10, 50),
+        total: 50,
+        percent: Math.min(Math.round(((data.monthlyHours || 0) / 50) * 100), 100)
+      }),
       unlockedDate: null,
       category: "mensuels"
     },
@@ -315,9 +319,13 @@ const ACHIEVEMENTS = {
       name: "Mois Intense",
       icon: "⚡",
       description: "100 heures de visionnage en un seul mois",
-      condition: (data) => false,
+      condition: (data) => (data.monthlyHours || 0) >= 100,
       conditionText: "100 heures de visionnage en un seul mois",
-      getProgress: (data) => ({ current: 0, total: 100, percent: 0 }),
+      getProgress: (data) => ({
+        current: Math.min(Math.round((data.monthlyHours || 0) * 10) / 10, 100),
+        total: 100,
+        percent: Math.min(Math.round(((data.monthlyHours || 0) / 100) * 100), 100)
+      }),
       unlockedDate: null,
       category: "mensuels"
     }

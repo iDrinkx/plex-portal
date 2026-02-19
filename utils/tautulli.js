@@ -49,11 +49,17 @@ async function getTautulliStats(username, TAUTULLI_URL, TAUTULLI_API_KEY, plexUs
         const directStats = getUserStatsFromTautulli(normalizedUsername);
         if (directStats && directStats.sessionCount > 0) {
           console.log("[TAUTULLI] ✅ Stats depuis DB Tautulli - sessionCount:", directStats.sessionCount);
+          const { getMonthlyHoursFromTautulli, getTimeBasedSessionCounts } = require("./tautulli-direct");
+          const monthlyHours = getMonthlyHoursFromTautulli(normalizedUsername);
+          const { nightCount, morningCount } = getTimeBasedSessionCounts(normalizedUsername);
           return {
             joinedAt: joinedAtTimestamp ? new Date(joinedAtTimestamp * 1000).toISOString() : null,
             lastActivity: directStats.lastSessionDate,
             sessionCount: directStats.sessionCount,
             lastSessionTimestamp: directStats.lastSessionDate,
+            monthlyHours: monthlyHours,
+            nightCount: nightCount,
+            morningCount: morningCount,
             watchStats: {
               totalHours: directStats.totalHours,
               movieHours: directStats.movieHours,

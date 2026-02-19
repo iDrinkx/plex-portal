@@ -128,6 +128,9 @@ router.get("/profil", requireAuth, async (req, res) => {
       movieCount: stats.watchStats?.movieCount || 0,
       episodeCount: stats.watchStats?.episodeCount || 0,
       sessionCount: stats.sessionCount || 0,
+      monthlyHours: stats.monthlyHours || 0,
+      nightCount: stats.nightCount || 0,
+      morningCount: stats.morningCount || 0,
       daysSince: Math.floor((Date.now() - (req.session.user.joinedAtTimestamp * 1000)) / (1000 * 60 * 60 * 24))
     };
 
@@ -181,6 +184,7 @@ router.get("/badges", requireAuth, async (req, res) => {
       movieCount: stats.watchStats?.movieCount || 0,
       episodeCount: stats.watchStats?.episodeCount || 0,
       sessionCount: stats.sessionCount || 0,
+      monthlyHours: stats.monthlyHours || 0,
       daysSince: Math.floor((Date.now() - (req.session.user.joinedAtTimestamp * 1000)) / (1000 * 60 * 60 * 24))
     };
 

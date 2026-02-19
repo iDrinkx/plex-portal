@@ -372,6 +372,9 @@
           movieCount: stats.watchStats?.movieCount || 0,
           episodeCount: stats.watchStats?.episodeCount || 0,
           sessionCount: stats.sessionCount || 0,
+          monthlyHours: stats.monthlyHours || 0,
+          nightCount: stats.nightCount || 0,
+          morningCount: stats.morningCount || 0,
           daysSince: joinedAtMs > 0 ? Math.floor((Date.now() - joinedAtMs) / (1000 * 60 * 60 * 24)) : 0
         };
 
@@ -387,8 +390,8 @@
         // Activités
         updateProgress('first-watch', Math.min(data.sessionCount, 1), 1);
         updateProgress('regular', Math.min(data.sessionCount, 7), 7);
-        updateProgress('night-owl', 0, 30);
-        updateProgress('early-bird', Math.min(data.sessionCount, 50), 50);
+        updateProgress('night-owl', Math.min(data.nightCount, 30), 30);
+        updateProgress('early-bird', Math.min(data.morningCount, 50), 50);
         updateProgress('centurion', Math.min(Math.round(data.totalHours), 100), 100);
         updateProgress('marathoner', Math.min(Math.round(data.totalHours), 500), 500);
 
@@ -405,9 +408,9 @@
         updateProgress('series-master', Math.min(data.episodeCount, 500), 500);
         updateProgress('serial-killer-legend', Math.min(data.episodeCount, 1000), 1000);
 
-        // Mensuels (pas de données temps réel, affichage statique)
-        updateProgress('busy-month', 0, 50);
-        updateProgress('intense-month', 0, 100);
+        // Mensuels
+        updateProgress('busy-month', Math.min(data.monthlyHours, 50), 50);
+        updateProgress('intense-month', Math.min(data.monthlyHours, 100), 100);
       })
       .catch(err => console.error('[BADGES-JS] Erreur:', err));
 
