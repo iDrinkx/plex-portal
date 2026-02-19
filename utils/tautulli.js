@@ -243,26 +243,12 @@ async function scanTautulliHistoryForAllUsers(TAUTULLI_URL, TAUTULLI_API_KEY) {
         
         const histJson = await histRes.json();
         
-        // Logs détaillés pour déboguer la structure
-        console.log("[TAUTULLI-SCAN] histJson keys:", Object.keys(histJson || {}).slice(0, 5));
-        console.log("[TAUTULLI-SCAN] histJson.response type:", typeof histJson?.response, "isArray:", Array.isArray(histJson?.response));
-        if (histJson?.response && !Array.isArray(histJson.response)) {
-          console.log("[TAUTULLI-SCAN] response est un objet avec keys:", Object.keys(histJson.response || {}).slice(0, 10));
-          console.log("[TAUTULLI-SCAN] response sample:", JSON.stringify(histJson.response).substring(0, 200));
-        }
+        // Structure Tautulli: { response: { result, message, data: { recordsFiltered, recordsTotal, data: [...sessions] } } }
+        const tautulliData = histJson.response?.data?.data || histJson.response?.data || histJson.data || [];
+        const sessions = Array.isArray(tautulliData) ? tautulliData : [];
         
-        // L'API Tautulli/get_history retourne { response: [...], draw, filter_duration, ... }
-        // response DOIT être un array de sessions
-        let sessions = [];
-        if (Array.isArray(histJson?.response)) {
-          sessions = histJson.response;
-        } else if (Array.isArray(histJson?.data)) {
-          sessions = histJson.data;
-        } else if (histJson?.response?.data && Array.isArray(histJson.response.data)) {
-          sessions = histJson.response.data;
-        }
-        
-        console.log("[TAUTULLI-SCAN] Page " + pagesScanned + " - Sessions found: " + sessions.length);
+        const recordsTotal = histJson.response?.data?.recordsTotal || histJson.recordsTotal || 0;
+        console.log("[TAUTULLI-SCAN] Page " + pagesScanned + " - Sessions: " + sessions.length + "/" + recordsTotal);
         
         if (!sessions || sessions.length === 0) {
           console.log("[TAUTULLI-SCAN] ✅ Pas plus de sessions - fin du scan");
@@ -271,7 +257,19 @@ async function scanTautulliHistoryForAllUsers(TAUTULLI_URL, TAUTULLI_API_KEY) {
         
         pagesScanned++;
         totalSessions += sessions.length;
-        console.log("[TAUTULLI-SCAN] Page", pagesScanned, '-', sessions.length, 'sessions (total:', totalSessions, ')');
+        console.log("[TAUTULLI-SCAN] Page " + pagesScanned + " - Sessions trouvées: " + sessions.length + " (total: " + totalSessions + " sur " + recordsTotal + ")");
+        
+        // Arrêter si on a atteint le total
+        if (totalSessions >= recordsTotal && recordsTotal > 0) {
+          console.log("[TAUTULLI-SCAN] ✅ All records fetched - total: " + totalSessions);
+          break;
+        }
+        
+        // Safeguard contre les boucles infinies (max 20 pages = 2000 sessions)
+        if (pagesScanned > 20 && totalSessions === 0) {
+          console.log("[TAUTULLI-SCAN] ⚠️ Limite de pages atteinte avec 0 sessions");
+          break;
+        }
         
         // Traiter chaque session
         for (const session of sessions) {
