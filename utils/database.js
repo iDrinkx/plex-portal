@@ -58,7 +58,7 @@ function runMigrations() {
     attemptAddColumn('tautulli_sessions', 'session_date', 'DATETIME');
     attemptAddColumn('tautulli_sessions', 'watched_status', 'REAL DEFAULT 0');
     attemptAddColumn('tautulli_sessions', 'rating_key', 'INTEGER');
-    attemptAddColumn('tautulli_sessions', 'session_hash', 'TEXT UNIQUE');
+    attemptAddColumn('tautulli_sessions', 'session_hash', 'TEXT');
     
     // Table: users
     db.exec(`
@@ -123,7 +123,7 @@ function runMigrations() {
         session_date DATETIME NOT NULL,
         watched_status REAL DEFAULT 0,
         rating_key INTEGER,
-        session_hash TEXT UNIQUE,
+        session_hash TEXT,
         synced_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
       )
@@ -180,7 +180,7 @@ function runMigrations() {
       CREATE INDEX IF NOT EXISTS idx_tautulli_sessions_user ON tautulli_sessions(user_id);
       CREATE INDEX IF NOT EXISTS idx_tautulli_sessions_username ON tautulli_sessions(username);
       CREATE INDEX IF NOT EXISTS idx_tautulli_sessions_timestamp ON tautulli_sessions(session_timestamp);
-      CREATE INDEX IF NOT EXISTS idx_tautulli_sessions_hash ON tautulli_sessions(session_hash);
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_tautulli_sessions_hash ON tautulli_sessions(session_hash) WHERE session_hash IS NOT NULL;
       CREATE INDEX IF NOT EXISTS idx_user_watch_stats_user ON user_watch_stats(user_id);
       CREATE INDEX IF NOT EXISTS idx_sync_metadata_type ON sync_metadata(sync_type);
     `);
