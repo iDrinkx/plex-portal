@@ -671,23 +671,28 @@ body {
 }
 
 /* Couleur dynamique selon statut */
-.subscription-card.active .progress {
+.subscription-card.active .progress,
+.profil-sub-card.active .progress {
   background: linear-gradient(90deg, #4caf50, #66bb6a);
 }
 
-.subscription-card.warning .progress {
+.subscription-card.warning .progress,
+.profil-sub-card.warning .progress {
   background: linear-gradient(90deg, #ff9800, #ffb74d);
 }
 
-.subscription-card.expired .progress {
+.subscription-card.expired .progress,
+.profil-sub-card.expired .progress {
   background: linear-gradient(90deg, #f44336, #e57373);
 }
 
-.subscription-card.unlimited .progress {
+.subscription-card.unlimited .progress,
+.profil-sub-card.unlimited .progress {
   background: linear-gradient(90deg, #2196f3, #42a5f5);
 }
 
-.subscription-card.not_found .progress {
+.subscription-card.not_found .progress,
+.profil-sub-card.not_found .progress {
   background: #555;
 }
 
