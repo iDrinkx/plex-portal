@@ -462,6 +462,14 @@ function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckIds = []
       let row;
       switch (id) {
 
+        // 🦕 Survivant du Parc — Les 6 films Jurassic (Park + World)
+        case 'clever-girl': {
+          row = countMoviesByLike(['%jurassic%']);
+          console.log(`[TAUTULLI-DIRECT] clever-girl: ${row.cnt}/6 films Jurassic`);
+          if (row.cnt >= 6) results[id] = fmt(row.last_stopped) || today;
+          break;
+        }
+
         // ⚡ Potterhead — 8 films Harry Potter (EN: "Harry Potter...", FR: "Harry Potter...")
         case 'potter-head': {
           // Même préfixe EN et FR

@@ -334,54 +334,6 @@ const ACHIEVEMENTS = {
   // 🔒 SECRETS
   secrets: [
     {
-      id: "secret-wanderer",
-      name: "Aventurier",
-      icon: "🗺️",
-      description: "Badge secret",
-      condition: (data) => false,
-      conditionText: "🔒 Badge secret",
-      getProgress: (data) => ({ current: 0, total: 1, percent: 0 }),
-      unlockedDate: null,
-      category: "secrets",
-      isSecret: true
-    },
-    {
-      id: "secret-bartender",
-      name: "Barman",
-      icon: "🍸",
-      description: "Badge secret",
-      condition: (data) => false,
-      conditionText: "🔒 Badge secret",
-      getProgress: (data) => ({ current: 0, total: 1, percent: 0 }),
-      unlockedDate: null,
-      category: "secrets",
-      isSecret: true
-    },
-    {
-      id: "secret-castle",
-      name: "Château",
-      icon: "🏰",
-      description: "Badge secret",
-      condition: (data) => false,
-      conditionText: "🔒 Badge secret",
-      getProgress: (data) => ({ current: 0, total: 1, percent: 0 }),
-      unlockedDate: null,
-      category: "secrets",
-      isSecret: true
-    },
-    {
-      id: "secret-spirit",
-      name: "Âme spirituelle",
-      icon: "👻",
-      description: "Badge secret",
-      condition: (data) => false,
-      conditionText: "🔒 Badge secret",
-      getProgress: (data) => ({ current: 0, total: 1, percent: 0 }),
-      unlockedDate: null,
-      category: "secrets",
-      isSecret: true
-    },
-    {
       id: "avenger",
       name: "Avenger",
       icon: "🦸",
@@ -407,15 +359,15 @@ const ACHIEVEMENTS = {
     },
     {
       id: "clever-girl",
-      name: "Clever Girl",
-      icon: "🧩",
-      description: "Fan de l'univers des Jurassic Park",
+      name: "Survivant du Parc",
+      icon: "🦕",
+      description: "A survécu à tous les parcs — les 6 films Jurassic",
       condition: (data) => false,
-      conditionText: "🔒 Badge secret",
+      conditionText: "A survécu à tous les parcs — les 6 films Jurassic",
       getProgress: (data) => ({ current: 0, total: 1, percent: 0 }),
       unlockedDate: null,
       category: "secrets",
-      isSecret: true
+      isSecret: false
     },
     {
       id: "potter-head",
@@ -429,18 +381,7 @@ const ACHIEVEMENTS = {
       category: "secrets",
       isSecret: false
     },
-    {
-      id: "spell-master",
-      name: "Maître des Sorts",
-      icon: "🪄",
-      description: "Fan de l'univers de la Magie",
-      condition: (data) => false,
-      conditionText: "🔒 Badge secret",
-      getProgress: (data) => ({ current: 0, total: 1, percent: 0 }),
-      unlockedDate: null,
-      category: "secrets",
-      isSecret: true
-    },
+
     {
       id: "weekend-warrior",
       name: "Guerrier du Week-end",
