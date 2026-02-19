@@ -471,14 +471,18 @@ async function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckId
       // 🔍 DEBUG: titres attendus vs titres regardés par l'user en DB
       if (debugId) {
         console.log(`[TAUTULLI-DIRECT] 🔍 [${debugId}] Titres Plex API:`, movies.map(m => `"${m.title}" (${m.year})`));
-        const dbTitles = tautulliDb.prepare(`
-          SELECT DISTINCT shm.title, shm.year
-          FROM session_history sh
-          JOIN session_history_metadata shm ON sh.id = shm.id
-          WHERE LOWER(sh.user) = ? AND sh.media_type = 'movie'
-          ORDER BY sh.stopped DESC LIMIT 10
-        `).all(norm);
-        console.log(`[TAUTULLI-DIRECT] 🔍 [${debugId}] Derniers films en DB:`, dbTitles.map(r => `"${r.title}" (${r.year})`));
+        // Chercher spécifiquement ces titres dans l'historique de l'user
+        const plexTitles = movies.map(m => m.title.toLowerCase());
+        const found = plexTitles.map(t => {
+          const r = tautulliDb.prepare(`
+            SELECT shm.title, shm.year FROM session_history sh
+            JOIN session_history_metadata shm ON sh.id = shm.id
+            WHERE LOWER(sh.user) = ? AND sh.media_type = 'movie' AND LOWER(shm.title) = ?
+            LIMIT 1
+          `).get(norm, t);
+          return r ? `✅ "${r.title}" (${r.year})` : `❌ "${t}"`;
+        });
+        console.log(`[TAUTULLI-DIRECT] 🔍 [${debugId}] Présent en DB:`, found);
       }
       const orClauses = movies.map(() => '(LOWER(shm.title) = ? AND shm.year = ?)').join(' OR ');
       const params = [norm, ...movies.flatMap(m => [m.title.toLowerCase(), m.year])];
