@@ -162,7 +162,6 @@ function runMigrations() {
       CREATE INDEX IF NOT EXISTS idx_user_watch_stats_user ON user_watch_stats(user_id);
       CREATE INDEX IF NOT EXISTS idx_sync_metadata_type ON sync_metadata(sync_type);
     `);
-    `);
     console.log("[DB] ✅ Indexes créés");
     
   } catch (err) {
