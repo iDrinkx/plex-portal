@@ -10,8 +10,8 @@ services:
     environment:
       # ⚠️ Obligatoire - Changez cette valeur en production!
       SESSION_SECRET: "change-me-to-a-secure-key"
-      
-      # === Optionnel ===
+
+      # ===Optionnel ===
       # L'app détecte automatiquement si elle est derrière un reverse proxy
       # via les headers X-Forwarded-* (envoyés par ngx proxy manager, Traefik, etc)
       

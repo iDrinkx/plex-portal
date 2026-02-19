@@ -9,7 +9,7 @@ const { getPlexJoinDate } = require("../utils/plex");
 const { XP_SYSTEM } = require("../utils/xp-system");
 const { ACHIEVEMENTS } = require("../utils/achievements");
 const { UserAchievementQueries } = require("../utils/database");
-const { getAchievementUnlockDates } = require("../utils/tautulli-direct");
+const { getAchievementUnlockDates, evaluateSecretAchievements, isTautulliReady } = require("../utils/tautulli-direct");
 const CacheManager = require("../utils/cache");
 const TautulliEvents = require("../utils/tautulli-events");  // 📢 Import EventEmitter
 
@@ -203,21 +203,48 @@ router.get("/badges", requireAuth, async (req, res) => {
       secrets: { icon: "🔒", name: "Secrets", achievements: ACHIEVEMENTS.secrets }
     };
 
-    // Dates de déblocage calculées depuis Tautulli (temporels, activités, films, séries)
-    const computedDates = getAchievementUnlockDates(
-      req.session.user.username,
-      req.session.user.joinedAtTimestamp
-    );
+    const userId = req.session.user.id;
+    const username = req.session.user.username;
+    const joinedAtTs = req.session.user.joinedAtTimestamp;
+    const today = new Date().toLocaleDateString('fr-FR');
 
-    // Ajouter le statut unlocked à chaque achievement (avec succès manuels depuis la DB)
-    const userUnlockedMap = UserAchievementQueries.getForUser(req.session.user.id);
-    const unlockedAchievements = ACHIEVEMENTS.getUnlocked(data, userUnlockedMap);
+    // ── 1. Unlocks déjà en cache DB (rapide, aucune requête Tautulli)
+    const userUnlockedMap = UserAchievementQueries.getForUser(userId);
+
+    // ── 2. Évaluer les succès NON-SECRETS non encore en DB (conditions sur data)
+    const allAchievements = ACHIEVEMENTS.getAll();
+    const computedDates = getAchievementUnlockDates(username, joinedAtTs);
+
+    for (const a of allAchievements) {
+      if (userUnlockedMap[a.id]) continue;          // déjà en cache → skip
+      if (a.isSecret) continue;                     // secrets admin-only → skip
+      if (a.category === 'secrets') continue;       // secrets auto traités ci-dessous
+      if (!a.condition(data)) continue;             // condition non remplie → skip
+      // Condition remplie et pas encore en DB → persister
+      const date = computedDates[a.id] || today;
+      UserAchievementQueries.unlock(userId, a.id, date, 'auto');
+      userUnlockedMap[a.id] = date;
+    }
+
+    // ── 3. Évaluer les succès secrets auto-détectables non encore en DB
+    const secretsToCheck = ACHIEVEMENTS.secrets
+      .filter(a => !a.isSecret && !userUnlockedMap[a.id])
+      .map(a => a.id);
+
+    if (secretsToCheck.length > 0 && isTautulliReady()) {
+      const newSecrets = evaluateSecretAchievements(username, joinedAtTs, secretsToCheck);
+      for (const [id, date] of Object.entries(newSecrets)) {
+        UserAchievementQueries.unlock(userId, id, date, 'auto');
+        userUnlockedMap[id] = date;
+      }
+    }
+
+    // ── 4. Construire les cards avec statut et date
     for (const category in achievementsByCategory) {
       achievementsByCategory[category].achievements = achievementsByCategory[category].achievements.map(achievement => ({
         ...achievement,
-        unlocked: unlockedAchievements.some(u => u.id === achievement.id),
-        // Priorité : DB manuelle > date calculée Tautulli > date statique sur l'achievement
-        unlockedDate: userUnlockedMap[achievement.id] || computedDates[achievement.id] || achievement.unlockedDate || null
+        unlocked: !!userUnlockedMap[achievement.id],
+        unlockedDate: userUnlockedMap[achievement.id] || null
       }));
     }
 
