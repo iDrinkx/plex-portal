@@ -191,21 +191,6 @@ const ACHIEVEMENTS = {
       category: "films"
     },
     {
-      id: "cinema-master",
-      name: "Maître du Cinéma",
-      icon: "👑",
-      description: "250 films regardés au total",
-      condition: (data) => data.movieCount >= 250,
-      conditionText: "250 films regardés au total",
-      getProgress: (data) => ({
-        current: Math.min(data.movieCount, 250),
-        total: 250,
-        percent: Math.min(Math.round((data.movieCount / 250) * 100), 100)
-      }),
-      unlockedDate: null,
-      category: "films"
-    },
-    {
       id: "hollywood-legend",
       name: "Légende d'Hollywood",
       icon: "✨",
@@ -231,6 +216,21 @@ const ACHIEVEMENTS = {
         current: Math.min(data.movieCount, 1000),
         total: 1000,
         percent: Math.min(Math.round((data.movieCount / 1000) * 100), 100)
+      }),
+      unlockedDate: null,
+      category: "films"
+    },
+    {
+      id: "cinema-universe",
+      name: "Seigneur du Cinéma",
+      icon: "🌌",
+      description: "2000 films regardés au total",
+      condition: (data) => data.movieCount >= 2000,
+      conditionText: "2000 films regardés au total",
+      getProgress: (data) => ({
+        current: Math.min(data.movieCount, 2000),
+        total: 2000,
+        percent: Math.min(Math.round((data.movieCount / 2000) * 100), 100)
       }),
       unlockedDate: null,
       category: "films"
@@ -311,7 +311,22 @@ const ACHIEVEMENTS = {
         percent: Math.min(Math.round((data.episodeCount / 2000) * 100), 100)
       }),
       unlockedDate: null,
-      category: "series"    }
+      category: "series"    },
+    {
+      id: "series-titan",
+      name: "Titan des Séries",
+      icon: "🌊",
+      description: "5000 épisodes regardés au total",
+      condition: (data) => data.episodeCount >= 5000,
+      conditionText: "5000 épisodes regardés au total",
+      getProgress: (data) => ({
+        current: Math.min(data.episodeCount, 5000),
+        total: 5000,
+        percent: Math.min(Math.round((data.episodeCount / 5000) * 100), 100)
+      }),
+      unlockedDate: null,
+      category: "series"
+    }
   ],
 
   // 📅 MENSUELS

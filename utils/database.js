@@ -228,6 +228,9 @@ function runMigrations() {
       // Supprimer le badge og (retiré de l'application)
       db.prepare(`DELETE FROM user_achievements WHERE achievement_id = ?`).run('og');
       db.prepare(`DELETE FROM achievement_progress WHERE achievement_id = ?`).run('og');
+      // Supprimer cinema-master (remplacé par cinema-universe 2000 films)
+      db.prepare(`DELETE FROM user_achievements WHERE achievement_id = ?`).run('cinema-master');
+      db.prepare(`DELETE FROM achievement_progress WHERE achievement_id = ?`).run('cinema-master');
       // Supprimer le badge dark-knight (remplacé par black-knight uniquement)
       const d1 = db.prepare(`DELETE FROM user_achievements WHERE achievement_id = ?`).run('dark-knight');
       const d2 = db.prepare(`DELETE FROM achievement_progress WHERE achievement_id = ?`).run('dark-knight');
