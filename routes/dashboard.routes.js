@@ -798,6 +798,35 @@ router.get("/api/debug/secrets", requireAuth, (req, res) => {
 });
 
 /* ===============================
+   🔍 DEBUG USERNAME IN TAUTULLI DB
+=============================== */
+router.get("/api/debug/tautulli-users", requireAuth, (req, res) => {
+  const TAUTULLI_DB_PATH = process.env.TAUTULLI_DB_PATH;
+  if (!TAUTULLI_DB_PATH) return res.json({ error: 'TAUTULLI_DB_PATH non configuré' });
+  const Database = require('better-sqlite3');
+  const tDb = new Database(TAUTULLI_DB_PATH, { readonly: true });
+  const myUsername = (req.session.user.username || '').toLowerCase();
+  try {
+    // Tous les usernames distincts dans session_history
+    const users = tDb.prepare(`SELECT DISTINCT user, friendly_name FROM session_history ORDER BY user`).all();
+    // Colonnes de session_history
+    const cols = tDb.prepare(`PRAGMA table_info(session_history)`).all().map(c => c.name);
+    // Chercher _idrink ou variantes
+    const matches = users.filter(u =>
+      (u.user || '').toLowerCase().includes('drink') ||
+      (u.friendly_name || '').toLowerCase().includes('drink') ||
+      (u.user || '').toLowerCase() === myUsername ||
+      (u.friendly_name || '').toLowerCase() === myUsername
+    );
+    tDb.close();
+    res.json({ my_session_username: myUsername, all_users: users, possible_matches: matches, sh_columns: cols });
+  } catch(e) {
+    tDb.close();
+    res.json({ error: e.message });
+  }
+});
+
+/* ===============================
    🦕 DEBUG COLLECTION (dev only)
 =============================== */
 router.get("/api/debug/collection/:collectionId", requireAuth, async (req, res) => {
