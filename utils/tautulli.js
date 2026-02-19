@@ -243,17 +243,26 @@ async function scanTautulliHistoryForAllUsers(TAUTULLI_URL, TAUTULLI_API_KEY) {
         
         const histJson = await histRes.json();
         
-        // L'API Tautulli/get_history retourne { response: [...], draw, filter_duration, ... }
-        // response est directement un array de sessions (pas de .data)
-        const sessions = histJson.response || histJson.data || [];
+        // Logs détaillés pour déboguer la structure
+        console.log("[TAUTULLI-SCAN] histJson keys:", Object.keys(histJson || {}).slice(0, 5));
+        console.log("[TAUTULLI-SCAN] histJson.response type:", typeof histJson?.response, "isArray:", Array.isArray(histJson?.response));
+        if (histJson?.response && !Array.isArray(histJson.response)) {
+          console.log("[TAUTULLI-SCAN] response est un objet avec keys:", Object.keys(histJson.response || {}).slice(0, 10));
+          console.log("[TAUTULLI-SCAN] response sample:", JSON.stringify(histJson.response).substring(0, 200));
+        }
         
-        console.log("[TAUTULLI-SCAN] Page", pagesScanned, '- Structure:', {
-          hasResponse: !!histJson?.response,
-          hasData: !!histJson?.data,
-          sessionsCount: Array.isArray(sessions) ? sessions.length : 'NOT_ARRAY',
-          recordsTotal: histJson.recordsTotal,
-          draw: histJson.draw
-        });
+        // L'API Tautulli/get_history retourne { response: [...], draw, filter_duration, ... }
+        // response DOIT être un array de sessions
+        let sessions = [];
+        if (Array.isArray(histJson?.response)) {
+          sessions = histJson.response;
+        } else if (Array.isArray(histJson?.data)) {
+          sessions = histJson.data;
+        } else if (histJson?.response?.data && Array.isArray(histJson.response.data)) {
+          sessions = histJson.response.data;
+        }
+        
+        console.log("[TAUTULLI-SCAN] Page " + pagesScanned + " - Sessions found: " + sessions.length);
         
         if (!sessions || sessions.length === 0) {
           console.log("[TAUTULLI-SCAN] ✅ Pas plus de sessions - fin du scan");
