@@ -697,47 +697,40 @@ router.get("/api/debug/secrets", requireAuth, (req, res) => {
   const Database = require('better-sqlite3');
   const tDb = new Database(process.env.TAUTULLI_DB_PATH, { readonly: true });
   const norm = (req.session.user.username || '').toLowerCase();
-  const out = {};
+  const out = { username: norm };
 
-  // Colonnes de session_history_metadata
+  // 1. Toutes les rating_keys HP dans session_history_metadata
   try {
-    const cols = tDb.prepare(`PRAGMA table_info(session_history_metadata)`).all();
-    out.metadata_columns = cols.map(c => c.name);
-  } catch(e) { out.metadata_columns_error = e.message; }
-
-  // Colonnes de session_history
-  try {
-    const cols = tDb.prepare(`PRAGMA table_info(session_history)`).all();
-    out.history_columns = cols.map(c => c.name);
-  } catch(e) {}
-
-  // Exemple d'une ligne complète de session_history_metadata (film)
-  try {
-    const row = tDb.prepare(`
-      SELECT shm.* FROM session_history_metadata shm
-      JOIN session_history sh ON sh.id = shm.id
-      WHERE sh.media_type = 'movie' LIMIT 1
-    `).get();
-    out.metadata_movie_sample = row;
-  } catch(e) { out.metadata_movie_sample_error = e.message; }
-
-  // HP dans session_history_metadata (tous users, toutes colonnes)
-  try {
-    const hp = tDb.prepare(`
-      SELECT shm.* FROM session_history_metadata shm
-      WHERE LOWER(shm.title) LIKE '%harry%' OR LOWER(shm.title) LIKE '%potter%'
-      LIMIT 5
+    const keys = tDb.prepare(`
+      SELECT DISTINCT rating_key, title FROM session_history_metadata
+      WHERE LOWER(title) LIKE 'harry potter%'
     `).all();
-    out.hp_metadata_rows = hp;
-  } catch(e) { out.hp_metadata_error = e.message; }
+    out.hp_rating_keys = keys;
+  } catch(e) { out.hp_rating_keys_error = e.message; }
 
-  // recently_added — contient-il les collections ?
+  // 2. Sessions de l'utilisateur avec ces rating_keys
+  if (out.hp_rating_keys && out.hp_rating_keys.length) {
+    const ratingKeys = out.hp_rating_keys.map(k => k.rating_key);
+    const placeholders = ratingKeys.map(() => '?').join(', ');
+    try {
+      const sessions = tDb.prepare(`
+        SELECT sh.rating_key, sh.stopped, sh.media_type
+        FROM session_history sh
+        JOIN users u ON sh.user_id = u.user_id
+        WHERE LOWER(u.username) = ?
+          AND sh.media_type = 'movie'
+          AND sh.rating_key IN (${placeholders})
+      `).all(norm, ...ratingKeys);
+      out.hp_user_sessions = sessions;
+      out.hp_distinct_count = new Set(sessions.map(s => s.rating_key)).size;
+    } catch(e) { out.hp_user_sessions_error = e.message; }
+  }
+
+  // 3. username exact dans la table users (vérif)
   try {
-    const cols = tDb.prepare(`PRAGMA table_info(recently_added)`).all();
-    out.recently_added_columns = cols.map(c => c.name);
-    const sample = tDb.prepare(`SELECT * FROM recently_added LIMIT 3`).all();
-    out.recently_added_sample = sample;
-  } catch(e) { out.recently_added_error = e.message; }
+    const users = tDb.prepare(`SELECT user_id, username, friendly_name FROM users WHERE LOWER(username) = ?`).all(norm);
+    out.matched_users = users;
+  } catch(e) { out.matched_users_error = e.message; }
 
   tDb.close();
   res.json(out);

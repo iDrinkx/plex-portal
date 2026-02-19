@@ -378,54 +378,38 @@ function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckIds = []
   const fmt  = (ts) => ts ? new Date(ts * 1000).toLocaleDateString('fr-FR') : null;
   const today = new Date().toLocaleDateString('fr-FR');
 
-  // ── Vérifier si session_history_metadata existe et le join fonctionne
-  let useMetadata = false;
-  try {
-    tautulliDb.prepare(`SELECT shm.title FROM session_history_metadata shm LIMIT 1`).get();
-    useMetadata = true;
-  } catch(e) {
-    console.warn('[TAUTULLI-DIRECT] ⚠️  session_history_metadata non accessible, fallback rating_key:', e.message);
-  }
-
   /**
-   * Compte les films distincts dont le titre (ou grandparent) matche un pattern LIKE.
-   * Accepte plusieurs patterns OR (EN + FR).
+   * Compte les films distincts regardés par l'utilisateur dont le titre matche un pattern LIKE.
+   * Stratégie : session_history_metadata sert de lookup (rating_key par titre),
+   * puis on compte les sessions dans session_history via sh.rating_key (pas de JOIN id=id).
    */
   const countMoviesByLike = (patterns) => {
     try {
-      const orClauses = patterns.map(() =>
-        useMetadata ? 'LOWER(shm.title) LIKE ?' : 'LOWER(shm.title) LIKE ?'
-      ).join(' OR ');
+      const orClauses = patterns.map(() => 'LOWER(shm.title) LIKE ?').join(' OR ');
 
-      let sql, params;
-      if (useMetadata) {
-        sql = `
-          SELECT COUNT(DISTINCT LOWER(shm.title)) as cnt, MAX(sh.stopped) as last_stopped
-          FROM session_history sh
-          JOIN users u ON sh.user_id = u.user_id
-          JOIN session_history_metadata shm ON sh.id = shm.id
-          WHERE LOWER(u.username) = ?
-            AND sh.stopped > sh.started
-            AND sh.media_type = 'movie'
-            AND (${orClauses})
-        `;
-        params = [norm, ...patterns.map(p => p.toLowerCase())];
-      } else {
-        // Fallback : join via metadata table (rating_key)
-        const orFallback = patterns.map(() => 'LOWER(m.title) LIKE ?').join(' OR ');
-        sql = `
-          SELECT COUNT(DISTINCT LOWER(m.title)) as cnt, MAX(sh.stopped) as last_stopped
-          FROM session_history sh
-          JOIN users u ON sh.user_id = u.user_id
-          LEFT JOIN metadata_items m ON sh.rating_key = m.rating_key
-          WHERE LOWER(u.username) = ?
-            AND sh.stopped > sh.started
-            AND sh.media_type = 'movie'
-            AND (${orFallback})
-        `;
-        params = [norm, ...patterns.map(p => p.toLowerCase())];
-      }
-      const row = tautulliDb.prepare(sql).get(...params);
+      // Étape 1 : obtenir les rating_keys correspondant aux titres (tous utilisateurs)
+      const keysSql = `
+        SELECT DISTINCT rating_key FROM session_history_metadata shm
+        WHERE ${orClauses}
+      `;
+      const keys = tautulliDb.prepare(keysSql).all(...patterns.map(p => p.toLowerCase()));
+
+      if (!keys.length) return { cnt: 0, last_stopped: null };
+
+      const ratingKeys = keys.map(k => k.rating_key);
+      const placeholders = ratingKeys.map(() => '?').join(', ');
+
+      // Étape 2 : compter les rating_keys DISTINCTS regardés par cet utilisateur
+      const sql = `
+        SELECT COUNT(DISTINCT sh.rating_key) as cnt, MAX(sh.stopped) as last_stopped
+        FROM session_history sh
+        JOIN users u ON sh.user_id = u.user_id
+        WHERE LOWER(u.username) = ?
+          AND sh.stopped > sh.started
+          AND sh.media_type = 'movie'
+          AND sh.rating_key IN (${placeholders})
+      `;
+      const row = tautulliDb.prepare(sql).get(norm, ...ratingKeys);
       return row || { cnt: 0, last_stopped: null };
     } catch(e) {
       console.error('[TAUTULLI-DIRECT] ❌ countMoviesByLike error:', e.message);
@@ -435,36 +419,35 @@ function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckIds = []
 
   /**
    * Compte les films dont le titre exact (EN ou FR) est dans la liste fournie.
+   * Même stratégie : lookup rating_key via metadata, puis count dans session_history.
    */
   const countMoviesByExactTitles = (titles) => {
     try {
-      const placeholders = titles.map(() => '?').join(', ');
-      let sql, params;
-      if (useMetadata) {
-        sql = `
-          SELECT COUNT(DISTINCT LOWER(shm.title)) as cnt, MAX(sh.stopped) as last_stopped
-          FROM session_history sh
-          JOIN users u ON sh.user_id = u.user_id
-          JOIN session_history_metadata shm ON sh.id = shm.id
-          WHERE LOWER(u.username) = ?
-            AND sh.stopped > sh.started
-            AND sh.media_type = 'movie'
-            AND LOWER(shm.title) IN (${placeholders})
-        `;
-      } else {
-        sql = `
-          SELECT COUNT(DISTINCT LOWER(m.title)) as cnt, MAX(sh.stopped) as last_stopped
-          FROM session_history sh
-          JOIN users u ON sh.user_id = u.user_id
-          LEFT JOIN metadata_items m ON sh.rating_key = m.rating_key
-          WHERE LOWER(u.username) = ?
-            AND sh.stopped > sh.started
-            AND sh.media_type = 'movie'
-            AND LOWER(m.title) IN (${placeholders})
-        `;
-      }
-      params = [norm, ...titles.map(t => t.toLowerCase())];
-      const row = tautulliDb.prepare(sql).get(...params);
+      const placeholdersTitles = titles.map(() => '?').join(', ');
+
+      // Étape 1 : rating_keys correspondant aux titres exacts
+      const keysSql = `
+        SELECT DISTINCT rating_key FROM session_history_metadata
+        WHERE LOWER(title) IN (${placeholdersTitles})
+      `;
+      const keys = tautulliDb.prepare(keysSql).all(...titles.map(t => t.toLowerCase()));
+
+      if (!keys.length) return { cnt: 0, last_stopped: null };
+
+      const ratingKeys = keys.map(k => k.rating_key);
+      const placeholders = ratingKeys.map(() => '?').join(', ');
+
+      // Étape 2 : compter les rating_keys DISTINCTS regardés par cet utilisateur
+      const sql = `
+        SELECT COUNT(DISTINCT sh.rating_key) as cnt, MAX(sh.stopped) as last_stopped
+        FROM session_history sh
+        JOIN users u ON sh.user_id = u.user_id
+        WHERE LOWER(u.username) = ?
+          AND sh.stopped > sh.started
+          AND sh.media_type = 'movie'
+          AND sh.rating_key IN (${placeholders})
+      `;
+      const row = tautulliDb.prepare(sql).get(norm, ...ratingKeys);
       return row || { cnt: 0, last_stopped: null };
     } catch(e) {
       console.error('[TAUTULLI-DIRECT] ❌ countMoviesByExactTitles error:', e.message);
