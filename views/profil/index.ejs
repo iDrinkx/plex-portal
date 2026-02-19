@@ -951,9 +951,10 @@
         if (sessionEl2) sessionEl2.textContent = tautulliSessionCount + " sessions";
       }
 
-      // Calculer l'XP
-      const totalXp = tautulliSessionCount * 2;
-      console.log("[XP] Calcul: " + tautulliSessionCount + " × 2 = " + totalXp);
+      // Calculer l'XP (basé sur les heures de visionnage)
+      const totalHours = tautulliData?.watchStats?.totalHours || 0;
+      const totalXp = Math.round(totalHours);
+      console.log("[XP] Calcul: " + Math.round(totalHours * 10) / 10 + " heures × 1 = " + totalXp + " XP");
       
       const badge = XP_SYSTEM.getBadgeByXp(totalXp);
       const progress = XP_SYSTEM.getProgressToNextBadge(totalXp);
@@ -1005,7 +1006,7 @@
       const formulaTotalEl = document.getElementById("totalXpFormula");
       console.log("[DOM] FormulaSessions:", !!formulaSessionEl);
       
-      if (formulaSessionEl) formulaSessionEl.textContent = `${tautulliSessionCount} × 2 = ${tautulliSessionCount * 2} XP`;
+      if (formulaSessionEl) formulaSessionEl.textContent = `${Math.round(totalHours * 10) / 10} heures × 1 = ${totalXp} XP`;
       if (formulaTotalEl) formulaTotalEl.textContent = `${totalXp} XP`;
 
       // Activer les badges débloqués
@@ -1043,9 +1044,9 @@
               sessionEl.textContent = readyStats.sessionCount;
             }
             
-            // Update xpAmount (recalcul XP)
-            const newSessionCount = readyStats.sessionCount || 0;
-            const newTotalXp = newSessionCount * 2;
+            // Update xpAmount (recalcul XP basé sur les heures)
+            const newTotalHours = readyStats?.watchStats?.totalHours || 0;
+            const newTotalXp = Math.round(newTotalHours);
             const xpAmountEl = document.getElementById("xpAmount");
             if (xpAmountEl) {
               xpAmountEl.textContent = newTotalXp;
@@ -1066,7 +1067,7 @@
             const formulaSessionEl = document.getElementById("sessionFormulaXp");
             const formulaTotalEl = document.getElementById("totalXpFormula");
             
-            if (formulaSessionEl) formulaSessionEl.textContent = `${newSessionCount} × 2 = ${newSessionCount * 2} XP`;
+            if (formulaSessionEl) formulaSessionEl.textContent = `${Math.round(newTotalHours * 10) / 10} heures × 1 = ${newTotalXp} XP`;
             if (formulaTotalEl) formulaTotalEl.textContent = `${newTotalXp} XP`;
             
             console.log("[PROFIL-UPDATE] ✅ Tous les éléments mis à jour!");
