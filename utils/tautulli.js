@@ -50,7 +50,7 @@ async function getTautulliStats(username, TAUTULLI_URL, TAUTULLI_API_KEY, plexUs
         if (directStats && directStats.sessionCount > 0) {
           console.log("[TAUTULLI] ✅ Stats depuis DB Tautulli - sessionCount:", directStats.sessionCount);
           return {
-            joinedAt: null,
+            joinedAt: joinedAtTimestamp ? new Date(joinedAtTimestamp * 1000).toISOString() : null,
             lastActivity: directStats.lastSessionDate,
             sessionCount: directStats.sessionCount,
             lastSessionTimestamp: directStats.lastSessionDate,
@@ -75,7 +75,7 @@ async function getTautulliStats(username, TAUTULLI_URL, TAUTULLI_API_KEY, plexUs
     if (dbStats && dbStats.sessionCount > 0) {
       console.log("[TAUTULLI] ✅ Stats trouvées en DB - sessionCount:", dbStats.sessionCount);
       return {
-        joinedAt: null,
+        joinedAt: joinedAtTimestamp ? new Date(joinedAtTimestamp * 1000).toISOString() : null,
         lastActivity: dbStats.lastSessionDate,
         sessionCount: dbStats.sessionCount,
         lastSessionTimestamp: dbStats.lastSessionDate,
