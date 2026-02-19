@@ -1143,10 +1143,28 @@
         if (sessionEl2) sessionEl2.textContent = tautulliSessionCount + " sessions";
       }
 
-      // Calculer l'XP (basé sur les heures de visionnage)
+      // CALCUL XP BREAKDOWN avec 3 sources (fait en premier!)
+      const XP_MULTIPLIERS = {
+        HOURS: 8,
+        BADGE: 140,
+        ANCIENNETE: 5,
+        LEVEL: 100
+      };
+
+      // Récupérer les données
       const totalHours = tautulliData?.watchStats?.totalHours || 0;
-      const totalXp = Math.round(totalHours);
-      console.log("[XP] Calcul: " + Math.round(totalHours * 10) / 10 + " heures × 1 = " + totalXp + " XP");
+      const unlockedBadgesCount = <%= unlockedBadgesCount || 0 %>;
+      const joinedAtObj = new Date(stats.joinedAt || Date.now());
+      const daysJoined = Math.floor((Date.now() - joinedAtObj.getTime()) / (1000 * 60 * 60 * 24));
+
+      // Calculer les 3 sources
+      const hoursXp = Math.round(totalHours * XP_MULTIPLIERS.HOURS);
+      const badgesXp = unlockedBadgesCount * XP_MULTIPLIERS.BADGE;
+      const ancienneteXp = daysJoined * XP_MULTIPLIERS.ANCIENNETE;
+
+      // TOTAL XP = somme des 3 sources (nouveau système!)
+      const totalXp = hoursXp + badgesXp + ancienneteXp;
+      console.log("[XP] Calcul NEW: Heures=" + hoursXp + " + Badges=" + badgesXp + " + Ancienneté=" + ancienneteXp + " = " + totalXp + " XP");
       
       const badge = XP_SYSTEM.getBadgeByXp(totalXp);
       const progress = XP_SYSTEM.getProgressToNextBadge(totalXp);
@@ -1198,24 +1216,8 @@
         xpNeeded.textContent = progress.xpNeeded > 0 ? `${progress.xpNeeded} XP avant ${progress.next?.name || "max"}` : "Max atteint!";
       }
 
-      // CALCUL XP BREAKDOWN avec 3 sources
-      const XP_MULTIPLIERS = {
-        HOURS: 8,
-        BADGE: 140,
-        ANCIENNETE: 5,
-        LEVEL: 100
-      };
-
-      const hoursXp = Math.round(totalHours * XP_MULTIPLIERS.HOURS);
-      const unlockedBadgesCount = <%= unlockedBadgesCount || 0 %>;
-      const badgesXp = unlockedBadgesCount * XP_MULTIPLIERS.BADGE;
-      const joinedAtObj = new Date(stats.joinedAt || Date.now());
-      const daysJoined = Math.floor((Date.now() - joinedAtObj.getTime()) / (1000 * 60 * 60 * 24));
-      const ancienneteXp = daysJoined * XP_MULTIPLIERS.ANCIENNETE;
-
+      // Calculer les pourcentages de répartition
       const totalXpBreakdown = hoursXp + badgesXp + ancienneteXp;
-      
-      // Calculer les pourcentages
       const hoursPercent = totalXpBreakdown > 0 ? Math.round((hoursXp / totalXpBreakdown) * 100) : 0;
       const badgesPercent = totalXpBreakdown > 0 ? Math.round((badgesXp / totalXpBreakdown) * 100) : 0;
       const anciennetePercent = totalXpBreakdown > 0 ? Math.round((ancienneteXp / totalXpBreakdown) * 100) : 0;
