@@ -19,17 +19,15 @@ const COLLECTION_CACHE_TTL = 24 * 60 * 60 * 1000;
  */
 const COLLECTION_KEYS = {
   'potter-head':  { ratingKey: 10292 },  // Harry Potter - Saga
-  'clever-girl':  { ratingKey: 12634 },  // Jurassic Park - Saga
+  'jurassic-survivor': { ratingKey: 12634 },  // Jurassic Park - Saga
   'marvel-fan':   { ratingKey: 306781 }, // Marvel Cinematic Universe
-  'dark-knight':  { ratingKey: 14715 },  // Star Wars (4 films min)
   'black-knight': { ratingKey: 14715 },  // Star Wars (7 films min)
   'tolkiendil':   { ratingKey: 17699 },  // Le Seigneur des Anneaux
   'evolutionist': { ratingKey: 15344 },  // La Planète des Singes
 };
 
-// Pour dark-knight/black-knight : seuils minimum sur la même collection Star Wars
+// Seuil minimum pour black-knight sur la collection Star Wars
 const COLLECTION_MIN = {
-  'dark-knight':  4,
   'black-knight': 7,
 };
 
@@ -531,7 +529,7 @@ async function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckId
       switch (id) {
 
         // 🦕 Survivant du Parc — Toute la saga Jurassic
-        case 'clever-girl': {
+        case 'jurassic-survivor': {
           const r = await checkCollection(id, ['%jurassic%'], 7);
           if (r.date) results[id] = r.date;
           if (r.total > 0) progress[id] = { current: r.current, total: r.total };
@@ -549,14 +547,6 @@ async function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckId
         // 🦸 Marvel Fan — Toute la collection MCU
         case 'marvel-fan': {
           const r = await checkCollection(id, ['%marvel%', '%avengers%']);
-          if (r.date) results[id] = r.date;
-          if (r.total > 0) progress[id] = { current: r.current, total: r.total };
-          break;
-        }
-
-        // 🗡️ Chevalier Noir — 4 films Star Wars minimum
-        case 'dark-knight': {
-          const r = await checkCollection(id, ['%star wars%'], COLLECTION_MIN['dark-knight']);
           if (r.date) results[id] = r.date;
           if (r.total > 0) progress[id] = { current: r.current, total: r.total };
           break;

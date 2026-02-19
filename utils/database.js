@@ -215,7 +215,24 @@ function runMigrations() {
       CREATE INDEX IF NOT EXISTS idx_sync_metadata_type ON sync_metadata(sync_type);
     `);
     console.log("[DB] ✅ Indexes créés");
-    
+
+    // 🔄 Migration données : renommage d'IDs de badges
+    try {
+      const renamed = db.prepare(`UPDATE user_achievements SET achievement_id = ? WHERE achievement_id = ?`);
+      const renamedProgress = db.prepare(`UPDATE achievement_progress SET achievement_id = ? WHERE achievement_id = ?`);
+      const r1 = renamed.run('jurassic-survivor', 'clever-girl');
+      const r2 = renamedProgress.run('jurassic-survivor', 'clever-girl');
+      if (r1.changes > 0 || r2.changes > 0) {
+        console.log(`[DB] 🔄 Migration: "clever-girl" → "jurassic-survivor" (${r1.changes} unlocks, ${r2.changes} progress)`);
+      }
+      // Supprimer le badge dark-knight (remplacé par black-knight uniquement)
+      const d1 = db.prepare(`DELETE FROM user_achievements WHERE achievement_id = ?`).run('dark-knight');
+      const d2 = db.prepare(`DELETE FROM achievement_progress WHERE achievement_id = ?`).run('dark-knight');
+      if (d1.changes > 0 || d2.changes > 0) {
+        console.log(`[DB] 🗑️  Migration: badge "dark-knight" supprimé (${d1.changes} unlocks, ${d2.changes} progress)`);
+      }
+    } catch(e) { /* tables pas encore créées au premier boot */ }
+
   } catch (err) {
     console.error("[DB] ❌ Erreur migrations:", err.message);
     throw err;

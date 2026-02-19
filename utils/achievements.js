@@ -347,25 +347,12 @@ const ACHIEVEMENTS = {
       revocable: true
     },
     {
-      id: "dark-knight",
-      name: "Chevalier Noir",
-      icon: "🗡️",
-      description: "Fan de l'univers de Star Wars",
-      condition: (data) => false,
-      conditionText: "Fan de l'univers de Star Wars",
-      getProgress: (data) => ({ current: 0, total: 1, percent: 0 }),
-      unlockedDate: null,
-      category: "collections",
-      isSecret: false,
-      revocable: true
-    },
-    {
       id: "black-knight",
       name: "Maître Jedi",
       icon: "🧑‍⚖️",
-      description: "Fan de l'univers de Star Wars",
+      description: "A regardé au moins 7 films de la saga Star Wars",
       condition: (data) => false,
-      conditionText: "Fan de l'univers de Star Wars",
+      conditionText: "A regardé au moins 7 films de la saga Star Wars",
       getProgress: (data) => ({ current: 0, total: 1, percent: 0 }),
       unlockedDate: null,
       category: "collections",
@@ -373,7 +360,7 @@ const ACHIEVEMENTS = {
       revocable: true
     },
     {
-      id: "clever-girl",
+      id: "jurassic-survivor",
       name: "Survivant du Parc",
       icon: "🦕",
       description: "A survécu à tous les parcs — les 7 films Jurassic",
