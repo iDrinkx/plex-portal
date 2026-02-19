@@ -469,15 +469,19 @@ async function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckId
   const countMoviesByGuids = (guids) => {
     if (!guids || !guids.length) return { cnt: 0, last_stopped: null };
     try {
-      // 🔍 DEBUG: Vérifier le format des GUIDs en DB vs Plex API
-      const sampleDbGuids = tautulliDb.prepare(`
-        SELECT DISTINCT shm.guid
+      // 🔍 DEBUG: Vérifier les colonnes de session_history_metadata
+      const cols = tautulliDb.prepare(`PRAGMA table_info(session_history_metadata)`).all();
+      console.log('[TAUTULLI-DIRECT] 🔍 Colonnes session_history_metadata:', cols.map(c => c.name).join(', '));
+
+      // 🔍 DEBUG: Voir un sample de colonnes ID pour l'user
+      const sampleRow = tautulliDb.prepare(`
+        SELECT shm.guid, shm.title
         FROM session_history sh
         JOIN session_history_metadata shm ON sh.id = shm.id
         WHERE LOWER(sh.user) = ? AND sh.media_type = 'movie'
-        LIMIT 5
+        LIMIT 3
       `).all(norm);
-      console.log('[TAUTULLI-DIRECT] 🔍 GUIDs en DB (sample):', sampleDbGuids.map(r => r.guid));
+      console.log('[TAUTULLI-DIRECT] 🔍 Sample rows:', JSON.stringify(sampleRow));
       console.log('[TAUTULLI-DIRECT] 🔍 GUIDs Plex API (sample):', guids.slice(0, 3));
 
       const ph = guids.map(() => '?').join(', ');
