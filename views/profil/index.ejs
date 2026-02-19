@@ -1235,13 +1235,14 @@
       const xpBadgesBar = document.getElementById("xpBadgesBar");
       const xpBadgesPercent = document.getElementById("xpBadgesPercent");
       
-      // Barre = % de l'XP succès dans le total XP (cohérent avec les autres barres)
+      // Barre = progression de déverrouillage des succès (25/37 → 68%)
+      // La valeur affichée reste l'XP, mais la barre reflète la complétion des succès
       const totalBadges = <%= totalBadgesCount || 0 %>;
-      const successesUnlockedLabel = totalBadges > 0 ? unlockedBadgesCount + "/" + totalBadges + " succès" : unlockedBadgesCount + " succès";
+      const successesProgressPercent = totalBadges > 0 ? Math.round((unlockedBadgesCount / totalBadges) * 100) : 0;
       
       if (xpBadgesValue) xpBadgesValue.textContent = badgesXp.toLocaleString() + " XP";
-      if (xpBadgesBar) xpBadgesBar.style.width = badgesPercent + "%";
-      if (xpBadgesPercent) xpBadgesPercent.textContent = badgesPercent + "% XP ("+successesUnlockedLabel+")";
+      if (xpBadgesBar) xpBadgesBar.style.width = successesProgressPercent + "%";
+      if (xpBadgesPercent) xpBadgesPercent.textContent = successesProgressPercent + "% (" + unlockedBadgesCount + "/" + totalBadges + " succès)";
 
       const xpAncienneteValue = document.getElementById("xpAncienneteValue");
       const xpAncienneteBar = document.getElementById("xpAncienneteBar");
