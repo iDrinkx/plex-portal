@@ -176,8 +176,17 @@ async function scanTautulliHistoryForAllUsers(TAUTULLI_URL, TAUTULLI_API_KEY) {
       
       if (usersRes.ok) {
         const usersJson = await usersRes.json();
-        if (usersJson.response?.data) {
+        console.log("[TAUTULLI-GET_USERS] Réponse brute:", typeof usersJson, "isArray:", Array.isArray(usersJson), "keys:", Object.keys(usersJson).slice(0, 5));
+        
+        // L'API Tautulli retourne directement un array pour get_users
+        if (Array.isArray(usersJson)) {
+          console.log("[TAUTULLI-GET_USERS] ✅ Format direct array - items:", usersJson.length);
+          tautulliUsers.push(...usersJson);
+        } else if (usersJson.response?.data) {
+          console.log("[TAUTULLI-GET_USERS] ℹ️ Format response.data - items:", usersJson.response.data.length);
           tautulliUsers.push(...usersJson.response.data);
+        } else {
+          console.log("[TAUTULLI-GET_USERS] ⚠️ Format inconnu - contenu:", JSON.stringify(usersJson).substring(0, 200));
         }
       }
     } catch (err) {
@@ -233,9 +242,10 @@ async function scanTautulliHistoryForAllUsers(TAUTULLI_URL, TAUTULLI_API_KEY) {
         }
         
         const histJson = await histRes.json();
-        console.log("[TAUTULLI-SCAN] Réponse API page", pagesScanned, "- structure:", JSON.stringify(histJson, null, 2).substring(0, 200));
+        console.log("[TAUTULLI-SCAN] Réponse API page", pagesScanned, "- recordsTotal:", histJson.recordsTotal, "data items:", histJson.data?.length || 0);
         
-        const sessions = histJson.response?.data || [];
+        // L'API Tautulli retourne directement data (pas response.data)
+        const sessions = histJson.data || histJson.response?.data || [];
         
         if (!sessions || sessions.length === 0) {
           console.log("[TAUTULLI-SCAN] ✅ Pas plus de sessions - fin du scan");
@@ -253,8 +263,8 @@ async function scanTautulliHistoryForAllUsers(TAUTULLI_URL, TAUTULLI_API_KEY) {
           
           userStats[username].sessionCount++;
           
-          // Durée en secondes → convertir en millisecondes
-          const durationSeconds = session.duration || 0;
+          // Durée: play_duration selon l'API officielle Tautulli (en secondes)
+          const durationSeconds = session.play_duration || session.duration || 0;
           const durationMs = durationSeconds * 1000;
           const sanitizedDuration = DURATION_VALIDATION.sanitize(durationMs);
           
