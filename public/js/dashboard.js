@@ -311,60 +311,85 @@ document.addEventListener("DOMContentLoaded", async () => {
    */
   async function updateWatchStats() {
     try {
+      console.log("[WATCH-STATS] 🚀 Appel API /api/stats");
+      
       const res = await fetch(basePath + "/api/stats", {
         headers: { "Accept": "application/json" }
       });
       
+      console.log("[WATCH-STATS] Réponse reçue - status:", res.status);
+      
       if (!res.ok) {
-        console.warn("[WATCH-STATS] Erreur API stats:", res.status);
+        console.warn("[WATCH-STATS] ❌ Erreur API stats:", res.status);
         return;
       }
       
       const stats = await res.json();
-      console.log("[WATCH-STATS] Stats reçues:", stats);
+      console.log("[WATCH-STATS] ✅ JSON parsé:", stats);
+      
+      // Attendre un peu que le DOM soit ready
+      await new Promise(r => setTimeout(r, 500));
+      
+      // Vérifier si les éléments DOM existent
+      console.log("[WATCH-STATS] 🔍 Recherche des éléments DOM...");
+      const hoursEl = document.getElementById('counterHours');
+      const moviesEl = document.getElementById('counterMovies');
+      const episodesEl = document.getElementById('counterEpisodes');
+      const sessionsEl = document.getElementById('counterSessions');
+      
+      console.log("[WATCH-STATS] DOM trouvés:", {
+        hoursEl: hoursEl ? '✅ ' + hoursEl.id : '❌',
+        moviesEl: moviesEl ? '✅ ' + moviesEl.id : '❌',
+        episodesEl: episodesEl ? '✅ ' + episodesEl.id : '❌',
+        sessionsEl: sessionsEl ? '✅ ' + sessionsEl.id : '❌'
+      });
       
       // Mettre à jour les compteurs si les données existent
       if (stats && stats.watchStats) {
         const { totalHours, movieCount, episodeCount } = stats.watchStats;
         const sessionCount = stats.sessionCount || 0;
         
-        console.log("[WATCH-STATS] Données extraites:", { totalHours, movieCount, episodeCount, sessionCount });
-        
-        // Mettre à jour avec les vraies données
-        const hoursEl = document.getElementById('counterHours');
-        const moviesEl = document.getElementById('counterMovies');
-        const episodesEl = document.getElementById('counterEpisodes');
-        const sessionsEl = document.getElementById('counterSessions');
-        
-        console.log("[WATCH-STATS] Éléments DOM:", { hoursEl: !!hoursEl, moviesEl: !!moviesEl, episodesEl: !!episodesEl, sessionsEl: !!sessionsEl });
+        console.log("[WATCH-STATS] 📊 Données à afficher:", { totalHours, movieCount, episodeCount, sessionCount });
         
         if (hoursEl) {
-          hoursEl.setAttribute('data-target', Math.round(totalHours * 10) / 10 || 0);
-          hoursEl.textContent = Math.round(totalHours * 10) / 10 || 0;
-          console.log("[WATCH-STATS] Heures mis à jour:", totalHours);
+          const hours = Math.round(totalHours * 10) / 10 || 0;
+          hoursEl.setAttribute('data-target', hours);
+          hoursEl.textContent = hours;
+          console.log("[WATCH-STATS] ✅ counterHours mis à jour: " + hours);
+        } else {
+          console.warn("[WATCH-STATS] ⚠️  #counterHours NOT FOUND in DOM");
         }
+        
         if (moviesEl) {
           moviesEl.setAttribute('data-target', movieCount || 0);
           moviesEl.textContent = movieCount || 0;
-          console.log("[WATCH-STATS] Films mis à jour:", movieCount);
+          console.log("[WATCH-STATS] ✅ counterMovies mis à jour: " + movieCount);
+        } else {
+          console.warn("[WATCH-STATS] ⚠️  #counterMovies NOT FOUND in DOM");
         }
+        
         if (episodesEl) {
           episodesEl.setAttribute('data-target', episodeCount || 0);
           episodesEl.textContent = episodeCount || 0;
-          console.log("[WATCH-STATS] Épisodes mis à jour:", episodeCount);
+          console.log("[WATCH-STATS] ✅ counterEpisodes mis à jour: " + episodeCount);
+        } else {
+          console.warn("[WATCH-STATS] ⚠️  #counterEpisodes NOT FOUND in DOM");
         }
+        
         if (sessionsEl) {
           sessionsEl.setAttribute('data-target', sessionCount || 0);
           sessionsEl.textContent = sessionCount || 0;
-          console.log("[WATCH-STATS] Sessions mis à jour:", sessionCount);
+          console.log("[WATCH-STATS] ✅ counterSessions mis à jour: " + sessionCount);
+        } else {
+          console.warn("[WATCH-STATS] ⚠️  #counterSessions NOT FOUND in DOM");
         }
         
-        console.log("[WATCH-STATS] ✅ Tous les compteurs mis à jour");
+        console.log("[WATCH-STATS] 🎉 Tous les compteurs traités");
       } else {
-        console.warn("[WATCH-STATS] ⚠️  watchStats non présent dans la réponse");
+        console.warn("[WATCH-STATS] ⚠️  Pas de watchStats dans la réponse:", { stats });
       }
     } catch (err) {
-      console.error("[WATCH-STATS] ❌ Erreur chargement:", err.message);
+      console.error("[WATCH-STATS] ❌ Exception:", err.message, err.stack);
     }
   }
 
