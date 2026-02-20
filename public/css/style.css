@@ -817,6 +817,13 @@ body {
   display: flex;
 }
 
+.mobile-sub-pill {
+  display: none;
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .burger {
   display: none;
   font-size: 26px;
@@ -894,6 +901,11 @@ body {
 
   .burger {
     display: block;
+  }
+
+  .mobile-sub-pill {
+    display: inline-flex;
+    align-items: center;
   }
 }
 

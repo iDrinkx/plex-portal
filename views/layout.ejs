@@ -34,6 +34,8 @@
       <a class="logout-btn" href="<%= basePath %>/logout">Déconnexion</a>
     </div>
 
+    <!-- Pill abonnement mobile -->
+    <a href="<%= basePath %>/profil" class="nav-sub-pill mobile-sub-pill" id="mobileSubPill">&#x2014;</a>
     <!-- Burger Mobile -->
     <div class="burger" id="burger">☰</div>
 
@@ -107,11 +109,16 @@
 
     function applyPill(data) {
       const numMatch = data.daysLeft && String(data.daysLeft).match(/\d+/);
-      if (data.status === 'unlimited') pill.textContent = '\u221e';
-      else if (numMatch)               pill.textContent = numMatch[0] + '\u00a0jours';
-      else                             pill.textContent = data.label || '\u2014';
-      pill.className = pill.className.replace(/\bnav-sub-pill--\S+/g, '');
-      pill.classList.add('nav-sub-pill--' + (data.status || 'loading'));
+      const text = data.status === 'unlimited' ? '\u221e'
+                 : numMatch ? numMatch[0] + '\u00a0jours'
+                 : data.label || '\u2014';
+      const cls = 'nav-sub-pill--' + (data.status || 'loading');
+      [pill, document.getElementById('mobileSubPill')].forEach(el => {
+        if (!el) return;
+        el.textContent = text;
+        el.className = el.className.replace(/\bnav-sub-pill--\S+/g, '');
+        el.classList.add(cls);
+      });
     }
 
     // ⚡ Restaurer instantanément depuis le cache
