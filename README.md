@@ -225,7 +225,7 @@ GET  /profil                    Page profil utilisateur (auth requis)
 GET  /statistiques              Statistiques de visionnage (auth requis)
 GET  /statistiques/activite     Activité détaillée (auth requis)
 GET  /seerr                     Seerr en iframe full-page (auth requis)
-GET  /badges                    Liste des succès disponibles
+GET  /succes                    Liste des succès disponibles
 
 # Auth
 GET  /login                     Initie l'auth Plex OAuth

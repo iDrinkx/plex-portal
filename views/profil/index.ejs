@@ -67,8 +67,8 @@
     <div class="xp-left-card">
       <div class="xp-left-icon">🏆</div>
       <div class="xp-left-label">Succès</div>
-      <div class="xp-left-count"><span id="xpUnlockedCount" class="skel"> </span></div>
-      <a href="<%= basePath %>/badges" class="action-pill action-pill--gold">Voir mes succès →</a>
+      <div class="xp-left-count"><span id="xpUnlockedCount"><%= unlockedBadgesCount || 0 %>&nbsp;/&nbsp;<%= totalBadgesCount || 0 %></span></div>
+      <a href="<%= basePath %>/succes" class="action-pill action-pill--gold">Voir mes succès →</a>
     </div>
 
     <!-- DROITE : barre XP -->
@@ -1827,11 +1827,11 @@
         if (rankData) item.classList.toggle("unlocked", currentLevel >= rankData.minLevel);
       });
       {
-        const unlockedCount = [...badgeItems].filter(i => i.classList.contains("unlocked")).length;
+        // counts from server (PAGE_UNLOCKED_BADGES / PAGE_TOTAL_BADGES)
         if (document.getElementById("detailProfilBadges"))
-          document.getElementById("detailProfilBadges").textContent = unlockedCount + "/" + XP_SYSTEM.ranks.length;
+          document.getElementById("detailProfilBadges").textContent = PAGE_UNLOCKED_BADGES + "/" + PAGE_TOTAL_BADGES;
         const uc = document.getElementById("xpUnlockedCount");
-        if (uc) { uc.textContent = unlockedCount + " / " + XP_SYSTEM.ranks.length; uc.classList.remove("skel"); }
+        if (uc) uc.textContent = PAGE_UNLOCKED_BADGES + " / " + PAGE_TOTAL_BADGES;
       }
 
       // Nettoyer skeletons batch 2 (Tautulli)
@@ -2129,10 +2129,10 @@
         if (rankData) item.classList.toggle("unlocked", currentLevel >= rankData.minLevel);
       });
       if (el("detailProfilBadges")) {
-        const unlockedCount = [...badgeItems].filter(i => i.classList.contains("unlocked")).length;
-        el("detailProfilBadges").textContent = unlockedCount + "/" + XP_SYSTEM.ranks.length;
+        // counts from server
+        el("detailProfilBadges").textContent = PAGE_UNLOCKED_BADGES + "/" + PAGE_TOTAL_BADGES;
         const uc = document.getElementById("xpUnlockedCount");
-        if (uc) { uc.textContent = unlockedCount + " / " + XP_SYSTEM.ranks.length; uc.classList.remove("skel"); }
+        if (uc) uc.textContent = PAGE_UNLOCKED_BADGES + " / " + PAGE_TOTAL_BADGES;
       }
     }
 

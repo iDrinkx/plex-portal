@@ -152,7 +152,7 @@ router.get("/statistiques", requireAuth, (req, res) => {
   res.render("statistiques/index", { user: req.session.user, basePath: req.basePath });
 });
 
-router.get("/badges", requireAuth, async (req, res) => {
+router.get("/succes", requireAuth, async (req, res) => {
   try {
     // ⚡ Rendu instantané depuis la DB uniquement — l'évaluation Tautulli
     //    se fait en arrière-plan via /api/badges-eval (appelé par le client)
@@ -200,7 +200,7 @@ router.get("/badges", requireAuth, async (req, res) => {
     const emptyData = { totalHours: 0, movieCount: 0, episodeCount: 0, sessionCount: 0, monthlyHours: 0, nightCount: 0, morningCount: 0, daysSince: 0 };
     const stats_global = ACHIEVEMENTS.getStats(emptyData, userUnlockedMap);
 
-    res.render("badges", {
+    res.render("succes", {
       user: req.session.user,
       basePath: req.basePath,
       XP_SYSTEM,
@@ -210,7 +210,7 @@ router.get("/badges", requireAuth, async (req, res) => {
     });
   } catch (err) {
     log.create('[Badges]').error(err.message);
-    res.render("badges", {
+    res.render("succes", {
       user: req.session.user,
       basePath: req.basePath,
       XP_SYSTEM,
@@ -224,7 +224,7 @@ router.get("/badges", requireAuth, async (req, res) => {
 
 /* ===============================
    🏆 API BADGES EVAL (arrière-plan)
-   Appellé par le browser après rendu de /badges.
+   Appellé par le browser après rendu de /succes.
    Fait le vrai calcul Tautulli + retourne les mises à jour.
 =============================== */
 const logBadges = log.create('[Badges]');
