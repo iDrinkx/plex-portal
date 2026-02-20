@@ -154,148 +154,51 @@ router.get("/statistiques", requireAuth, (req, res) => {
 
 router.get("/badges", requireAuth, async (req, res) => {
   try {
-    // Récupérer les stats de l'utilisateur
-    const stats = await getTautulliStats(
-      req.session.user.username,
-      process.env.TAUTULLI_URL,
-      process.env.TAUTULLI_API_KEY,
-      req.session.user.id,
-      process.env.PLEX_URL,
-      process.env.PLEX_TOKEN,
-      req.session.user.joinedAtTimestamp
-    );
-
-    // Préparer les données pour les achievements
-    const data = {
-      totalHours: stats.watchStats?.totalHours || 0,
-      movieCount: stats.watchStats?.movieCount || 0,
-      episodeCount: stats.watchStats?.episodeCount || 0,
-      sessionCount: stats.sessionCount || 0,
-      monthlyHours: stats.monthlyHours || 0,
-      nightCount: stats.nightCount || 0,
-      morningCount: stats.morningCount || 0,
-      daysSince: Math.floor((Date.now() - (req.session.user.joinedAtTimestamp * 1000)) / (1000 * 60 * 60 * 24))
-    };
-
-    // Structurer les achievements par catégorie
+    // ⚡ Rendu instantané depuis la DB uniquement — l'évaluation Tautulli
+    //    se fait en arrière-plan via /api/badges-eval (appelé par le client)
     const achievementsByCategory = {
-      temporels: { icon: "🎁", name: "Temporels", achievements: ACHIEVEMENTS.temporels },
-      activites: { icon: "🔥", name: "Activité", achievements: ACHIEVEMENTS.activites },
-      films: { icon: "🎬", name: "Films", achievements: ACHIEVEMENTS.films },
-      series: { icon: "📺", name: "Séries", achievements: ACHIEVEMENTS.series },
-      mensuels: { icon: "📅", name: "Mensuels", achievements: ACHIEVEMENTS.mensuels },
+      temporels:   { icon: "🎁", name: "Temporels",   achievements: ACHIEVEMENTS.temporels },
+      activites:   { icon: "🔥", name: "Activité",    achievements: ACHIEVEMENTS.activites },
+      films:       { icon: "🎬", name: "Films",        achievements: ACHIEVEMENTS.films },
+      series:      { icon: "📺", name: "Séries",       achievements: ACHIEVEMENTS.series },
+      mensuels:    { icon: "📅", name: "Mensuels",     achievements: ACHIEVEMENTS.mensuels },
       collections: { icon: "🎥", name: "Collections", achievements: ACHIEVEMENTS.collections },
-      secrets: { icon: "🔒", name: "Secrets", achievements: ACHIEVEMENTS.secrets }
+      secrets:     { icon: "🔒", name: "Secrets",     achievements: ACHIEVEMENTS.secrets }
     };
 
-    const userId = req.session.user.id;
-    const username = req.session.user.username;
+    const username   = req.session.user.username;
     const joinedAtTs = req.session.user.joinedAtTimestamp;
-    const today = new Date().toLocaleDateString('fr-FR');
 
-    // S'assurer que l'utilisateur existe dans notre DB (upsert silencieux)
+    // Upsert utilisateur en DB (silencieux)
     let dbUserId = null;
     try {
       const dbUser = UserQueries.upsert(
         username,
-        req.session.user.id || null,
+        req.session.user.id    || null,
         req.session.user.email || null,
         req.session.user.joinedAt || joinedAtTs || null
       );
-      dbUserId = dbUser ? dbUser.id : null;
+      dbUserId = dbUser?.id || null;
     } catch(e) {
-      // Fallback: lecture seule si upsert échoue
       try { dbUserId = UserQueries.getByUsername(username)?.id || null; } catch(_) {}
     }
 
-    // ── 1. Unlocks déjà en cache DB (rapide, aucune requête Tautulli)
+    // Lecture DB uniquement (< 5 ms)
     const userUnlockedMap = dbUserId ? UserAchievementQueries.getForUser(dbUserId) : {};
-    // ── 1b. Progression des badges collection (depuis dernière évaluation)
-    const progressMap = dbUserId ? AchievementProgressQueries.getForUser(dbUserId) : {};
+    const progressMap     = dbUserId ? AchievementProgressQueries.getForUser(dbUserId) : {};
 
-    // ── 2. Évaluer les succès NON-SECRETS (conditions sur data)
-    const allAchievements = ACHIEVEMENTS.getAll();
-    const computedDates = getAchievementUnlockDates(username, joinedAtTs);
-
-    for (const a of allAchievements) {
-      if (userUnlockedMap[a.id]) continue;          // déjà en cache → skip
-      if (a.isSecret) continue;                     // secrets via Tautulli uniquement
-      if (a.category === 'secrets') continue;       // secrets auto traités ci-dessous
-      if (a.category === 'collections') continue;   // collections auto traités via Tautulli
-      if (!a.condition(data)) continue;             // condition non remplie → skip
-      const date = computedDates[a.id] || today;
-      if (dbUserId) {
-        try { UserAchievementQueries.unlock(dbUserId, a.id, date, 'auto'); } catch(e) {}
-      }
-      userUnlockedMap[a.id] = date;                 // toujours afficher même sans DB
-    }
-
-    // ── 3. Évaluer les collections + secrets avec timeout 4 s
-    // Les badges revocable (collection) sont TOUJOURS re-évalués même si déjà débloqués
-    // Les badges événementiels (minuit, week-end...) ne sont évalués que s'ils ne sont pas encore débloqués
-    const secretsToCheck = [...ACHIEVEMENTS.collections, ...ACHIEVEMENTS.secrets]
-      .filter(a => !a.isSecret && (!userUnlockedMap[a.id] || a.revocable))
-      .map(a => a.id);
-
-    // IDs des badges revocable déjà débloqués (pour détecter les régressions)
-    const revocableUnlocked = new Set(
-      [...ACHIEVEMENTS.collections, ...ACHIEVEMENTS.secrets]
-        .filter(a => a.revocable && userUnlockedMap[a.id])
-        .map(a => a.id)
-    );
-
-    if (secretsToCheck.length > 0 && isTautulliReady()) {
-      // Await avec timeout de 4 s : si Tautulli répond, on a les données fraîches pour le rendu.
-      // Si timeout dépassé, on tombe sur le progressMap DB (comportement précédent).
-      try {
-        const evalResult = await Promise.race([
-          evaluateSecretAchievements(username, joinedAtTs, secretsToCheck, req.session.user.id),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('EVAL_TIMEOUT')), 4000))
-        ]);
-
-        const { unlocked: newSecrets, progress: newProgress } = evalResult;
-
-        // Débloquer / révoquer en DB
-        for (const [id, date] of Object.entries(newSecrets)) {
-          if (dbUserId) try { UserAchievementQueries.unlock(dbUserId, id, date, 'auto'); } catch(e) {}
-          userUnlockedMap[id] = date; // visible immédiatement dans le rendu
-        }
-        for (const id of revocableUnlocked) {
-          if (!newSecrets[id] && dbUserId) {
-            try { UserAchievementQueries.revoke(dbUserId, id); } catch(e) {}
-            delete userUnlockedMap[id];
-          }
-        }
-        // Sauvegarder la progression et fusionner dans progressMap pour le rendu
-        if (newProgress) {
-          for (const [id, prog] of Object.entries(newProgress)) {
-            if (dbUserId) try { AchievementProgressQueries.save(dbUserId, id, prog.current, prog.total); } catch(e) {}
-            progressMap[id] = { current: prog.current, total: prog.total }; // merge dans le rendu
-          }
-        }
-        if (Object.keys(newSecrets).length > 0) {
-          log.create('[Badges]').info(`Secrets débloqués pour ${username}:`, Object.keys(newSecrets).join(', '));
-        }
-      } catch (evalErr) {
-        if (evalErr.message === 'EVAL_TIMEOUT') {
-          log.create('[Badges]').warn(`Timeout évaluation collections pour ${username} — cache DB utilisé`);
-        } else {
-          log.create('[Badges]').error('Évaluation secrets:', evalErr.message);
-        }
-      }
-    }
-
-    // ── 4. Construire les cards avec statut et date
+    // Construire les cards depuis l'état DB courant
     for (const category in achievementsByCategory) {
-      achievementsByCategory[category].achievements = achievementsByCategory[category].achievements.map(achievement => ({
-        ...achievement,
-        unlocked: !!userUnlockedMap[achievement.id],
-        unlockedDate: userUnlockedMap[achievement.id] || null
+      achievementsByCategory[category].achievements = achievementsByCategory[category].achievements.map(a => ({
+        ...a,
+        unlocked:     !!userUnlockedMap[a.id],
+        unlockedDate: userUnlockedMap[a.id] || null
       }));
     }
 
-    // Obtenir les stats globales
-    const stats_global = ACHIEVEMENTS.getStats(data, userUnlockedMap);
+    // Stats basées sur la DB (sans recalcul Tautulli)
+    const emptyData = { totalHours: 0, movieCount: 0, episodeCount: 0, sessionCount: 0, monthlyHours: 0, nightCount: 0, morningCount: 0, daysSince: 0 };
+    const stats_global = ACHIEVEMENTS.getStats(emptyData, userUnlockedMap);
 
     res.render("badges", {
       user: req.session.user,
@@ -313,8 +216,112 @@ router.get("/badges", requireAuth, async (req, res) => {
       XP_SYSTEM,
       ACHIEVEMENTS: {},
       stats: { total: 0, unlocked: 0, locked: 0, progress: 0 },
+      progressMap: {},
       error: "Erreur lors du chargement des achievements"
     });
+  }
+});
+
+/* ===============================
+   🏆 API BADGES EVAL (arrière-plan)
+   Appellé par le browser après rendu de /badges.
+   Fait le vrai calcul Tautulli + retourne les mises à jour.
+=============================== */
+const logBadges = log.create('[Badges]');
+
+router.get('/api/badges-eval', requireAuth, async (req, res) => {
+  try {
+    const username   = req.session.user.username;
+    const joinedAtTs = req.session.user.joinedAtTimestamp;
+    const today      = new Date().toLocaleDateString('fr-FR');
+
+    let dbUserId = null;
+    try {
+      const dbUser = UserQueries.upsert(username, req.session.user.id||null, req.session.user.email||null, req.session.user.joinedAt||joinedAtTs||null);
+      dbUserId = dbUser?.id || null;
+    } catch(e) {
+      try { dbUserId = UserQueries.getByUsername(username)?.id || null; } catch(_) {}
+    }
+
+    const userUnlockedMap = dbUserId ? UserAchievementQueries.getForUser(dbUserId) : {};
+
+    // 1. Stats Tautulli (rapide si DB directe prête)
+    const stats = await getTautulliStats(
+      username, process.env.TAUTULLI_URL, process.env.TAUTULLI_API_KEY,
+      req.session.user.id, process.env.PLEX_URL, process.env.PLEX_TOKEN, joinedAtTs
+    );
+    const data = {
+      totalHours:   stats.watchStats?.totalHours   || 0,
+      movieCount:   stats.watchStats?.movieCount   || 0,
+      episodeCount: stats.watchStats?.episodeCount || 0,
+      sessionCount: stats.sessionCount   || 0,
+      monthlyHours: stats.monthlyHours   || 0,
+      nightCount:   stats.nightCount     || 0,
+      morningCount: stats.morningCount   || 0,
+      daysSince: Math.floor((Date.now() - (joinedAtTs * 1000)) / (1000 * 60 * 60 * 24))
+    };
+
+    const computedDates = getAchievementUnlockDates(username, joinedAtTs);
+    const allAchievements = ACHIEVEMENTS.getAll();
+    const newlyUnlocked = {};
+
+    // 2. Succès non-secrets
+    for (const a of allAchievements) {
+      if (userUnlockedMap[a.id])    continue;
+      if (a.isSecret)               continue;
+      if (a.category === 'secrets') continue;
+      if (a.category === 'collections') continue;
+      if (!a.condition(data))       continue;
+      const date = computedDates[a.id] || today;
+      if (dbUserId) try { UserAchievementQueries.unlock(dbUserId, a.id, date, 'auto'); } catch(e) {}
+      newlyUnlocked[a.id] = date;
+    }
+
+    // 3. Collections + secrets Tautulli
+    const secretsToCheck = [...ACHIEVEMENTS.collections, ...ACHIEVEMENTS.secrets]
+      .filter(a => !a.isSecret && (!userUnlockedMap[a.id] || a.revocable)).map(a => a.id);
+    const revocableUnlocked = new Set(
+      [...ACHIEVEMENTS.collections, ...ACHIEVEMENTS.secrets]
+        .filter(a => a.revocable && userUnlockedMap[a.id]).map(a => a.id)
+    );
+    const newProgress = {};
+    const revoked = [];
+
+    if (secretsToCheck.length > 0 && isTautulliReady()) {
+      try {
+        const evalResult = await Promise.race([
+          evaluateSecretAchievements(username, joinedAtTs, secretsToCheck, req.session.user.id),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('EVAL_TIMEOUT')), 5000))
+        ]);
+        const { unlocked: evalUnlocked, progress: evalProgress } = evalResult;
+        for (const [id, date] of Object.entries(evalUnlocked)) {
+          if (dbUserId) try { UserAchievementQueries.unlock(dbUserId, id, date, 'auto'); } catch(e) {}
+          newlyUnlocked[id] = date;
+        }
+        for (const id of revocableUnlocked) {
+          if (!evalUnlocked[id]) {
+            if (dbUserId) try { UserAchievementQueries.revoke(dbUserId, id); } catch(e) {}
+            revoked.push(id);
+          }
+        }
+        if (evalProgress) {
+          for (const [id, prog] of Object.entries(evalProgress)) {
+            if (dbUserId) try { AchievementProgressQueries.save(dbUserId, id, prog.current, prog.total); } catch(e) {}
+            newProgress[id] = prog;
+          }
+        }
+        if (Object.keys(newlyUnlocked).length > 0)
+          logBadges.info(`Débloqués pour ${username}:`, Object.keys(newlyUnlocked).join(', '));
+      } catch (err) {
+        if (err.message === 'EVAL_TIMEOUT') logBadges.warn(`Timeout eval ${username}`);
+        else logBadges.error('badges-eval:', err.message);
+      }
+    }
+
+    res.json({ unlocked: newlyUnlocked, progress: newProgress, revoked, data });
+  } catch (err) {
+    logBadges.error('badges-eval crash:', err.message);
+    res.status(500).json({ unlocked: {}, progress: {}, revoked: [], data: {} });
   }
 });
 

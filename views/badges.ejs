@@ -316,7 +316,7 @@
 
       <div class="achievements-grid">
         <% category.achievements.forEach(achievement => { %>
-          <div class="achievement-card <%= achievement.category %> <%= achievement.unlocked ? 'unlocked' : 'locked' %>">
+          <div class="achievement-card <%= achievement.category %> <%= achievement.unlocked ? 'unlocked' : 'locked' %>" data-badge-id="<%= achievement.id %>">
             <span class="achievement-icon"><%= achievement.icon %></span>
             <div class="achievement-name"><%= achievement.name %></div>
             
@@ -501,5 +501,73 @@
 
     // Lancer immédiatement
     fetchAndApply();
+
+    // ── Évaluation arrière-plan : unlock/révoquer badges via Tautulli ──
+    fetch(BASE + '/api/badges-eval')
+      .then(r => r.ok ? r.json() : null)
+      .then(result => {
+        if (!result) return;
+        const { unlocked, progress, revoked, data } = result;
+        let unlockedDelta = 0;
+
+        // Appliquer les nouveaux unlocks
+        for (const [id, date] of Object.entries(unlocked || {})) {
+          const card = document.querySelector('[data-badge-id="' + id + '"]');
+          if (!card || card.classList.contains('unlocked')) continue;
+          card.classList.remove('locked');
+          card.classList.add('unlocked');
+          // Remplace le dernier bloc de contenu (barre de progression ou texte) par la date
+          const existingDate = card.querySelector('.achievement-date, .achievement-progress, .achievement-progress-bar, .achievement-secret-text, .achievement-description');
+          if (existingDate) {
+            // Supprimer tout ce qui suit achievement-name
+            const name = card.querySelector('.achievement-name');
+            let node = name ? name.nextSibling : null;
+            while (node) { const next = node.nextSibling; card.removeChild(node); node = next; }
+          }
+          const desc = card.querySelector('.achievement-description');
+          if (!desc) {
+            // Ajouter la date débloquée
+            const dateDiv = document.createElement('div');
+            dateDiv.className = 'achievement-date';
+            dateDiv.textContent = '✓ Débloqué le ' + date;
+            card.appendChild(dateDiv);
+          }
+          unlockedDelta++;
+        }
+
+        // Appliquer les révocations (badges collection perdus)
+        for (const id of (revoked || [])) {
+          const card = document.querySelector('[data-badge-id="' + id + '"]');
+          if (!card || card.classList.contains('locked')) continue;
+          card.classList.remove('unlocked');
+          card.classList.add('locked');
+          const name = card.querySelector('.achievement-name');
+          let node = name ? name.nextSibling : null;
+          while (node) { const next = node.nextSibling; card.removeChild(node); node = next; }
+          unlockedDelta--;
+        }
+
+        // Mettre à jour les barres de progression des collections
+        for (const [id, prog] of Object.entries(progress || {})) {
+          if (prog && prog.total > 0) updateProgress(id, Math.min(prog.current, prog.total), prog.total);
+        }
+
+        // Mettre à jour les compteurs stats si des changements ont eu lieu
+        if (unlockedDelta !== 0) {
+          const ulEl = document.getElementById('unlockedCount');
+          const lkEl = document.getElementById('lockedCount');
+          const prEl = document.getElementById('progressPercent');
+          if (ulEl) { const n = (parseInt(ulEl.textContent)||0) + unlockedDelta; ulEl.textContent = n; }
+          if (lkEl) { const n = (parseInt(lkEl.textContent)||0) - unlockedDelta; lkEl.textContent = Math.max(0, n); }
+          if (prEl && ulEl && lkEl) {
+            const total = (parseInt(ulEl.textContent)||0) + (parseInt(lkEl.textContent)||0);
+            prEl.textContent = (total > 0 ? Math.round((parseInt(ulEl.textContent)/total)*100) : 0) + '%';
+          }
+        }
+
+        // Relancer fetchAndApply avec les vraies données si Tautulli a répondu
+        if (data && (data.sessionCount > 0 || data.totalHours > 0)) applyAll(data);
+      })
+      .catch(() => {});
   });
 </script>
