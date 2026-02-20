@@ -73,10 +73,18 @@
       border: none;
     }
 
-    /* Sur mobile : masquer la topbar pour donner tout l'espace à l'iframe */
+    /* Sur mobile : topbar plus compacte */
     @media (max-width: 768px) {
       #topbar {
-        display: none;
+        height: 36px;
+        padding: 0 10px;
+      }
+      #topbar a {
+        font-size: 0.78rem;
+        padding: 4px 9px;
+      }
+      #topbar .title {
+        font-size: 0.75rem;
       }
     }
   </style>
