@@ -18,7 +18,12 @@ const fetch = require("node-fetch");
    AUTH GUARD
 =============================== */
 function requireAuth(req, res, next) {
-  if (!req.session.user) return res.redirect((req.basePath || "") + "/");
+  const hasSession = !!(req.session && req.session.user);
+  console.log(`[SeerrProxy] requireAuth ${req.method} ${req.url} — session.user: ${hasSession ? req.session.user.username : "ABSENT"}`);
+  if (!hasSession) {
+    console.warn(`[SeerrProxy] ❌ requireAuth FAIL → redirect /`);
+    return res.redirect((req.basePath || "") + "/");
+  }
   next();
 }
 
@@ -109,10 +114,8 @@ router.get("/overseerr", requireAuth, async (req, res) => {
     console.warn("[SeerrProxy] Cookie invalide — nouvelle tentative d'auth");
     delete req.session.overseerrCookie;
     await doSeerrAuth(req);
-
     const valid2 = await validateSeerrCookie(req.session.overseerrCookie);
     if (!valid2) {
-      console.error("[SeerrProxy] ❌ Cookie toujours invalide après 2 tentatives");
       return res.status(503).send(`
         <html><body style="background:#0f1117;color:#e2e8f0;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0">
           <div style="text-align:center">
@@ -126,25 +129,13 @@ router.get("/overseerr", requireAuth, async (req, res) => {
     }
   }
 
-  // 3. ✅ Envoyer le cookie Seerr directement au browser
-  //    Restreint au path /overseerr-frame → le browser l'inclut automatiquement
-  //    dans TOUTES les requêtes sous /overseerr-frame/* (JS inclus, SSR inclus)
-  //    Sans ça, Seerr côté client ne sait pas que l'utilisateur est connecté.
-  const rawCookie = req.session.overseerrCookie; // "connect.sid=s%3A..."
-  const eqIdx = rawCookie.indexOf("=");
-  const cookieName  = rawCookie.slice(0, eqIdx);
-  const cookieValue = rawCookie.slice(eqIdx + 1);
-
-  res.cookie(cookieName, cookieValue, {
-    path: basePath + "/overseerr-frame",
-    httpOnly: true,
-    sameSite: "lax",
-    // Pas de maxAge → cookie de session (supprimé à la fermeture du tab)
-  });
-
-  // 4. Sauvegarder la session plex-portal et rediriger
+  // 3. Forcer la sauvegarde + réémettre le cookie de session plex-portal
+  //    en touchant la session pour que express-session pose bien le Set-Cookie
+  //    sur la réponse de redirect (nécessaire pour la requête suivante /overseerr-frame/)
+  req.session.touch();
   await new Promise((resolve, reject) => req.session.save(err => err ? reject(err) : resolve()));
-  console.log(`[SeerrProxy] ✅ Cookie Seerr envoyé au browser → redirect ${basePath}/overseerr-frame/`);
+
+  console.log(`[SeerrProxy] ✅ Redirect vers ${basePath}/overseerr-frame/ (session: ${req.sessionID})`);
   res.redirect(basePath + "/overseerr-frame/");
 });
 
@@ -194,9 +185,10 @@ const proxyMiddleware = createProxyMiddleware({
   target: seerrTarget,
   changeOrigin: true,
 
-  // ⚠️  PAS de pathRewrite — Seerr a BASE_URL=/overseerr-frame donc Next.js
-  //    s'attend à recevoir les requêtes avec le préfixe /overseerr-frame intact.
-  //    Supprimer le préfixe causait une boucle infinie de redirects.
+  // Express Router strip le préfixe "/overseerr-frame" de req.url avant d'appeler le proxy.
+  // Ex: requête "/overseerr-frame/api/v1/auth/me" → req.url = "/api/v1/auth/me" dans le proxy.
+  // On doit donc RE-AJOUTER le préfixe pour que Seerr (BASE_URL=/overseerr-frame) reconnaisse l'URL.
+  pathRewrite: (path) => "/overseerr-frame" + path,
 
   secure: false,
   proxyTimeout: 30000,
