@@ -1,4 +1,4 @@
-document.addEventListener("DOMContentLoaded", async () => {
+﻿document.addEventListener("DOMContentLoaded", async () => {
 
   const basePath = window.APP_BASE_PATH || "";
   const SUBSCRIPTION_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
@@ -78,19 +78,19 @@ document.addEventListener("DOMContentLoaded", async () => {
         cacheManager.set("statsCache", tautulliData);
       }
 
-      let overseerrData = cacheManager.get("overseerrCache", STATS_CACHE_DURATION);
-      if (!overseerrData) {
-        const res = await fetch(basePath + "/api/overseerr", {
+      let seerrData = cacheManager.get("seerrCache", STATS_CACHE_DURATION);
+      if (!seerrData) {
+        const res = await fetch(basePath + "/api/seerr", {
           headers: { "Accept": "application/json" }
         });
         if (!res.ok) return;
-        overseerrData = await res.json();
-        cacheManager.set("overseerrCache", overseerrData);
+        seerrData = await res.json();
+        cacheManager.set("seerrCache", seerrData);
       }
 
       // Calculer l'XP
       const sessionCount = tautulliData?.sessionCount || 0;
-      const totalXp = sessionCount * 2; // Overseerr ne procure plus d'XP
+      const totalXp = sessionCount * 2; // Seerr ne procure plus d'XP
 
       // Obtenir le badge couleur
       const badge = XP_SYSTEM.getBadgeByXp(totalXp);

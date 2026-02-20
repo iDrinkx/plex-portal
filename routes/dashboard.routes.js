@@ -1,10 +1,10 @@
-const express = require("express");
+﻿const express = require("express");
 const router = express.Router();
 const fetch = require("node-fetch");
 
 const { computeSubscription } = require("../utils/wizarr");
 const { getTautulliStats } = require("../utils/tautulli");
-const { getOverseerrStats } = require("../utils/overseerr");
+const { getSeerrStats } = require("../utils/seerr");
 const { getPlexJoinDate } = require("../utils/plex");
 const { XP_SYSTEM } = require("../utils/xp-system");
 const { ACHIEVEMENTS } = require("../utils/achievements");
@@ -437,10 +437,10 @@ router.get("/api/stats-wait", requireAuth, async (req, res) => {
 });
 
 /* ===============================
-   🎬 API OVERSEERR
+   🎬 API SEERR
 =============================== */
 
-router.get("/api/overseerr", requireAuth, async (req, res) => {
+router.get("/api/seerr", requireAuth, async (req, res) => {
   try {
     const userEmail = req.session.user?.email;
     const username = req.session.user?.username;
@@ -451,22 +451,22 @@ router.get("/api/overseerr", requireAuth, async (req, res) => {
     }
 
     // Clé de cache utilisant l'ID Plex pour plus de certitude
-    const cacheKey = `overseerr:${plexUserId}`;
+    const cacheKey = `seerr:${plexUserId}`;
     
-    const overseerr = await cache.getOrSet(
+    const seerr = await cache.getOrSet(
       cacheKey,
-      () => getOverseerrStats(
+      () => getSeerrStats(
         userEmail,
         username,
-        process.env.OVERSEERR_URL,
-        process.env.OVERSEERR_API_KEY
+        process.env.SEERR_URL,
+        process.env.SEERR_API_KEY
       ),
       60 * 1000 // 60 secondes
     );
 
-    res.json(overseerr || {});
+    res.json(seerr || {});
   } catch (err) {
-    res.status(500).json({ error: "Failed to fetch overseerr data" });
+    res.status(500).json({ error: "Failed to fetch seerr data" });
   }
 });
 
@@ -483,7 +483,7 @@ router.post("/api/cache/invalidate", requireAuth, (req, res) => {
     // Invalide tous les caches de l'utilisateur
     cache.invalidate(`subscription:${userId}`);
     cache.invalidate(`stats:${userId}`);
-    cache.invalidate(`overseerr:${userId}`);
+    cache.invalidate(`seerr:${userId}`);
     
     res.json({ 
       message: "Cache invalidated", 
@@ -501,8 +501,8 @@ router.post("/api/cache/invalidate", requireAuth, (req, res) => {
 // Endpoint pour récupérer tous les utilisateurs (utilisé par cron job au démarrage)
 router.get("/api/all-users", async (req, res) => {
   try {
-    const baseUrl = process.env.OVERSEERR_URL || "http://localhost:5055";
-    const apiKey = process.env.OVERSEERR_API_KEY;
+    const baseUrl = process.env.SEERR_URL || "http://localhost:5055";
+    const apiKey = process.env.SEERR_API_KEY;
     
     if (!apiKey) {
       return res.json([]);

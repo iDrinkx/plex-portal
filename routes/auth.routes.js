@@ -1,4 +1,4 @@
-const express = require("express");
+﻿const express = require("express");
 const fetch = require("node-fetch");
 const router = express.Router();
 
@@ -13,7 +13,7 @@ const { isUserAuthorized } = require("../utils/plex");
  * automatiquement quand l'iframe charge overseerr.idrinktv.ovh.
  */
 function getSeerrCookieDomain() {
-  const publicUrl = process.env.OVERSEERR_PUBLIC_URL || "";
+  const publicUrl = process.env.SEERR_PUBLIC_URL || "";
   if (!publicUrl) return null;
   try {
     const hostname = new URL(publicUrl).hostname; // ex: overseerr.idrinktv.ovh
@@ -24,10 +24,10 @@ function getSeerrCookieDomain() {
 }
 
 async function grabSeerrCookie(authToken, res) {
-  const overseerrUrl = (process.env.OVERSEERR_URL || "").replace(/\/$/, "");
-  if (!overseerrUrl || !authToken) return;
+  const seerrUrl = (process.env.SEERR_URL || "").replace(/\/$/, "");
+  if (!seerrUrl || !authToken) return;
   try {
-    const r = await fetch(`${overseerrUrl}/api/v1/auth/plex`, {
+    const r = await fetch(`${seerrUrl}/api/v1/auth/plex`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "Accept": "application/json" },
       body: JSON.stringify({ authToken })

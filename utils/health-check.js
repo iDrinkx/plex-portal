@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 🏥 HEALTH CHECK - Vérification de la configuration PRO
  * Lance des vérifications pour s'assurer que tout est configuré correctement
  */
@@ -65,7 +65,7 @@ async function runHealthCheck() {
     PLEX_URL: process.env.PLEX_URL ? "✅" : "❌",
     PLEX_TOKEN: process.env.PLEX_TOKEN ? "✅" : "❌",
     WIZARR_URL: process.env.WIZARR_URL ? "✅" : "⚠️",
-    OVERSEERR_URL: process.env.OVERSEERR_URL ? "✅" : "⚠️",
+    SEERR_URL: process.env.SEERR_URL ? "✅" : "⚠️",
   };
 
   for (const [key, status] of Object.entries(configChecks)) {

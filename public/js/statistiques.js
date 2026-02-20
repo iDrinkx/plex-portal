@@ -1,4 +1,4 @@
-document.addEventListener("DOMContentLoaded", async () => {
+﻿document.addEventListener("DOMContentLoaded", async () => {
 
   const basePath = window.APP_BASE_PATH || "";
   const container = document.getElementById("statsContainer");
@@ -104,16 +104,16 @@ document.addEventListener("DOMContentLoaded", async () => {
      🎬 LOAD OVERSEERR STATS
   =============================== */
 
-  async function loadOverseerrStats() {
+  async function loadSeerrStats() {
     try {
-      let data = cacheManager.get("overseerrCache");
+      let data = cacheManager.get("seerrCache");
 
       if (!data) {
-        const res = await fetch(basePath + "/api/overseerr");
+        const res = await fetch(basePath + "/api/seerr");
         if (!res.ok) throw new Error("API error");
 
         data = await res.json();
-        cacheManager.set("overseerrCache", data);
+        cacheManager.set("seerrCache", data);
       }
 
       if (!data || !data.total) {
@@ -127,7 +127,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         total: data.total || 0
       };
     } catch (err) {
-      console.error("Overseerr error:", err);
+      console.error("Seerr error:", err);
       return null;
     }
   }
@@ -137,9 +137,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   =============================== */
 
   try {
-    const [tautulliData, overseerrData] = await Promise.all([
+    const [tautulliData, seerrData] = await Promise.all([
       loadTautulliStats(),
-      loadOverseerrStats()
+      loadSeerrStats()
     ]);
 
     let html = "";
@@ -159,27 +159,27 @@ document.addEventListener("DOMContentLoaded", async () => {
       `;
     }
 
-    if (overseerrData) {
+    if (seerrData) {
       html += `
         <div>
           <h4 style="margin-bottom: 10px;">🎬 Demandes de contenu</h4>
           <div class="subscription-row">
             <span class="label">📊 Total demandes</span>
-            <span class="value">${overseerrData.total}</span>
+            <span class="value">${seerrData.total}</span>
           </div>
           <div class="subscription-row">
             <span class="label">🔄 En attente</span>
-            <span class="value">${overseerrData.pending}</span>
+            <span class="value">${seerrData.pending}</span>
           </div>
           <div class="subscription-row">
             <span class="label">✅ Approuvées</span>
-            <span class="value">${overseerrData.approved}</span>
+            <span class="value">${seerrData.approved}</span>
           </div>
         </div>
       `;
     }
 
-    if (!tautulliData && !overseerrData) {
+    if (!tautulliData && !seerrData) {
       html = "<p>Aucune donnée disponible.</p>";
     }
 

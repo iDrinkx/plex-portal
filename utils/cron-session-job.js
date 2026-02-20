@@ -1,4 +1,4 @@
-const cron = require('node-cron');
+﻿const cron = require('node-cron');
 const { scanTautulliHistoryForAllUsers } = require('./tautulli');
 const SessionStatsCache = require('./session-stats-cache-db');  // 🗄️ Utiliser SQLite
 
@@ -45,7 +45,7 @@ function startSessionCronJob(TAUTULLI_URL, TAUTULLI_API_KEY, PLEX_URL, PLEX_TOKE
 
   console.log("[CRON] 🕐 Job cron schedule: 0 2 * * * (tous les jours à 2h)");
   console.log("[CRON] 💾 Cache au démarrage:", SessionStatsCache.getKeys().length, 'utilisateurs');
-  console.log("[CRON] 📊 Utilisateurs détectés (Overseerr):", userList.length);
+  console.log("[CRON] 📊 Utilisateurs détectés (Seerr):", userList.length);
   console.log("[CRON] ⚙️  Mode: Scan intelligent avec delta sync (arrêt automatique au cache)");
   
   return cronJob;

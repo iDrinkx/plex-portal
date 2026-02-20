@@ -1,4 +1,4 @@
-<div class="profil-container">
+﻿<div class="profil-container">
   <!-- HEADER AVEC AVATAR ET XP -->
   <div class="profil-header">
     <% 
@@ -906,22 +906,22 @@
      🎬 LOAD OVERSEERR STATS
   =============================== */
 
-  async function loadOverseerrStats() {
+  async function loadSeerrStats() {
     try {
-      console.log("[OVERSEERR] Démarrage fetch...");
-      const url = basePath + "/api/overseerr";
-      console.log("[OVERSEERR] URL cible:", url);
+      console.log("[SEERR] Démarrage fetch...");
+      const url = basePath + "/api/seerr";
+      console.log("[SEERR] URL cible:", url);
       
-      let data = cacheManager.get("overseerrCache");
+      let data = cacheManager.get("seerrCache");
 
       if (!data) {
-        console.log("[OVERSEERR] Cache miss - requête API");
+        console.log("[SEERR] Cache miss - requête API");
         const res = await fetch(url);
-        console.log("[OVERSEERR] Réponse reçue - status:", res.status, "ok:", res.ok);
+        console.log("[SEERR] Réponse reçue - status:", res.status, "ok:", res.ok);
         
         if (!res.ok) {
           const text = await res.text();
-          console.error("[OVERSEERR] ❌ Erreur API:", res.status, text);
+          console.error("[SEERR] ❌ Erreur API:", res.status, text);
           return {
             pending: 0,
             approved: 0,
@@ -931,14 +931,14 @@
         }
 
         data = await res.json();
-        console.log("[OVERSEERR] ✅ JSON parsé:", data);
-        cacheManager.set("overseerrCache", data);
+        console.log("[SEERR] ✅ JSON parsé:", data);
+        cacheManager.set("seerrCache", data);
       } else {
-        console.log("[OVERSEERR] Cache hit");
+        console.log("[SEERR] Cache hit");
       }
 
       if (!data) {
-        console.warn("[OVERSEERR] ⚠️ Données null, retour défaut");
+        console.warn("[SEERR] ⚠️ Données null, retour défaut");
         return {
           pending: 0,
           approved: 0,
@@ -947,7 +947,7 @@
         };
       }
 
-      console.log("[OVERSEERR] ✅ Données valides retournées - total:", data.total);
+      console.log("[SEERR] ✅ Données valides retournées - total:", data.total);
       return {
         pending: data.pending || 0,
         approved: data.approved || 0,
@@ -956,7 +956,7 @@
         total: data.total || 0
       };
     } catch (err) {
-      console.error("[OVERSEERR] ❌ Erreur catch:", err.message, err);
+      console.error("[SEERR] ❌ Erreur catch:", err.message, err);
       return {
         pending: 0,
         approved: 0,
@@ -1008,33 +1008,33 @@
     try {
       console.log("[PROFIL] 🚀 Chargement progressif des données");
       
-      // ÉTAPE 1: Charger rapidement Overseerr + Wizarr (pas de timeout long)
-      console.log("[PROFIL] Chargement Overseerr + Wizarr (rapide)...");
-      const [overseerrRes, subscriptionRes] = await Promise.allSettled([
-        loadOverseerrStats(),
+      // ÉTAPE 1: Charger rapidement Seerr + Wizarr (pas de timeout long)
+      console.log("[PROFIL] Chargement Seerr + Wizarr (rapide)...");
+      const [seerrRes, subscriptionRes] = await Promise.allSettled([
+        loadSeerrStats(),
         loadSubscription()
       ]);
       
-      // ÉTAPE 2: Afficher immédiatement Overseerr + Wizarr (sans attendre Tautulli)
-      const overseerrData = overseerrRes.status === 'fulfilled' ? overseerrRes.value || { total: 0, pending: 0, approved: 0, available: 0 } : { total: 0, pending: 0, approved: 0, available: 0 };
+      // ÉTAPE 2: Afficher immédiatement Seerr + Wizarr (sans attendre Tautulli)
+      const seerrData = seerrRes.status === 'fulfilled' ? seerrRes.value || { total: 0, pending: 0, approved: 0, available: 0 } : { total: 0, pending: 0, approved: 0, available: 0 };
       const subscriptionData = subscriptionRes.status === 'fulfilled' ? subscriptionRes.value || {} : {};
       
-      console.log("[PROFIL] ✅ Overseerr + Wizarr chargés - affichage immédiat");
+      console.log("[PROFIL] ✅ Seerr + Wizarr chargés - affichage immédiat");
       
-      // Afficher les stats Overseerr IMMÉDIATEMENT
+      // Afficher les stats Seerr IMMÉDIATEMENT
       const totalReqEl = document.getElementById("totalRequests");
       const approvedEl = document.getElementById("approvedRequests");
       const pendingEl = document.getElementById("pendingRequests");
       const availableEl = document.getElementById("availableRequests");
       const reqCountEl = document.getElementById("requestCount2");
       
-      if (totalReqEl) totalReqEl.textContent = overseerrData.total;
-      if (approvedEl) approvedEl.textContent = overseerrData.approved;
-      if (pendingEl) pendingEl.textContent = overseerrData.pending;
-      if (availableEl) availableEl.textContent = overseerrData.available;
-      if (reqCountEl) reqCountEl.textContent = overseerrData.total + " demandes";
+      if (totalReqEl) totalReqEl.textContent = seerrData.total;
+      if (approvedEl) approvedEl.textContent = seerrData.approved;
+      if (pendingEl) pendingEl.textContent = seerrData.pending;
+      if (availableEl) availableEl.textContent = seerrData.available;
+      if (reqCountEl) reqCountEl.textContent = seerrData.total + " demandes";
       
-      console.log("[PROFIL] ✅ Overseerr affiché:", overseerrData);
+      console.log("[PROFIL] ✅ Seerr affiché:", seerrData);
       
       // Afficher abonnement IMMÉDIATEMENT
       const profilSubCard    = document.getElementById('profilSubCard');
@@ -1065,7 +1065,7 @@
       // Extraire les données Tautulli du promise
       const tautulliData = tautulliRes[0].status === 'fulfilled' ? tautulliRes[0].value || {} : {};
       const stats = tautulliData;
-      const overseerr = overseerrData;
+      const overseerr = seerrData;
       const subscription = subscriptionData;
 
       console.log("[PROFIL] ✅ Données chargées - Tautulli:", tautulliData);

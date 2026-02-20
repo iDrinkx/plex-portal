@@ -1,4 +1,4 @@
-const express = require("express");
+﻿const express = require("express");
 const session = require("express-session");
 const expressLayouts = require("express-ejs-layouts");
 const path = require("path");
@@ -39,7 +39,7 @@ app.use(session({
   }
 }));
 
-// 2. Route Overseerr (iframe SSO Organizr-style — simple GET, pas de proxy)
+// 2. Route Seerr (iframe SSO Organizr-style — simple GET, pas de proxy)
 app.use("/", seeerrProxyRoutes);
 
 // 3. Body parsers
@@ -120,19 +120,19 @@ async function loadAllUserStatsFromTautulli() {
 
 /**
  * 👥 Récupérer la liste des utilisateurs pour le cron job
- * (depuis Overseerr ou Tautulli)
+ * (depuis Seerr ou Tautulli)
  */
 async function initializeAllUsersForCron() {
   try {
-    const baseUrl = process.env.OVERSEERR_URL || "http://localhost:5055";
-    const apiKey = process.env.OVERSEERR_API_KEY;
+    const baseUrl = process.env.SEERR_URL || "http://localhost:5055";
+    const apiKey = process.env.SEERR_API_KEY;
     
     if (!apiKey) {
-      console.warn("[SETUP] ⚠️  Pas d'OVERSEERR_API_KEY configurée, cron job sans utilisateurs");
+      console.warn("[SETUP] ⚠️  Pas d'SEERR_API_KEY configurée, cron job sans utilisateurs");
       return [];
     }
 
-    console.log("[SETUP] Tentative de fetch des utilisateurs Overseerr depuis:", baseUrl);
+    console.log("[SETUP] Tentative de fetch des utilisateurs Seerr depuis:", baseUrl);
 
     const users = [];
     let page = 1;
@@ -157,7 +157,7 @@ async function initializeAllUsersForCron() {
         console.log(`[SETUP]   Status: ${resp.status}`);
 
         if (!resp.ok) {
-          console.warn(`[SETUP]   ⚠️  Overseerr ${resp.status}, retry...`);
+          console.warn(`[SETUP]   ⚠️  Seerr ${resp.status}, retry...`);
           retries--;
           await new Promise(r => setTimeout(r, 500)); // attendre 500ms avant retry
           continue;
@@ -227,7 +227,7 @@ app.listen(PORT, async () => {
   // 🏥 HEALTH CHECK au démarrage
   await runHealthCheck();
   
-  // Initialiser le cron job avec tous les utilisateurs Overseerr
+  // Initialiser le cron job avec tous les utilisateurs Seerr
   console.log("[SETUP] Initialisation du cron job sessions...");
   const allUsers = await initializeAllUsersForCron();
   

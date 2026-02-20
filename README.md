@@ -1,395 +1,344 @@
-# 📺 Plex Portal
+﻿#  Plex Portal
 
-Application web pour gérer votre accès Plex, afficher les abonnements et les statistiques de visionnage.
+Application web pour gérer votre accès Plex, afficher abonnements, statistiques de visionnage, et accéder à Seerr via SSO intégré.
 
-## ✨ Fonctionnalités
+##  Fonctionnalités
 
-- 🔐 **Authentification Plex** - Connectez-vous avec votre compte Plex
-- 📊 **Dashboard** - Affichage des informations d'accès
-- 💳 **Gestion des abonnements** - Affichage des abonnements Wizarr (optionnel)
-- 📈 **Statistiques** - Historique de visionnage via Tautulli (optionnel)
-- 🌐 **Support Reverse Proxy Automatique** - Détection auto via headers X-Forwarded-*
-- 🚀 **Configuration Minimale** - Juste` SESSION_SECRET` en env var!
+-  **Authentification Plex**  Connexion via compte Plex (OAuth)
+-  **Dashboard**  Vue d'ensemble : abonnement, statistiques, demandes Seerr
+-  **Abonnements Wizarr**  Affichage de la date d'expiration et du groupe (optionnel)
+-  **Statistiques Tautulli**  Historique de visionnage, temps total, collections (optionnel)
+-  **Intégration Seerr (SSO)**  Accès à Seerr dans une iframe full-page sans re-connexion
+-  **Système XP & Succès**  Points d'expérience et badges selon l'activité de visionnage
+-  **Page Profil**  Stats personnelles, demandes Seerr, succès débloqués
+-  **Reverse Proxy Automatique**  Détection auto via headers `X-Forwarded-*`
+-  **Configuration Minimale**  Juste `SESSION_SECRET` en obligatoire
 
 ---
 
-## 🚀 Démarrage ultra-rapide
+##  Démarrage rapide
 
-### Requirements
+### Prérequis
 
 - Docker & Docker Compose
 - Compte Plex
-- _(Optionnel)_ Wizarr ou Tautulli
+- _(Optionnel)_ Wizarr, Tautulli, Seerr
 
-### Démarrer en local (30 secondes!)
+### Local (30 secondes)
 
 ```bash
-# 1. Cloner le projet
-git clone https://github.com/theopoleme/plex-portal.git
+git clone https://github.com/idrinkx/plex-portal.git
 cd plex-portal
 
-# 2. Modifier SESSION_SECRET dans docker-compose.yml
-# SESSION_SECRET: "change-me-to-a-secure-key"
+# Changer SESSION_SECRET dans docker-compose.yml, puis :
+docker compose up -d
 
-# 3. Lancer!
-docker-compose up -d
-
-# 4. Ouvrir http://localhost:3000
+# Ouvrir http://localhost:3000
 ```
 
-**C'est tout!** ✨
-
-### Déploiement Production (Unraid + ngx proxy manager)
+### Production (Unraid + ngx proxy manager)
 
 ```bash
-# Même commande, l'app détecte automatiquement le reverse proxy!
-docker-compose up -d
-
-# Accès: https://example.com/plex-portal
+# L'app détecte automatiquement le reverse proxy via X-Forwarded-*
+docker compose up -d
+# Accès : https://plex-portal.votredomaine.com
 ```
 
----
-
-## 📚 Documentation
-
-- **[SETUP.md](./SETUP.md)** - Guide pas à pas (recommandé pour débuter)
-- **[DOCKER.md](./DOCKER.md)** - Guide complet Docker et reverse proxy
-- **[UNRAID.md](./UNRAID.md)** - Configuration spécifique Unraid
-- **[.env.example](./.env.example)** - Variables d'environnement
+> Image Docker publique : `ghcr.io/idrinkx/plex-portal:latest`
 
 ---
 
-## 📋 Structure du projet
+##  Documentation
+
+- **[SETUP.md](./SETUP.md)**  Guide pas à pas complet
+- **[DOCKER.md](./DOCKER.md)**  Guide Docker et reverse proxy
+- **[UNRAID.md](./UNRAID.md)**  Configuration spécifique Unraid
+
+---
+
+##  Structure du projet
 
 ```
 plex-portal/
-├── Dockerfile                          # Image Docker
-├── docker-compose.yml                  # Un seul fichier config!
-├── server.js                           # Serveur Express
-├── package.json                        # Dépendances Node
-│
-├── middleware/
-│   ├── auth.middleware.js
-│   └── reverseproxy.middleware.js      # Auto-détection reverse proxy
-│
-├── routes/
-│   ├── auth.routes.js
-│   └── dashboard.routes.js
-│
-├── views/
-│   ├── layout.ejs
-│   ├── login.ejs
-│   ├── dashboard/
-│   ├── abonnement/
-│   └── statistiques/
-│
-├── public/
-│   ├── css/style.css
-│   └── js/
-│
-├── utils/
-│   ├── wizarr.js
-│   └── tautulli.js
-│
-├── config/
-│   └── logo.png
-│
-├── SETUP.md
-├── DOCKER.md
-├── UNRAID.md
-└── README.md
+ Dockerfile
+ docker-compose.yml
+ server.js                           # Serveur Express principal
+ package.json
+
+ middleware/
+    auth.middleware.js              # Vérification session
+    reverseproxy.middleware.js      # Auto-détection reverse proxy
+
+ routes/
+    auth.routes.js                  # Login Plex OAuth + SSO Seerr
+    dashboard.routes.js             # APIs dashboard, stats, profil
+    seerr-proxy.routes.js           # Route iframe Seerr (/seerr)
+
+ views/
+    layout.ejs
+    login.ejs
+    badges.ejs
+    dashboard/
+       index.ejs
+       _activity.ejs
+       _overseerr.ejs
+       _stats.ejs
+       _subscription.ejs
+    profil/
+       index.ejs
+    seerr/
+       index.ejs                   # Iframe full-page Seerr
+    statistiques/
+        index.ejs
+        activite.ejs
+
+ public/
+    css/style.css
+    js/
+        dashboard.js
+        statistiques.js
+
+ utils/
+    achievements.js                 # Système de succès
+    cache.js                        # Couche de cache mémoire
+    cron-session-job.js             # Job cron sessions/stats
+    database.js                     # SQLite (sessions, XP, cache)
+    health-check.js                 # Vérification santé services
+    plex.js                         # Whitelist utilisateurs Plex
+    seerr.js                        # API Seerr (stats demandes)
+    seerr-new.js                    # API Seerr alternative
+    session-stats-cache.js
+    session-stats-cache-db.js
+    tautulli.js                     # API Tautulli
+    tautulli-direct.js              # Lecture directe DB Tautulli
+    tautulli-events.js
+    wizarr.js                       # API Wizarr
+    xp-system.js                    # Calcul XP et niveaux
+
+ config/
+     logo.png                        # Logo personnalisable
 ```
 
 ---
 
-## 🎯 Comment fonctionne la détection automatique
+##  Configuration
 
-L'app détecte automatiquement si elle est:
+### Variables d'environnement
+
+#### Obligatoire
+
+```yaml
+SESSION_SECRET: "votre-cle-secrete"     # Clé de session (obligatoire)
+```
+
+#### Intégrations
+
+```yaml
+# Wizarr  affichage abonnement
+WIZARR_URL: "http://Wizarr:5690"
+WIZARR_API_KEY: "votre-cle"
+
+# Tautulli  statistiques de visionnage
+TAUTULLI_URL: "http://tautulli:8181"
+TAUTULLI_API_KEY: "votre-cle"
+TAUTULLI_DB_PATH: "/tautulli-data/tautulli.db"   # Lecture DB directe (optimal)
+
+# Seerr (ex-Overseerr/Jellyseerr)  SSO iframe
+SEERR_URL: "http://Seerr:5055"                   # URL interne (API auth au login)
+SEERR_PUBLIC_URL: "https://seerr.votredomaine.com" # URL publique (src iframe)
+SEERR_API_KEY: "votre-cle"                        # Clé API (stats profil)
+
+# Sécurité  restriction aux utilisateurs du serveur Plex
+PLEX_URL: "http://plex:32400"
+PLEX_TOKEN: "votre-token"
+```
+
+#### Overrides manuels (auto-détectés si omis)
+
+```yaml
+APP_URL: "https://plex-portal.votredomaine.com"
+BASE_PATH: "/plex-portal"
+PORT: "3000"
+DEBUG: "true"
+```
+
+### docker-compose.yml complet (exemple production)
+
+```yaml
+services:
+  plex-portal:
+    image: ghcr.io/idrinkx/plex-portal:latest
+    container_name: plex-portal
+    ports:
+      - "4000:3000"
+    restart: unless-stopped
+    networks:
+      - proxy
+    environment:
+      - SESSION_SECRET=votre-cle-secrete
+      - WIZARR_URL=http://Wizarr:5690
+      - WIZARR_API_KEY=votre-cle
+      - TAUTULLI_URL=http://tautulli:8181
+      - TAUTULLI_API_KEY=votre-cle
+      - TAUTULLI_DB_PATH=/tautulli-data/tautulli.db
+      - SEERR_URL=http://Seerr:5055
+      - SEERR_PUBLIC_URL=https://seerr.votredomaine.com
+      - SEERR_API_KEY=votre-cle
+      - PLEX_URL=http://plex:32400
+      - PLEX_TOKEN=votre-token
+    volumes:
+      - /chemin/appdata/plex-portal/config:/config
+      - /chemin/appdata/tautulli:/tautulli-data
+
+networks:
+  proxy:
+    external: true
+```
+
+---
+
+##  Intégration Seerr (SSO)
+
+Plex Portal intègre Seerr (ex-Overseerr / Jellyseerr) via **SSO Organizr-style** :
+
+1. Au login Plex  plex-portal contacte Seerr en interne (`SEERR_URL`) et récupère le `connect.sid`
+2. Ce cookie est posé dans le browser avec `domain=.votredomaine.com` (sous-domaine parent commun)
+3. Navigation vers `/seerr`  iframe full-page chargée depuis `SEERR_PUBLIC_URL`
+4. Le browser envoie automatiquement le cookie  Seerr authentifié sans re-connexion
+
+**Prérequis :**
+- `SEERR_PUBLIC_URL` et l'URL de plex-portal doivent partager le même domaine parent
+  _(ex: `plex-portal.idrinktv.ovh` + `seerr.idrinktv.ovh`  parent `.idrinktv.ovh`)_
+- HTTPS obligatoire en production (cookie `secure: true`)
+
+---
+
+##  Routes disponibles
+
+```
+# Pages
+GET  /                          Login ou redirect dashboard
+GET  /dashboard                 Dashboard principal (auth requis)
+GET  /profil                    Page profil utilisateur (auth requis)
+GET  /statistiques              Statistiques de visionnage (auth requis)
+GET  /statistiques/activite     Activité détaillée (auth requis)
+GET  /seerr                     Seerr en iframe full-page (auth requis)
+GET  /badges                    Liste des succès disponibles
+
+# Auth
+GET  /login                     Initie l'auth Plex OAuth
+GET  /auth-complete             Callback Plex OAuth
+GET  /logout                    Déconnexion
+
+# APIs JSON
+GET  /api/subscription          Infos abonnement Wizarr
+GET  /api/stats                 Statistiques Tautulli
+GET  /api/seerr                 Stats demandes Seerr
+POST /api/cache/invalidate      Invalide le cache utilisateur
+```
+
+---
+
+##  Détection reverse proxy automatique
 
 ### En local
 ```
 Aucun header X-Forwarded-*
-↓
-App: http://localhost:3000
-basePath: "" (vide)
+ http://localhost:3000   (basePath: "")
 ```
 
-### Derrière un reverse proxy
+### Derrière ngx proxy manager / Traefik
 ```
-Headers de ngx proxy manager:
-  X-Forwarded-Proto: https
-  X-Forwarded-Host: example.com
-  X-Forwarded-Prefix: /plex-portal
-↓
-App détecte automatiquement: https://example.com/plex-portal
-basePath: "/plex-portal"
+X-Forwarded-Proto: https
+X-Forwarded-Host: plex-portal.votredomaine.com
+X-Forwarded-Prefix: /
+ https://plex-portal.votredomaine.com   (auto-détecté)
 ```
 
-**Aucune configuration manuelle requise!** ✨
+Aucune configuration manuelle requise. 
 
 ---
 
-## 🔧 Configuration
+##  Sécurité
 
-### Minimale (obligatoire)
-
-```yaml
-environment:
-  SESSION_SECRET: "change-me-to-a-secure-key"
-```
-
-### Optionnelle (override auto-détection)
-
-```yaml
-environment:
-  SESSION_SECRET: "your-key"
-  APP_URL: "https://example.com"        # Auto si omis
-  BASE_PATH: "/plex-portal"             # Auto si omis
-  DEBUG: "true"                         # Affiche logs
-  WIZARR_URL: "http://wizarr.local"
-  WIZARR_API_KEY: "key"
-  TAUTULLI_URL: "http://tautulli.local"
-  TAUTULLI_API_KEY: "key"
-```
+-  Authentification via Plex OAuth uniquement (aucun mot de passe stocké)
+-  Sessions HttpOnly, SameSite=Lax, nom personnalisé (`plex-portal.sid`)
+-  Support HTTPS via reverse proxy
+-  Whitelist optionnelle par serveur Plex (`PLEX_URL` + `PLEX_TOKEN`)
+-  Changez `SESSION_SECRET` en production : `openssl rand -hex 32`
+-  Gardez toutes les clés API secrètes
 
 ---
 
-## 📚 Exemples d'usage
-
-### Local (développement)
-
-```bash
-docker-compose up -d
-# http://localhost:3000
-```
-
-### Unraid + ngx proxy manager
-
-```bash
-# Aucune modification du docker-compose.yml!
-docker-compose up -d
-
-# https://example.com/plex-portal (auto-détecté)
-```
-
-### Traefik
-
-Labels Traefik auto-détection, aucune config de l'app requise.
-
----
-
-## 🔒 Sécurité
-
-- ✅ Authentification via Plex (aucun stockage de password)
-- ✅ Sessions sécurisées (HttpOnly cookies)
-- ✅ Support HTTPS (via reverse proxy)
-- ⚠️ Changez `SESSION_SECRET` en production
-
----
-
-## 🛠 Development
+##  Développement
 
 ### Stack technique
 
-- **Backend**: Node.js + Express.js
-- **Frontend**: EJS + Vanilla JS
-- **Auth**: Plex OAuth
-- **Container**: Docker
+- **Backend** : Node.js + Express.js
+- **Templating** : EJS + express-ejs-layouts
+- **Auth** : Plex OAuth (plex.tv API v2)
+- **Base de données** : SQLite (sessions, XP, cache stats)
+- **Container** : Docker
 
-### Installation locale (sans Docker)
+### Installation locale sans Docker
 
 ```bash
 npm install
-# Modifier docker-compose.yml → .env
-SESSION_SECRET=dev-secret
+# Configurer les variables d'env (voir docker-compose.yml)
 npm start
 # http://localhost:3000
 ```
 
----
+### Build et push image Docker
 
-## 📝 APIs disponibles
-
-```
-GET  /                        # Login ou redirect dashboard
-GET  /dashboard               # Dashboard (auth requis)
-GET  /abonnement              # Abonnements
-GET  /statistiques            # Statistiques
-
-POST /login                   # Initiate Plex auth
-GET  /auth-complete           # Plex callback
-GET  /logout                  # Logout
-
-GET  /api/subscription        # JSON stats
-GET  /api/stats               # JSON stats
+```bash
+docker build -t ghcr.io/idrinkx/plex-portal:latest .
+docker push ghcr.io/idrinkx/plex-portal:latest
 ```
 
 ---
 
-## 🤝 Contribution
+##  Support & FAQ
 
-Les contributions sont bienvenues! Veuillez:
+**Q : Que modifier pour passer du local à la production ?**
+R : Rien côté app. Configurez ngx proxy manager pour pointer vers plex-portal, les headers `X-Forwarded-*` sont auto-détectés.
+
+**Q : Seerr ne charge pas dans l'iframe ?**
+R : Vérifiez que `SEERR_PUBLIC_URL` et l'URL du portail partagent le même domaine parent (`.votredomaine.com`). HTTPS requis.
+
+**Q : Comment changer le port ?**
+R : Dans docker-compose.yml : `ports: ["4000:3000"]`  l'interne reste 3000, l'externe est libre.
+
+**Q : Comment personnaliser le logo ?**
+R : Placez votre `logo.png` dans le volume `./config:/config`.
+
+**Plus de questions ?**
+-  Consultez [SETUP.md](./SETUP.md) et [DOCKER.md](./DOCKER.md)
+-  Logs : `docker compose logs -f plex-portal`
+-  Ouvrez une issue sur GitHub
+
+---
+
+##  Contribution
 
 1. Fork le projet
-2. Créer une branche (`git checkout -b feature/amazing-feature`)
-3. Commit les changements (`git commit -m 'Add amazing feature'`)
-4. Push vers la branche (`git push origin feature/amazing-feature`)
+2. Créer une branche (`git checkout -b feature/ma-feature`)
+3. Commit (`git commit -m 'feat: ma feature'`)
+4. Push (`git push origin feature/ma-feature`)
 5. Ouvrir une Pull Request
 
 ---
 
-## 📄 Licence
+##  Remerciements
+
+- [Plex](https://plex.tv/)  Pour leur API OAuth
+- [Wizarr](https://github.com/wizarr-io/wizarr)  Gestion des invitations
+- [Tautulli](https://github.com/Tautulli/Tautulli)  Statistiques de visionnage
+- [Seerr](https://github.com/sct/overseerr)  Gestion des demandes de médias
+- [Organizr](https://github.com/causefx/Organizr)  Inspiration pour le SSO iframe
+
+---
+
+##  Licence
 
 Ce projet est sous [MIT License](LICENSE)
-
----
-
-## 🆘 Support & FAQ
-
-**Q: Vous devriez modifier quoi pour passer du local à la production?**
-R: Rien! L'app détecte automatiquement. Juste configurer ngx proxy manager.
-
-**Q: SESSION_SECRET doit être gardé secret?**
-R: Oui! Générez une clé avec: `openssl rand -hex 32`
-
-**Q: Puis-je changer le port 3000?**
-R: Oui, dans docker-compose.yml: `ports: ["3001:3000"]`
-
-**Plus de questions?**
-- 📖 Consulter [SETUP.md](./SETUP.md)
-- 📖 Consulter [DOCKER.md](./DOCKER.md)
-- 💬 Ouvrir une issue sur GitHub
-
----
-
-## 🔧 Configuration
-
-### Variables d'environnement (obligatoires)
-
-```bash
-APP_URL=http://localhost:3000              # URL publique de l'app
-SESSION_SECRET=your-secret-key             # Clé secrète sessions
-```
-
-### Variables optionnelles
-
-```bash
-BASE_PATH=/plex-portal                     # Si derrière reverse proxy
-WIZARR_URL=http://wizarr.local             # Instance Wizarr
-WIZARR_API_KEY=your-key                    # Clé API Wizarr
-TAUTULLI_URL=http://tautulli.local         # Instance Tautulli
-TAUTULLI_API_KEY=your-key                  # Clé API Tautulli
-```
-
----
-
-## 🎯 Cas d'usage
-
-### ✅ Local Development
-```bash
-docker-compose up -d
-# http://localhost:3000
-```
-
-### ✅ Unraid + ngx proxy manager
-```bash
-# .env configuration
-APP_URL=https://example.com
-BASE_PATH=/plex-portal
-
-# Launch
-docker-compose -f docker-compose.yml -f docker-compose.reverse-proxy.yml up -d
-# https://example.com/plex-portal
-```
-
-### ✅ Production self-hosted
-```bash
-# Configuration complète avec tous les services
-APP_URL=https://plex.myserver.com
-SESSION_SECRET=your-secure-key
-WIZARR_URL=http://internal-wizarr
-WIZARR_API_KEY=key
-```
-
----
-
-## 🔐 Sécurité
-
-- ✅ Authentification via Plex (aucun stockage de password)
-- ✅ Sessions sécurisées (HttpOnly cookies)
-- ✅ Support HTTPS (via reverse proxy)
-- ⚠️ Changez `SESSION_SECRET` en production
-- ⚠️ Gardez les clés API secrètes
-
----
-
-## 🛠 Development
-
-### Stack technique
-
-- **Backend**: Node.js + Express.js
-- **Frontend**: EJS + Vanilla JS
-- **Auth**: Plex OAuth
-- **Container**: Docker
-
-### Installation locale (sans Docker)
-
-```bash
-npm install
-cp .env.example .env
-# Modifier .env
-npm start
-# http://localhost:3000
-```
-
----
-
-## 📝 APIs disponibles
-
-```
-GET  /                        # Page login ou redirect dashboard
-GET  /dashboard               # Dashboard (requiert auth)
-GET  /abonnement              # Info abonnements
-GET  /statistiques            # Statistiques visionnage
-
-POST /login                   # Initiate Plex auth
-GET  /auth-complete           # Plex callback
-GET  /logout                  # Logout
-
-GET  /api/subscription        # Subscription info (JSON)
-GET  /api/stats               # Stats (JSON)
-```
-
----
-
-## 🤝 Contribution
-
-Les contributions sont bienvenues! Veuillez:
-
-1. Fork le projet
-2. Créer une branche (`git checkout -b feature/amazing-feature`)
-3. Commit les changements (`git commit -m 'Add amazing feature'`)
-4. Push vers la branche (`git push origin feature/amazing-feature`)
-5. Ouvrir une Pull Request
-
----
-
-## 📄 Licence
-
-Ce projet est sous [MIT License](LICENSE)
-
----
-
-## 🆘 Support
-
-- 📖 Consultez [DOCKER.md](./DOCKER.md) pour les problèmes de déploiement
-- 🔧 Vérifiez les logs: `docker-compose logs -f plex-portal`
-- 💬 Ouvrez une issue sur GitHub
-
----
-
-## 🙏 Remerciements
-
-- [Plex](https://plex.tv/) - Pour leur API
-- [Wizarr](https://github.com/wizarr-io/wizarr) - Gestion des invitations
-- [Tautulli](https://github.com/Tautulli/Tautulli) - Statistiques de visionnage
