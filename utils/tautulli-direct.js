@@ -665,6 +665,49 @@ function getLiveUsers() {
 }
 
 /**
+ * 🎬 Récupérer le dernier contenu regardé par un utilisateur (pour fallback widget)
+ */
+function getLastPlayedItem(username) {
+  if (!tautulliDb) return null;
+  try {
+    const norm = username.toLowerCase();
+    const stmt = tautulliDb.prepare(`
+      SELECT
+        sh.id,
+        sh.media_type,
+        sh.stopped,
+        sh.duration,
+        shm.title,
+        shm.grandparent_title,
+        shm.parent_title,
+        shm.year,
+        shm.thumb
+      FROM session_history sh
+      JOIN session_history_metadata shm ON sh.id = shm.id
+      WHERE LOWER(sh.user) = ?
+        AND sh.stopped > sh.started
+        AND sh.media_type IN ('movie', 'episode')
+      ORDER BY sh.stopped DESC
+      LIMIT 1
+    `);
+    const row = stmt.get(norm);
+    if (!row) return null;
+    return {
+      mediaType:     row.media_type,
+      title:         row.title         || '',
+      grandTitle:    row.grandparent_title || '',
+      parentTitle:   row.parent_title  || '',
+      year:          row.year          || null,
+      thumb:         row.thumb         || null,
+      stoppedAt:     row.stopped       || null,
+    };
+  } catch (err) {
+    log.warn('getLastPlayedItem:', err.message);
+    return null;
+  }
+}
+
+/**
  * Fermer la connexion (au shutdown)
  */
 function closeTautulliDatabase() {
@@ -685,5 +728,6 @@ module.exports = {
   getAchievementUnlockDates,
   evaluateSecretAchievements,
   getLiveUsers,
+  getLastPlayedItem,
   closeTautulliDatabase
 };

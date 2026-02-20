@@ -10,7 +10,7 @@ const { getPlexJoinDate } = require("../utils/plex");
 const { XP_SYSTEM } = require("../utils/xp-system");
 const { ACHIEVEMENTS } = require("../utils/achievements");
 const { UserAchievementQueries, UserQueries, AchievementProgressQueries } = require("../utils/database");
-const { getAchievementUnlockDates, evaluateSecretAchievements, isTautulliReady } = require("../utils/tautulli-direct");
+const { getAchievementUnlockDates, evaluateSecretAchievements, isTautulliReady, getLastPlayedItem } = require("../utils/tautulli-direct");
 const CacheManager = require("../utils/cache");
 const TautulliEvents = require("../utils/tautulli-events");  // 📢 Import EventEmitter
 
@@ -592,7 +592,27 @@ router.get("/api/now-playing", requireAuth, async (req, res) => {
       return su === username || sid === String(userId);
     });
 
-    if (!mySession) return res.json({ playing: false });
+    if (!mySession) {
+      // Fallback : dernier contenu regardé
+      const username = (req.session.user.username || "");
+      const last = getLastPlayedItem(username);
+      if (!last) return res.json({ playing: false });
+
+      const thumbUrl = last.thumb
+        ? (req.basePath || "") + "/api/plex-thumb?path=" + encodeURIComponent(last.thumb)
+        : null;
+
+      return res.json({
+        playing:      false,
+        lastPlayed:   true,
+        type:         last.mediaType,
+        title:        last.title,
+        grandTitle:   last.grandTitle,
+        year:         last.year,
+        thumb:        thumbUrl,
+        stoppedAt:    last.stoppedAt,
+      });
+    }
 
     const duration    = mySession.duration || 0;
     const viewOffset  = mySession.viewOffset || 0;

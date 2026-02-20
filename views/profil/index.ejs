@@ -480,6 +480,11 @@
   .np-paused .np-label { color:#94a3b8; }
   .np-paused .np-bar-fill { background: #94a3b8; }
 
+  /* Dernière lecture — grisé discret */
+  .np-last-played .np-dot  { background:#4a5568; box-shadow:none; animation:none; opacity:.5; }
+  .np-last-played .np-label { color:#718096; }
+  .np-last-played .np-bar-track { display:none; }
+
   .avatar-wrapper {
     position: relative;
     flex-shrink: 0;
@@ -1990,13 +1995,16 @@
       console.error("[PROFIL] ❌ Erreur:", err);
     }
 
-    // NOW PLAYING — polling toutes les 30s
+    // NOW PLAYING — polling toutes les 10s
     async function refreshNowPlaying() {
       try {
         const r = await fetch(basePath + "/api/now-playing");
         const d = await r.json();
         const w = document.getElementById("nowPlayingWidget");
-        if (!d.playing) { w.style.display = "none"; return; }
+
+        if (!d.playing && !d.lastPlayed) { w.style.display = "none"; return; }
+
+        const isLastPlayed = !d.playing && !!d.lastPlayed;
 
         // Fond flouté = même image que l'affiche
         if (d.thumb) {
@@ -2016,20 +2024,41 @@
         grand.textContent   = d.grandTitle || "";
         grand.style.display = d.grandTitle ? "" : "none";
         title.textContent   = d.title  || "";
-        player.textContent  = d.player ? "📺 " + d.player : "";
-        pct.textContent     = d.progressPct != null ? d.progressPct + "%" : "";
 
-        // Barre de progression linéaire
-        document.getElementById("npBarFill").style.width = (d.progressPct || 0) + "%";
+        if (isLastPlayed) {
+          player.textContent = d.stoppedAt ? "🕐 " + _npRelTime(d.stoppedAt) : "";
+          pct.textContent    = "";
+          document.getElementById("npBarFill").style.width = "0%";
+        } else {
+          player.textContent = d.player ? "📺 " + d.player : "";
+          pct.textContent    = d.progressPct != null ? d.progressPct + "%" : "";
+          document.getElementById("npBarFill").style.width = (d.progressPct || 0) + "%";
+        }
 
-        // État pause / play
+        // Classes d'état
         const isPaused = d.state === "paused";
-        w.classList.toggle("np-paused", isPaused);
+        w.classList.toggle("np-paused",      isPaused && !isLastPlayed);
+        w.classList.toggle("np-last-played", isLastPlayed);
+
         const labelEl = document.getElementById("npLabel");
-        if (labelEl) labelEl.textContent = isPaused ? "EN PAUSE" : "EN COURS";
+        if (labelEl) {
+          if (isLastPlayed)  labelEl.textContent = "DERNIÈRE LECTURE";
+          else if (isPaused) labelEl.textContent = "EN PAUSE";
+          else               labelEl.textContent = "EN COURS";
+        }
 
         w.style.display = "";
       } catch(e) { /* silencieux */ }
+    }
+
+    // Formate un timestamp Unix en "il y a X"
+    function _npRelTime(ts) {
+      const diff = Math.floor(Date.now() / 1000) - ts;
+      if (diff < 60)    return "à l'instant";
+      if (diff < 3600)  return "il y a " + Math.floor(diff / 60) + " min";
+      if (diff < 86400) return "il y a " + Math.floor(diff / 3600) + "h";
+      const d = Math.floor(diff / 86400);
+      return "il y a " + d + " jour" + (d > 1 ? "s" : "");
     }
     // =====================================================
     //  RAFRAÎCHISSEMENT AUTOMATIQUE
