@@ -5,6 +5,24 @@
 
   <div class="login-card">
     <h1>Connexion</h1>
+    <% if (typeof error !== 'undefined' && error === 'unauthorized') { %>
+    <div class="login-error">
+      ⛔ Votre compte Plex n'a pas accès au serveur Dark TV.
+    </div>
+    <% } %>
     <a class="plex-btn" href="<%= basePath %>/login">Se connecter avec Plex</a>
   </div>
 </div>
+
+<style>
+  .login-error {
+    background: rgba(239, 68, 68, 0.12);
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    color: #fca5a5;
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    font-size: 0.88rem;
+    text-align: center;
+  }
+</style>

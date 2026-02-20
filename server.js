@@ -91,7 +91,7 @@ app.get("/", (req, res) => {
     const redirectUrl = req.basePath ? `${req.basePath}/dashboard` : "/dashboard";
     return res.redirect(redirectUrl);
   }
-  res.render("login");
+  res.render("login", { error: req.query.error || null });
 });
 
 /* =========================

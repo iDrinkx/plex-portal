@@ -125,12 +125,35 @@ router.get("/auth-complete", async (req, res) => {
   console.info(`  Username: ${user.username}`);
   console.debug(`[Auth] Full user response from plex.tv:`, JSON.stringify(user, null, 2));
 
-  // ⚠️ NOTE: Whitelist validation would require access to Plex server's user list,
-  // which is not reliably exposed via Plex API. Since the user has successfully 
-  // authenticated via Plex OAuth, we trust this as sufficient validation.
-  
-  console.info(`✅ [Auth] LOGIN SUCCESS for Plex user ${user.id} (${user.email})`);
-  console.info(`[Auth] User authenticated via Plex OAuth\n`);
+  // Vérifier que l'utilisateur a accès au serveur Plex Dark TV
+  // - Si PLEX_URL/PLEX_TOKEN ne sont pas configurés → on laisse passer (fail-open)
+  // - Si Plex est injoignable → on laisse passer avec warning (évite un lock-out lors d'un redémarrage)
+  // - Si Plex répond mais l'utilisateur est absent → accès refusé
+  let authorized = true;
+  if (process.env.PLEX_URL && process.env.PLEX_TOKEN) {
+    try {
+      const result = await isUserAuthorized(
+        user.id,
+        process.env.PLEX_URL,
+        process.env.PLEX_TOKEN
+      );
+      if (result === false) {
+        console.warn(`⛔ [Auth] ACCÈS REFUSÉ — Plex user ${user.id} (${user.email}) n'est pas membre du serveur`);
+        authorized = false;
+      }
+    } catch (authErr) {
+      // Plex injoignable → fail-open, on laisse passer
+      console.warn(`⚠️ [Auth] Vérification serveur impossible (${authErr.message}) — accès accordé par défaut`);
+    }
+  } else {
+    console.warn("[Auth] PLEX_URL ou PLEX_TOKEN manquant — vérification d'accès ignorée");
+  }
+
+  if (!authorized) {
+    return res.redirect((req.basePath || "") + "/?error=unauthorized");
+  }
+
+  console.info(`✅ [Auth] LOGIN SUCCESS for Plex user ${user.id} (${user.email})\n`);
 
   req.session.user = user;
   req.session.user.joinedAtTimestamp = user.joinedAt;
