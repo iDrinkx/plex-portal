@@ -2,11 +2,17 @@ const fetch = require("node-fetch");
 const log = require("./logger");
 const logPlex = log.create('[Plex]');
 
+// ─── Cache permanent (ne change jamais tant que la config ne change pas) ────
+let _cachedOwnerId   = null;      // ID Plex de l'admin — chargé une seule fois
+let _cachedMachineId = undefined; // undefined = pas encore chargé, null = échec
+// ────────────────────────────────────────────────────────────────────────────
+
 /**
  * Récupère l'ID Plex du propriétaire du serveur (le compte lié au PLEX_TOKEN admin).
  * Utilise l'API cloud plex.tv — fiable même si le serveur local est en redémarrage.
  */
 async function getServerOwnerId(PLEX_TOKEN) {
+  if (_cachedOwnerId !== null) return _cachedOwnerId;
   const res = await fetch("https://plex.tv/api/v2/user", {
     headers: {
       "X-Plex-Token": PLEX_TOKEN,
@@ -16,7 +22,9 @@ async function getServerOwnerId(PLEX_TOKEN) {
   });
   if (!res.ok) throw new Error(`plex.tv/api/v2/user → HTTP ${res.status}`);
   const data = await res.json();
-  return data.id ? parseInt(data.id) : null;
+  _cachedOwnerId = data.id ? parseInt(data.id) : null;
+  logPlex.debug(`Owner ID mis en cache: ${_cachedOwnerId}`);
+  return _cachedOwnerId;
 }
 
 /**
@@ -24,6 +32,7 @@ async function getServerOwnerId(PLEX_TOKEN) {
  * Utilisé pour filtrer précisément les accès à CE serveur dans le XML plex.tv.
  */
 async function getServerMachineId(PLEX_URL, PLEX_TOKEN) {
+  if (_cachedMachineId !== undefined) return _cachedMachineId;
   try {
     const res = await fetch(`${PLEX_URL}/identity`, {
       headers: {
@@ -31,11 +40,14 @@ async function getServerMachineId(PLEX_URL, PLEX_TOKEN) {
         "Accept": "application/json"
       }
     });
-    if (!res.ok) return null;
+    if (!res.ok) { _cachedMachineId = null; return null; }
     const data = await res.json();
-    return data.MediaContainer?.machineIdentifier || null;
+    _cachedMachineId = data.MediaContainer?.machineIdentifier || null;
+    logPlex.debug(`Machine ID mis en cache: ${_cachedMachineId}`);
+    return _cachedMachineId;
   } catch (e) {
     logPlex.warn('machineIdentifier indisponible:', e.message);
+    _cachedMachineId = null;
     return null;
   }
 }
@@ -231,5 +243,8 @@ module.exports = {
   getPlexUsers,
   getPlexUserInfo,
   isUserAuthorized,
+  getAuthorizedServerUsers,
+  getServerOwnerId,
+  getServerMachineId,
   getPlexJoinDate
 };

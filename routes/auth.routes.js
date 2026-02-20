@@ -4,7 +4,7 @@ const router = express.Router();
 const log = require("../utils/logger");
 const logAuth = log.create('[Auth]');
 
-const { isUserAuthorized } = require("../utils/plex");
+const { isUserAuthorized, getAuthorizedServerUsers, getServerOwnerId, getServerMachineId } = require("../utils/plex");
 
 /**
  * Grab le cookie connect.sid de Seerr via le token Plex.
@@ -137,15 +137,32 @@ router.get("/auth-complete", async (req, res) => {
 
   logAuth.info(`Connexion: ${user.username} <${user.email}> (ID ${user.id})`);
 
-  // 1) Vérification whitelist Plex en premier — accès refusé = arrêt immédiat
-  //    Le cookie Seerr ne se pose QUE si l'utilisateur est autorisé (sécurité)
+  // ── Vérification accès serveur ─────────────────────────────────────────────
+  // On lance en parallèle ownerId (mis en cache dès le 1er login) et machineId
+  // (mis en cache dès le 1er login) pendant que le profil vient d'être récupéré.
+  // Après le 1er login : ownerId + machineId = instantané (cache mémoire).
+  // La liste des utilisateurs autorisés est le seul appel réseau restant.
   let authorized = true;
   if (process.env.PLEX_URL && process.env.PLEX_TOKEN) {
     try {
-      const result = await isUserAuthorized(user.id, process.env.PLEX_URL, process.env.PLEX_TOKEN);
-      if (result === false) {
-        logAuth.warn(`Accès refusé — ${user.username} (${user.id}) absent du serveur`);
-        authorized = false;
+      const userId = parseInt(user.id);
+
+      // 1) Récupérer (ou lire dans le cache) ownerId + machineId en parallèle
+      const [ownerId, machineId] = await Promise.all([
+        getServerOwnerId(process.env.PLEX_TOKEN),
+        getServerMachineId(process.env.PLEX_URL, process.env.PLEX_TOKEN)
+      ]);
+
+      if (ownerId && ownerId === userId) {
+        // C'est l'admin — aucun appel réseau supplémentaire
+        logAuth.info(`User ${userId} — propriétaire du serveur`);
+      } else {
+        // 2) Seul appel réseau restant : liste des utilisateurs autorisés
+        const authorizedUsers = await getAuthorizedServerUsers(process.env.PLEX_TOKEN, machineId);
+        if (!authorizedUsers.some(u => u.id === userId)) {
+          logAuth.warn(`Accès refusé — ${user.username} (${userId}) absent du serveur`);
+          authorized = false;
+        }
       }
     } catch (authErr) {
       logAuth.warn(`Vérification serveur impossible (${authErr.message}) — accès accordé par défaut`);
