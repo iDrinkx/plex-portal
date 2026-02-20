@@ -29,11 +29,15 @@ async function grabSeerrCookie(authToken, res) {
   const seerrUrl = (process.env.SEERR_URL || "").replace(/\/$/, "");
   if (!seerrUrl || !authToken) return;
   try {
+    const ctrl = new AbortController();
+    const timeout = setTimeout(() => ctrl.abort(), 5000);
     const r = await fetch(`${seerrUrl}/api/v1/auth/plex`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "Accept": "application/json" },
-      body: JSON.stringify({ authToken })
+      body: JSON.stringify({ authToken }),
+      signal: ctrl.signal
     });
+    clearTimeout(timeout);
     if (!r.ok) {
       logAuth.warn(`Seerr SSO échoué: HTTP ${r.status}`);
       return;
@@ -61,26 +65,31 @@ async function grabSeerrCookie(authToken, res) {
 }
 
 router.get("/login", async (req, res) => {
+  try {
+    const ctrl = new AbortController();
+    const timeout = setTimeout(() => ctrl.abort(), 8000);
+    const response = await fetch("https://plex.tv/api/v2/pins?strong=true", {
+      method: "POST",
+      headers: {
+        "X-Plex-Client-Identifier": "plex-portal-app",
+        "X-Plex-Product": "Plex Portal",
+        "Accept": "application/json"
+      },
+      signal: ctrl.signal
+    });
+    clearTimeout(timeout);
 
-  const response = await fetch("https://plex.tv/api/v2/pins?strong=true", {
-    method: "POST",
-    headers: {
-      "X-Plex-Client-Identifier": "plex-portal-app",
-      "X-Plex-Product": "Plex Portal",
-      "Accept": "application/json"
-    }
-  });
+    const data = await response.json();
+    req.session.pinId = data.id;
 
-  const data = await response.json();
-
-  req.session.pinId = data.id;
-
-  // Construire l'URL de callback automatiquement
-  const forwardUrl = req.appUrl + "/auth-complete";
-
-  res.redirect(
-    `https://app.plex.tv/auth#?clientID=plex-portal-app&code=${data.code}&forwardUrl=${encodeURIComponent(forwardUrl)}`
-  );
+    const forwardUrl = req.appUrl + "/auth-complete";
+    res.redirect(
+      `https://app.plex.tv/auth#?clientID=plex-portal-app&code=${data.code}&forwardUrl=${encodeURIComponent(forwardUrl)}`
+    );
+  } catch (err) {
+    logAuth.error("Impossible d'initier l'auth Plex:", err.message);
+    res.redirect(req.basePath + "/?error=plex_unavailable");
+  }
 });
 
 router.get("/auth-complete", async (req, res) => {
@@ -89,58 +98,56 @@ router.get("/auth-complete", async (req, res) => {
 
   let authToken = null;
 
-  for (let i = 0; i < 10; i++) {
-    const response = await fetch(
-      `https://plex.tv/api/v2/pins/${req.session.pinId}`,
-      {
-        headers: {
-          "X-Plex-Client-Identifier": "plex-portal-app",
-          "Accept": "application/json"
-        }
-      }
-    );
+  // Polling du token Plex — première tentative sans délai, puis 800 ms entre chaque essai
+  try {
+    for (let i = 0; i < 12; i++) {
+      if (i > 0) await new Promise(r => setTimeout(r, 800));
 
-    const data = await response.json();
+      const ctrl = new AbortController();
+      const timeout = setTimeout(() => ctrl.abort(), 5000);
+      const response = await fetch(
+        `https://plex.tv/api/v2/pins/${req.session.pinId}`,
+        { headers: { "X-Plex-Client-Identifier": "plex-portal-app", "Accept": "application/json" }, signal: ctrl.signal }
+      );
+      clearTimeout(timeout);
 
-    if (data.authToken) {
-      authToken = data.authToken;
-      break;
+      const data = await response.json();
+      if (data.authToken) { authToken = data.authToken; break; }
     }
-
-    await new Promise(r => setTimeout(r, 1000));
+  } catch (err) {
+    logAuth.error("Erreur polling pins Plex:", err.message);
   }
 
   if (!authToken) return res.redirect(req.basePath + "/");
 
-  const account = await fetch("https://plex.tv/api/v2/user", {
-    headers: {
-      "X-Plex-Token": authToken,
-      "Accept": "application/json"
-    }
-  });
-
-  const user = await account.json();
+  let user;
+  try {
+    const ctrl = new AbortController();
+    const timeout = setTimeout(() => ctrl.abort(), 8000);
+    const account = await fetch("https://plex.tv/api/v2/user", {
+      headers: { "X-Plex-Token": authToken, "Accept": "application/json" },
+      signal: ctrl.signal
+    });
+    clearTimeout(timeout);
+    user = await account.json();
+  } catch (err) {
+    logAuth.error("Impossible de récupérer le profil Plex:", err.message);
+    return res.redirect(req.basePath + "/?error=plex_unavailable");
+  }
 
   logAuth.info(`Connexion: ${user.username} <${user.email}> (ID ${user.id})`);
 
-  // Vérifier que l'utilisateur a accès au serveur Plex Dark TV
-  // - Si PLEX_URL/PLEX_TOKEN ne sont pas configurés → on laisse passer (fail-open)
-  // - Si Plex est injoignable → on laisse passer avec warning (évite un lock-out lors d'un redémarrage)
-  // - Si Plex répond mais l'utilisateur est absent → accès refusé
+  // 1) Vérification whitelist Plex en premier — accès refusé = arrêt immédiat
+  //    Le cookie Seerr ne se pose QUE si l'utilisateur est autorisé (sécurité)
   let authorized = true;
   if (process.env.PLEX_URL && process.env.PLEX_TOKEN) {
     try {
-      const result = await isUserAuthorized(
-        user.id,
-        process.env.PLEX_URL,
-        process.env.PLEX_TOKEN
-      );
+      const result = await isUserAuthorized(user.id, process.env.PLEX_URL, process.env.PLEX_TOKEN);
       if (result === false) {
         logAuth.warn(`Accès refusé — ${user.username} (${user.id}) absent du serveur`);
         authorized = false;
       }
     } catch (authErr) {
-      // Plex injoignable → fail-open, on laisse passer
       logAuth.warn(`Vérification serveur impossible (${authErr.message}) — accès accordé par défaut`);
     }
   } else {
@@ -151,17 +158,15 @@ router.get("/auth-complete", async (req, res) => {
     return res.redirect((req.basePath || "") + "/?error=unauthorized");
   }
 
+  // 2) Cookie SSO Seerr — seulement si autorisé
+  await grabSeerrCookie(authToken, res);
+
   logAuth.info(`✅ Connecté: ${user.username} (${user.id})`);
 
   req.session.user = user;
   req.session.user.joinedAtTimestamp = user.joinedAt;
   req.session.plexToken = authToken;
   delete req.session.pinId;
-
-  // Grab le cookie Seerr immédiatement au login (same as Organizr)
-  // Le cookie connect.sid est posé en cross-subdomain → l'iframe seerr.votredomaine.com
-  // est authentifiée automatiquement sans que l'utilisateur ait à se re-connecter.
-  await grabSeerrCookie(authToken, res);
 
   res.redirect(req.basePath + "/dashboard");
 });
