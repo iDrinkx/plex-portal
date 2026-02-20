@@ -250,7 +250,7 @@ router.get("/badges", requireAuth, async (req, res) => {
       userUnlockedMap[a.id] = date;                 // toujours afficher même sans DB
     }
 
-    // ── 3. Évaluer les succès secrets en ARRIÈRE-PLAN (ne bloque pas le rendu)
+    // ── 3. Évaluer les collections + secrets avec timeout 4 s
     // Les badges revocable (collection) sont TOUJOURS re-évalués même si déjà débloqués
     // Les badges événementiels (minuit, week-end...) ne sont évalués que s'ils ne sont pas encore débloqués
     const secretsToCheck = [...ACHIEVEMENTS.collections, ...ACHIEVEMENTS.secrets]
@@ -265,35 +265,44 @@ router.get("/badges", requireAuth, async (req, res) => {
     );
 
     if (secretsToCheck.length > 0 && isTautulliReady()) {
-      // Lancer sans await : rendu immédiat, unlock/revoke persisté pour la prochaine visite
-      evaluateSecretAchievements(username, joinedAtTs, secretsToCheck, req.session.user.id)
-        .then(({ unlocked: newSecrets, progress: newProgress }) => {
-          // Débloquer les nouveaux succès
-          for (const [id, date] of Object.entries(newSecrets)) {
-            if (dbUserId) {
-              try { UserAchievementQueries.unlock(dbUserId, id, date, 'auto'); } catch(e) {}
-            }
+      // Await avec timeout de 4 s : si Tautulli répond, on a les données fraîches pour le rendu.
+      // Si timeout dépassé, on tombe sur le progressMap DB (comportement précédent).
+      try {
+        const evalResult = await Promise.race([
+          evaluateSecretAchievements(username, joinedAtTs, secretsToCheck, req.session.user.id),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('EVAL_TIMEOUT')), 4000))
+        ]);
+
+        const { unlocked: newSecrets, progress: newProgress } = evalResult;
+
+        // Débloquer / révoquer en DB
+        for (const [id, date] of Object.entries(newSecrets)) {
+          if (dbUserId) try { UserAchievementQueries.unlock(dbUserId, id, date, 'auto'); } catch(e) {}
+          userUnlockedMap[id] = date; // visible immédiatement dans le rendu
+        }
+        for (const id of revocableUnlocked) {
+          if (!newSecrets[id] && dbUserId) {
+            try { UserAchievementQueries.revoke(dbUserId, id); } catch(e) {}
+            delete userUnlockedMap[id];
           }
-          // Révoquer les badges revocable qui ne sont plus remplis
-          for (const id of revocableUnlocked) {
-            if (!newSecrets[id] && dbUserId) {
-              try {
-                UserAchievementQueries.revoke(dbUserId, id);
-                console.log(`[BADGES] 🔒 Badge "${id}" révoqué pour ${username} (condition non remplie)`);
-              } catch(e) {}
-            }
+        }
+        // Sauvegarder la progression et fusionner dans progressMap pour le rendu
+        if (newProgress) {
+          for (const [id, prog] of Object.entries(newProgress)) {
+            if (dbUserId) try { AchievementProgressQueries.save(dbUserId, id, prog.current, prog.total); } catch(e) {}
+            progressMap[id] = { current: prog.current, total: prog.total }; // merge dans le rendu
           }
-          // Sauvegarder la progression des badges collection
-          if (dbUserId && newProgress) {
-            for (const [id, prog] of Object.entries(newProgress)) {
-              try { AchievementProgressQueries.save(dbUserId, id, prog.current, prog.total); } catch(e) {}
-            }
-          }
-          if (Object.keys(newSecrets).length > 0) {
-            console.log(`[BADGES] 🔓 Secrets débloqués en background pour ${username}:`, Object.keys(newSecrets).join(', '));
-          }
-        })
-        .catch(e => console.error('[BADGES] Erreur secrets background:', e.message));
+        }
+        if (Object.keys(newSecrets).length > 0) {
+          console.log(`[BADGES] 🔓 Secrets débloqués pour ${username}:`, Object.keys(newSecrets).join(', '));
+        }
+      } catch (evalErr) {
+        if (evalErr.message === 'EVAL_TIMEOUT') {
+          console.warn(`[BADGES] ⏱ Timeout évaluation collections pour ${username} — rendu avec cache DB`);
+        } else {
+          console.error('[BADGES] Erreur évaluation secrets:', evalErr.message);
+        }
+      }
     }
 
     // ── 4. Construire les cards avec statut et date

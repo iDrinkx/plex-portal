@@ -955,6 +955,11 @@
   const CACHE_DURATION = 30000; // 30 secondes
   const userId = document.body.getAttribute("data-user-id") || "guest";
 
+  // Constantes XP — rendues une seule fois côté serveur, accessibles partout
+  const XP_MULTIPLIERS = { HOURS: 8, BADGE: 140, ANCIENNETE: 5 };
+  const PAGE_UNLOCKED_BADGES = <%= unlockedBadgesCount || 0 %>;
+  const PAGE_TOTAL_BADGES    = <%= totalBadgesCount    || 0 %>;
+
   /* ===============================
      DATE UTILITIES
   =============================== */
@@ -1350,16 +1355,11 @@
       }
 
       // CALCUL XP BREAKDOWN avec 3 sources (fait en premier!)
-      const XP_MULTIPLIERS = {
-        HOURS: 8,
-        BADGE: 140,
-        ANCIENNETE: 5,
-        LEVEL: 100
-      };
+      // XP_MULTIPLIERS, PAGE_UNLOCKED_BADGES, PAGE_TOTAL_BADGES déclarés en scope global
 
       // Récupérer les données
       const totalHours = tautulliData?.watchStats?.totalHours || 0;
-      const unlockedBadgesCount = <%= unlockedBadgesCount || 0 %>;
+      const unlockedBadgesCount = PAGE_UNLOCKED_BADGES;
       const joinedAtObj = new Date(stats.joinedAt || Date.now());
       const daysJoined = Math.floor((Date.now() - joinedAtObj.getTime()) / (1000 * 60 * 60 * 24));
 
@@ -1694,34 +1694,40 @@
       // ---- Tautulli / XP / Badges ----
       if (!stats || stats.status === "computing") return;
 
-      const watchStats        = stats.watchStats || {};
-      const totalHours        = watchStats.totalHours || 0;
-      const daysJoined        = Math.floor((Date.now() - new Date(stats.joinedAt).getTime()) / 86400000);
+      const watchStats   = stats.watchStats || {};
+      const totalHours   = watchStats.totalHours || 0;
+      const daysJoined   = Math.floor((Date.now() - new Date(stats.joinedAt).getTime()) / 86400000);
 
       // Compteurs visionnage
-      if (el("counterSessions"))   { el("counterSessions").textContent  = stats.sessionCount || 0; el("counterSessions").setAttribute("data-target", stats.sessionCount || 0); }
-      if (el("statTotalHours"))      el("statTotalHours").textContent    = Math.round(totalHours * 10) / 10 + "h visionnées";
-      if (el("counterMovies"))     { el("counterMovies").textContent     = watchStats.movieCount   || 0; el("counterMovies").setAttribute("data-target", watchStats.movieCount || 0); }
-      if (el("statMovieHours"))      el("statMovieHours").textContent    = Math.round((watchStats.movieHours   || 0) * 10) / 10 + "h de films";
-      if (el("counterEpisodes"))   { el("counterEpisodes").textContent   = watchStats.episodeCount || 0; el("counterEpisodes").setAttribute("data-target", watchStats.episodeCount || 0); }
-      if (el("statEpisodeHours"))    el("statEpisodeHours").textContent  = Math.round((watchStats.episodeHours || 0) * 10) / 10 + "h de séries";
+      if (el("counterSessions"))    { el("counterSessions").textContent   = stats.sessionCount || 0; el("counterSessions").setAttribute("data-target", stats.sessionCount || 0); }
+      if (el("statTotalHours"))       el("statTotalHours").textContent     = Math.round(totalHours * 10) / 10 + "h visionnées";
+      if (el("counterMovies"))      { el("counterMovies").textContent      = watchStats.movieCount   || 0; el("counterMovies").setAttribute("data-target", watchStats.movieCount || 0); }
+      if (el("statMovieHours"))       el("statMovieHours").textContent     = Math.round((watchStats.movieHours   || 0) * 10) / 10 + "h de films";
+      if (el("counterEpisodes"))    { el("counterEpisodes").textContent    = watchStats.episodeCount || 0; el("counterEpisodes").setAttribute("data-target", watchStats.episodeCount || 0); }
+      if (el("statEpisodeHours"))     el("statEpisodeHours").textContent   = Math.round((watchStats.episodeHours || 0) * 10) / 10 + "h de séries";
 
-      // Calcul XP
-      const hoursXp        = Math.round(totalHours * 8);
-      const ancienneteXp   = daysJoined * 5;
-      const totalXp        = hoursXp + ancienneteXp;
+      // Calcul XP — formule identique au chargement initial
+      const hoursXp       = Math.round(totalHours * XP_MULTIPLIERS.HOURS);
+      const badgesXp      = PAGE_UNLOCKED_BADGES * XP_MULTIPLIERS.BADGE;
+      const ancienneteXp  = daysJoined * XP_MULTIPLIERS.ANCIENNETE;
+      const totalXp       = hoursXp + badgesXp + ancienneteXp;
       const totalBreakdown = Math.max(1, totalXp);
-      const hoursPercent        = Math.round((hoursXp      / totalBreakdown) * 100);
-      const anciennetePercent   = Math.round((ancienneteXp / totalBreakdown) * 100);
+      const hoursPercent      = Math.round((hoursXp      / totalBreakdown) * 100);
+      const badgesPercent     = Math.round((badgesXp     / totalBreakdown) * 100);
+      const anciennetePercent = Math.round((ancienneteXp / totalBreakdown) * 100);
+      const successPct        = PAGE_TOTAL_BADGES > 0 ? Math.round((PAGE_UNLOCKED_BADGES / PAGE_TOTAL_BADGES) * 100) : 0;
 
       if (el("xpAmount"))             el("xpAmount").textContent              = totalXp;
       if (el("xpHoursValue"))         el("xpHoursValue").textContent          = hoursXp.toLocaleString()      + " XP";
       if (el("xpHoursBar"))           el("xpHoursBar").style.width            = hoursPercent      + "%";
       if (el("xpHoursPercent"))       el("xpHoursPercent").textContent        = hoursPercent      + "%";
+      if (el("xpBadgesValue"))        el("xpBadgesValue").textContent         = badgesXp.toLocaleString()     + " XP";
+      if (el("xpBadgesBar"))          el("xpBadgesBar").style.width           = successPct        + "%";
+      if (el("xpBadgesPercent"))      el("xpBadgesPercent").textContent       = successPct + "% (" + PAGE_UNLOCKED_BADGES + "/" + PAGE_TOTAL_BADGES + " succès)";
       if (el("xpAncienneteValue"))    el("xpAncienneteValue").textContent     = ancienneteXp.toLocaleString() + " XP";
       if (el("xpAncienneteBar"))      el("xpAncienneteBar").style.width       = anciennetePercent + "%";
       if (el("xpAnciennetePercent"))  el("xpAnciennetePercent").textContent   = anciennetePercent + "%";
-      if (el("detailProfilHours"))    el("detailProfilHours").textContent      = Math.round(totalHours * 10) / 10 + "h";
+      if (el("detailProfilHours"))    el("detailProfilHours").textContent     = Math.round(totalHours * 10) / 10 + "h";
       if (el("detailProfilAnciennete")) el("detailProfilAnciennete").textContent = daysJoined + " j";
 
       // Badge courant + barre XP
@@ -1730,16 +1736,16 @@
       const avatar       = el("profileAvatar");
       const badgeRing    = el("badgeRing");
       const xpBadgeEl    = el("xpBadge");
-      if (avatar)     avatar.style.borderColor     = currentBadge.borderColor;
-      if (badgeRing)  badgeRing.style.borderColor  = currentBadge.borderColor;
-      if (xpBadgeEl)  {
-        xpBadgeEl.textContent        = `${currentBadge.icon} ${currentBadge.name}`;
-        xpBadgeEl.style.background   = currentBadge.bgColor;
-        xpBadgeEl.style.color        = currentBadge.color;
-        xpBadgeEl.style.borderColor  = currentBadge.borderColor;
+      if (avatar)    avatar.style.borderColor    = currentBadge.borderColor;
+      if (badgeRing) badgeRing.style.borderColor = currentBadge.borderColor;
+      if (xpBadgeEl) {
+        xpBadgeEl.textContent       = `${currentBadge.icon} ${currentBadge.name}`;
+        xpBadgeEl.style.background  = currentBadge.bgColor;
+        xpBadgeEl.style.color       = currentBadge.color;
+        xpBadgeEl.style.borderColor = currentBadge.borderColor;
       }
-      if (el("xpBarFill")) el("xpBarFill").style.width   = progress.progressPercent + "%";
-      if (el("xpNeeded"))  el("xpNeeded").textContent    = progress.xpNeeded > 0
+      if (el("xpBarFill")) el("xpBarFill").style.width = progress.progressPercent + "%";
+      if (el("xpNeeded"))  el("xpNeeded").textContent  = progress.xpNeeded > 0
         ? `${progress.xpNeeded} XP avant ${progress.next?.name || "max"}`
         : "Max atteint!";
 
