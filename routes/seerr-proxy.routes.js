@@ -36,17 +36,20 @@ function getSeerrCookieDomain() {
   return null;
 }
 
-async function grabSeerrCookie(authToken, res) {
+async function grabSeerrCookie(authToken, res, username) {
   const seerrUrl = (process.env.SEERR_URL || "").replace(/\/$/, "");
-  if (!seerrUrl || !authToken) return false;
+  if (!seerrUrl) { console.warn("[Seerr SSO] SEERR_URL non configuré"); return false; }
+  if (!authToken) { console.warn(`[Seerr SSO] ⚠️ plexToken absent de la session pour ${username} — l'utilisateur doit se reconnecter`); return false; }
   try {
     const r = await fetch(`${seerrUrl}/api/v1/auth/plex`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "Accept": "application/json" },
       body: JSON.stringify({ authToken })
     });
+    console.info(`[Seerr SSO] POST /api/v1/auth/plex pour ${username} → HTTP ${r.status}`);
     if (!r.ok) {
-      console.warn(`[Seerr SSO] Échec HTTP ${r.status}`);
+      const body = await r.text().catch(() => "");
+      console.warn(`[Seerr SSO] Échec HTTP ${r.status} pour ${username} — réponse: ${body.slice(0, 200)}`);
       return false;
     }
     const setCookies = r.headers.raw()["set-cookie"] || [];
@@ -57,13 +60,13 @@ async function grabSeerrCookie(authToken, res) {
       const cookieOpts = { path: "/", httpOnly: true, sameSite: "lax", secure: true };
       if (cookieDomain) cookieOpts.domain = cookieDomain;
       res.cookie("connect.sid", decodeURIComponent(value), cookieOpts);
-      console.info(`[Seerr SSO] ✅ Cookie rafraîchi (domain=${cookieDomain || "courant"})`);
+      console.info(`[Seerr SSO] ✅ Cookie rafraîchi pour ${username} (domain=${cookieDomain || "courant"})`);
       return true;
     }
-    console.warn("[Seerr SSO] Pas de connect.sid dans la réponse");
+    console.warn(`[Seerr SSO] ⚠️ Seerr n'a pas retourné de connect.sid pour ${username}`);
     return false;
   } catch (e) {
-    console.warn("[Seerr SSO] Erreur:", e.message);
+    console.warn(`[Seerr SSO] Erreur pour ${username}:`, e.message);
     return false;
   }
 }
@@ -89,11 +92,8 @@ router.get("/seerr", requireAuth, async (req, res) => {
   //  - premier passage après un redémarrage serveur
   //  - session Seerr expirée sans que la session portail soit expirée
   const plexToken = req.session.plexToken;
-  if (plexToken) {
-    await grabSeerrCookie(plexToken, res);
-  } else {
-    console.warn("[Seerr SSO] plexToken absent de la session — cookie non rafraîchi");
-  }
+  const username  = req.session.user?.username || req.session.user?.email || "inconnu";
+  await grabSeerrCookie(plexToken, res, username);
 
   // Rendu sans layout (page standalone full-screen)
   res.render("seerr/index", { layout: false, seerrPublicUrl });
