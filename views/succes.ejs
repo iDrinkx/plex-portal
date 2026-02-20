@@ -32,6 +32,40 @@
   .back-button { display: none !important; }
   .badges-container { padding-top: 0 !important; }
   <% } %>
+  <% if (typeof embed !== 'undefined' && embed) { %>
+  /* ── MODE EMBED : overrides compact pour la modale ── */
+  .badges-container {
+    max-width: 100% !important;
+    padding: 0 4px 16px !important;
+  }
+  .badges-header { margin-bottom: 14px; }
+  .badges-title { font-size: 20px; }
+  .badges-subtitle { font-size: 12px; }
+  .badges-stats {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .stat-box { padding: 10px 8px; }
+  .stat-number { font-size: 20px; }
+  .stat-label { font-size: 10px; }
+  .achievements-grid {
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: 8px;
+  }
+  .achievement-card {
+    padding: 10px 8px;
+    min-height: 130px;
+    border-radius: 8px;
+  }
+  .achievement-icon { font-size: 22px; margin-bottom: 5px; }
+  .achievement-name { font-size: 10px; margin-bottom: 3px; }
+  .achievement-description { font-size: 10px; }
+  .achievement-date { font-size: 10px; }
+  .category-name { font-size: 15px; }
+  .category-icon { font-size: 16px; }
+  .achievements-section { margin-bottom: 18px; }
+  <% } %>
 
   .back-button:hover {
     color: #E5A00D;
@@ -372,7 +406,15 @@
 </div>
 
 <script>
-  document.addEventListener("DOMContentLoaded", function () {
+  (function initSucces() {
+    <% if (typeof embed !== 'undefined' && embed) { %>
+    // Mode embed : DOM déjà chargé, exécution immédiate
+    Promise.resolve().then(run);
+    <% } else { %>
+    document.addEventListener("DOMContentLoaded", run);
+    <% } %>
+
+    function run() {
     console.log("🏆 Page Badges chargée!");
 
     const BASE = '<%= basePath %>';
@@ -573,5 +615,6 @@
         if (data && (data.sessionCount > 0 || data.totalHours > 0)) applyAll(data);
       })
       .catch(() => {});
-  });
+    } // end run()
+  })(); // end initSucces
 </script>
