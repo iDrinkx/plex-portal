@@ -153,6 +153,9 @@ const proxyMiddleware = createProxyMiddleware({
       // Injecter le cookie de session Seerr
       if (req.session?.overseerrCookie) {
         proxyReq.setHeader("Cookie", req.session.overseerrCookie);
+        console.log(`[SeerrProxy] → ${req.method} ${req.url} (cookie: ${req.session.overseerrCookie.slice(0, 40)}...)`);
+      } else {
+        console.warn(`[SeerrProxy] → ${req.method} ${req.url} ⚠️  PAS DE COOKIE — session:`, !!req.session);
       }
 
       // Corriger le host header
@@ -176,16 +179,17 @@ const proxyMiddleware = createProxyMiddleware({
       const basePath = req.basePath || "";
 
       // ── Interception des redirections d'authentification ──────────────────
+      // Log toutes les redirections pour diagnostic
       const isRedirect = [301, 302, 303, 307, 308].includes(proxyRes.statusCode);
       if (isRedirect) {
         const location = proxyRes.headers["location"] || "";
-        const isAuthRedirect =
-          location.includes("app.plex.tv") ||
-          location.includes("plex.tv/sign-in") ||
-          location.match(/\/login(\?|$)/);
+        console.log(`[SeerrProxy] Redirect Seerr (${proxyRes.statusCode}): ${location}`);
 
-        if (isAuthRedirect) {
-          console.warn(`[SeerrProxy] ⚠️  Redirect vers login intercepté (${location}) → re-auth`);
+        // Tout redirect qui ne reste pas sous /overseerr-frame est un redirect d'auth
+        // (login Seerr, app.plex.tv, plex.tv/sign-in, /, /login, etc.)
+        const staysInProxy = location.startsWith("/overseerr-frame");
+        if (!staysInProxy) {
+          console.warn(`[SeerrProxy] ⚠️  Redirect hors proxy intercepté (${location}) → re-auth`);
           proxyRes.headers["location"] = `${basePath}/overseerr-frame-reauth`;
         }
       }
