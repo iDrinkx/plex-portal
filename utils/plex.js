@@ -18,37 +18,43 @@ async function getServerOwnerId(PLEX_TOKEN) {
 }
 
 /**
- * Récupère la liste complète des amis/partagés du compte admin via l'API cloud plex.tv.
- * Gère la pagination : boucle jusqu'à ce que toutes les pages soient récupérées.
+ * Récupère la liste complète des utilisateurs ayant accès au compte via l'API XML legacy plex.tv.
+ * Cette API (/api/users) est plus exhaustive que /api/v2/friends — elle inclut tous les types
+ * de relations (amis, partages serveur, home users, etc.) en une seule requête sans pagination.
  */
 async function getPlexFriends(PLEX_TOKEN) {
-  const PAGE_SIZE = 100;
-  let offset = 0;
-  let allFriends = [];
+  const url = `https://plex.tv/api/users`;
+  const res = await fetch(url, {
+    headers: {
+      "X-Plex-Token": PLEX_TOKEN,
+      "X-Plex-Client-Identifier": "plex-portal-app",
+      "Accept": "application/xml"
+    }
+  });
+  if (!res.ok) throw new Error(`plex.tv/api/users → HTTP ${res.status}`);
 
-  while (true) {
-    const url = `https://plex.tv/api/v2/friends?includeSharedServers=1&count=${PAGE_SIZE}&offset=${offset}`;
-    const res = await fetch(url, {
-      headers: {
-        "X-Plex-Token": PLEX_TOKEN,
-        "X-Plex-Client-Identifier": "plex-portal-app",
-        "Accept": "application/json"
-      }
-    });
-    if (!res.ok) throw new Error(`plex.tv/api/v2/friends → HTTP ${res.status}`);
-    const page = await res.json();
-    if (!Array.isArray(page) || page.length === 0) break;
+  const xml = await res.text();
 
-    allFriends = allFriends.concat(page);
-    console.debug(`[Plex] Friends page offset=${offset}: ${page.length} reçus, total=${allFriends.length}`);
+  // Parser le XML manuellement : extraire les attributs id, title, email de chaque <User>
+  const users = [];
+  const userRegex = /<User\s([^>]+)>/g;
+  const attrRegex = /(\w+)="([^"]*)"/g;
+  let userMatch;
 
-    // Si la page est moins remplie que PAGE_SIZE, c'est la dernière
-    if (page.length < PAGE_SIZE) break;
-    offset += PAGE_SIZE;
+  while ((userMatch = userRegex.exec(xml)) !== null) {
+    const attrs = {};
+    let attrMatch;
+    const attrStr = userMatch[1];
+    while ((attrMatch = attrRegex.exec(attrStr)) !== null) {
+      attrs[attrMatch[1]] = attrMatch[2];
+    }
+    if (attrs.id) {
+      users.push({ id: parseInt(attrs.id), username: attrs.title || "", email: attrs.email || "" });
+    }
   }
 
-  console.info(`[Plex] ✅ Total amis récupérés: ${allFriends.length}`);
-  return allFriends;
+  console.info(`[Plex] ✅ Total utilisateurs récupérés (API XML): ${users.length}`);
+  return users;
 }
 
 /**
