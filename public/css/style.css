@@ -1115,6 +1115,7 @@ body {
   font-size: 10px;
   color: #555;
   margin-top: 1px;
+  text-align: center;
 }
 
 @media (max-width: 600px) {
