@@ -63,7 +63,7 @@
   <!-- PROGRESS BAR XP -->
   <div class="xp-progress-section">
     <div class="progress-header">
-      <span>Progression vers le prochain badge</span>
+      <span>Progression vers le niveau suivant</span>
       <span class="xp-needed" id="xpNeeded">-</span>
     </div>
     <div class="xp-bar-wrapper">
@@ -458,7 +458,7 @@
     border-radius: 50%;
     object-fit: cover;
     border: 3px solid #5B9BD5;
-    transition: border-color 0.3s ease;
+    transition: border-color 0.4s ease, box-shadow 0.4s ease;
     position: relative;
     z-index: 2;
   }
@@ -468,18 +468,19 @@
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: 110px;
-    height: 110px;
+    width: 116px;
+    height: 116px;
     border-radius: 50%;
-    border: 3px solid #5B9BD5;
-    opacity: 0.3;
-    animation: ring-pulse 2s ease-in-out infinite;
+    border: 2px solid #5B9BD5;
+    opacity: 0.6;
+    transition: border-color 0.4s ease, box-shadow 0.4s ease;
+    animation: ring-pulse 2.5s ease-in-out infinite;
     z-index: 1;
   }
 
   @keyframes ring-pulse {
-    0%, 100% { opacity: 0.3; transform: translate(-50%, -50%) scale(1); }
-    50% { opacity: 0.1; transform: translate(-50%, -50%) scale(1.15); }
+    0%, 100% { opacity: 0.6; transform: translate(-50%, -50%) scale(1); }
+    50% { opacity: 0.25; transform: translate(-50%, -50%) scale(1.12); }
   }
 
   .profile-info {
@@ -505,7 +506,9 @@
   }
 
   .xp-badge {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     padding: 6px 14px;
     background: rgba(91, 155, 213, 0.2);
     color: #5B9BD5;
@@ -513,6 +516,20 @@
     font-size: 13px;
     font-weight: 600;
     border: 1px solid rgba(91, 155, 213, 0.5);
+    transition: background 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease;
+    white-space: nowrap;
+  }
+  .xp-level-num {
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+  .xp-rank-sep {
+    opacity: 0.45;
+    font-size: 11px;
+    padding: 0 1px;
+  }
+  .xp-rank-name {
+    font-size: 12px;
   }
 
   .xp-amount {
@@ -692,6 +709,7 @@
     opacity: 1;
     border-color: currentColor;
     background: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 0 10px currentColor, 0 0 22px rgba(255,255,255,0.04);
   }
 
   .badge-icon {
@@ -933,38 +951,27 @@
 </style>
 
 <script>
-  // XP System Definition
-  const XP_SYSTEM = <%- JSON.stringify({badges: XP_SYSTEM.badges}) %>;
-
-  XP_SYSTEM.getBadgeByXp = function(totalXp) {
-    return this.badges.find(b => totalXp >= b.minXp && totalXp < b.maxXp) || this.badges[this.badges.length - 1];
-  };
-
-  XP_SYSTEM.getProgressToNextBadge = function(totalXp) {
-    const currentBadge = this.getBadgeByXp(totalXp);
-    const nextBadge = this.badges.find(b => b.level === currentBadge.level + 1);
-    if (!nextBadge) {
-      return {
-        current: currentBadge,
-        next: null,
-        currentXp: totalXp,
-        nextXpThreshold: null,
-        progressPercent: 100,
-        xpNeeded: 0
-      };
-    }
-    const xpInCurrentBadge = totalXp - currentBadge.minXp;
-    const xpNeededForNextBadge = nextBadge.minXp - currentBadge.minXp;
-    const progressPercent = Math.floor((xpInCurrentBadge / xpNeededForNextBadge) * 100);
+  // ─── Système de rangs et niveaux ───────────────────────────────────
+  const XP_PAR_NIVEAU = 1000;
+  const XP_SYSTEM = <%- JSON.stringify({ranks: XP_SYSTEM.ranks}) %>;
+  XP_SYSTEM.badges = XP_SYSTEM.ranks; // backward-compat
+  XP_SYSTEM.getLevel          = function(xp) { return Math.floor((xp || 0) / XP_PAR_NIVEAU) + 1; };
+  XP_SYSTEM.getRankByLevel    = function(lvl) { return this.ranks.find(r => lvl >= r.minLevel && lvl <= r.maxLevel) || this.ranks[this.ranks.length - 1]; };
+  XP_SYSTEM.getRankByXp       = function(xp)  { return this.getRankByLevel(this.getLevel(xp)); };
+  XP_SYSTEM.getBadgeByXp      = function(xp)  { return this.getRankByXp(xp); };
+  XP_SYSTEM.getProgressToNextLevel = function(xp) {
+    xp = xp || 0;
+    const level     = this.getLevel(xp);
+    const rank      = this.getRankByLevel(level);
+    const xpInLevel = xp % XP_PAR_NIVEAU;
     return {
-      current: currentBadge,
-      next: nextBadge,
-      currentXp: totalXp,
-      nextXpThreshold: nextBadge.minXp,
-      progressPercent: Math.min(progressPercent, 100),
-      xpNeeded: Math.max(nextBadge.minXp - totalXp, 0)
+      current: rank, next: this.getRankByLevel(level + 1),
+      level, nextLevel: level + 1, currentXp: xp,
+      progressPercent: Math.floor((xpInLevel / XP_PAR_NIVEAU) * 100),
+      xpNeeded: XP_PAR_NIVEAU - xpInLevel
     };
   };
+  XP_SYSTEM.getProgressToNextBadge = function(xp) { return this.getProgressToNextLevel(xp); };
 
   /* ===============================
      💾 XP SNAPSHOT — stale-while-revalidate
@@ -976,44 +983,58 @@
   const _XP_CACHE_KEY = () => `xp_snapshot_${document.body.getAttribute("data-user-id") || "guest"}`;
   const _XP_CACHE_TTL  = 24 * 60 * 60 * 1000;
 
+  // ─── Applique le glow coloré sur avatar + ring + barre XP ─────────
+  function applyRankGlow(color) {
+    const avatarEl  = document.getElementById("profileAvatar");
+    const badgeRing = document.getElementById("badgeRing");
+    const xpBarFill = document.getElementById("xpBarFill");
+    if (avatarEl) {
+      avatarEl.style.borderColor = color;
+      avatarEl.style.boxShadow   = `0 0 18px ${color}99, 0 0 40px ${color}33`;
+    }
+    if (badgeRing) {
+      badgeRing.style.borderColor = color;
+      badgeRing.style.boxShadow   = `0 0 16px ${color}bb, 0 0 32px ${color}55`;
+    }
+    if (xpBarFill) {
+      xpBarFill.style.background = `linear-gradient(90deg, ${color}88, ${color})`;
+      xpBarFill.style.boxShadow  = `0 0 12px ${color}88`;
+    }
+  }
+
   function applyXpDisplay(snap) {
-    const b = snap.badge;
+    if (!snap || !snap.level) return; // invalider ancien format sans level
+    const r         = snap.rank;
     const xpBadgeEl = document.getElementById("xpBadge");
-    const xpAmountEl = document.getElementById("xpAmount");
-    const badgeRing  = document.getElementById("badgeRing");
-    const avatarEl   = document.getElementById("profileAvatar");
-    const xpBarFill  = document.getElementById("xpBarFill");
-    const xpNeededEl = document.getElementById("xpNeeded");
+    const xpAmountEl= document.getElementById("xpAmount");
+    const xpBarFill = document.getElementById("xpBarFill");
+    const xpNeededEl= document.getElementById("xpNeeded");
 
     if (xpBadgeEl) {
-      xpBadgeEl.textContent    = `${b.icon} ${b.name}`;
-      xpBadgeEl.style.background   = b.bgColor;
-      xpBadgeEl.style.color        = b.color;
-      xpBadgeEl.style.borderColor  = b.borderColor;
+      xpBadgeEl.innerHTML = `<span class="xp-level-num">Niv.\u00a0${snap.level}</span><span class="xp-rank-sep">•</span><span class="xp-rank-name">${r.icon} ${r.name}</span>`;
+      xpBadgeEl.style.background  = r.bgColor;
+      xpBadgeEl.style.color       = r.color;
+      xpBadgeEl.style.borderColor = r.borderColor;
+      xpBadgeEl.style.boxShadow   = `0 0 10px ${r.color}55`;
       xpBadgeEl.classList.remove("xp-skel");
     }
     if (xpAmountEl) {
       xpAmountEl.textContent = `${(snap.totalXp || 0).toLocaleString("fr-FR")} XP`;
       xpAmountEl.classList.remove("xp-skel");
     }
-    if (avatarEl) avatarEl.style.borderColor  = b.borderColor;
-    if (badgeRing) badgeRing.style.borderColor = b.borderColor;
+    applyRankGlow(r.color);
     if (xpBarFill)  xpBarFill.style.width = (snap.progressPercent || 0) + "%";
-    if (xpNeededEl) {
-      xpNeededEl.textContent = snap.xpNeeded > 0
-        ? `${snap.xpNeeded.toLocaleString("fr-FR")} XP avant ${snap.nextBadgeName || "max"}`
-        : "Max atteint !";
-    }
+    if (xpNeededEl) xpNeededEl.textContent = `${(snap.xpNeeded || 0).toLocaleString("fr-FR")} XP \u2192 Niv.\u00a0${snap.level + 1}`;
   }
 
-  function saveXpSnapshot(totalXp, badge, progress) {
+  function saveXpSnapshot(totalXp, rank, progress) {
     try {
       localStorage.setItem(_XP_CACHE_KEY(), JSON.stringify({
         totalXp,
-        badge: { icon: badge.icon, name: badge.name, color: badge.color, bgColor: badge.bgColor, borderColor: badge.borderColor },
+        level: progress.level,
+        rank: { icon: rank.icon, name: rank.name, color: rank.color, bgColor: rank.bgColor, borderColor: rank.borderColor },
         progressPercent: progress.progressPercent,
         xpNeeded: progress.xpNeeded,
-        nextBadgeName: progress.next?.name || null,
         savedAt: Date.now()
       }));
     } catch (_) {}
@@ -1216,17 +1237,18 @@
   function renderBadges() {
     const container = document.getElementById("badgesContainer");
     if (!container) return;
-    
-    XP_SYSTEM.badges.forEach((badge) => {
-      const badgeEl = document.createElement("div");
-      badgeEl.className = "badge-item";
-      badgeEl.dataset.level = badge.level;
-      badgeEl.innerHTML = `
-        <div class="badge-icon" style="color: ${badge.color};">${badge.icon}</div>
-        <div class="badge-name">${badge.name}</div>
-        <div class="badge-range">${badge.minXp} - ${badge.maxXp === Infinity ? '∞' : badge.maxXp} XP</div>
+
+    XP_SYSTEM.ranks.forEach((rank, idx) => {
+      const el = document.createElement("div");
+      el.className = "badge-item";
+      el.dataset.rankIdx = idx;
+      el.style.color = rank.color; // used by currentColor in .unlocked CSS
+      el.innerHTML = `
+        <div class="badge-icon" style="color:${rank.color};filter:drop-shadow(0 0 6px ${rank.color}88);">${rank.icon}</div>
+        <div class="badge-name" style="color:${rank.color};">${rank.name}</div>
+        <div class="badge-range">Niv.\u00a0${rank.minLevel}${rank.maxLevel < 9999 ? '\u2013' + rank.maxLevel : '+'}</div>
       `;
-      container.appendChild(badgeEl);
+      container.appendChild(el);
     });
   }
 
@@ -1569,37 +1591,24 @@
       const badgesXp = unlockedBadgesCount * XP_MULTIPLIERS.BADGE;
       const ancienneteXp = daysJoined * XP_MULTIPLIERS.ANCIENNETE;
 
-      // TOTAL XP = somme des 3 sources (nouveau système!)
-      const totalXp = hoursXp + badgesXp + ancienneteXp;
-      console.log("[XP] Calcul NEW: Heures=" + hoursXp + " + Badges=" + badgesXp + " + Ancienneté=" + ancienneteXp + " = " + totalXp + " XP");
-      
-      const badge = XP_SYSTEM.getBadgeByXp(totalXp);
-      const progress = XP_SYSTEM.getProgressToNextBadge(totalXp);
-      console.log("[BADGE] Badge calculé:", badge.name);
+      // TOTAL XP = somme des 3 sources
+      const totalXp      = hoursXp + badgesXp + ancienneteXp;
+      const currentLevel = XP_SYSTEM.getLevel(totalXp);
+      const rank         = XP_SYSTEM.getRankByLevel(currentLevel);
+      const progress     = XP_SYSTEM.getProgressToNextLevel(totalXp);
 
-      // Couleur avatar selon badge
-      const avatarEl = document.getElementById("profileAvatar");
-      const badgeRing = document.getElementById("badgeRing");
-      console.log("[DOM] avatarEl:", !!avatarEl, "badgeRing:", !!badgeRing);
-      
-      if (avatarEl) {
-        avatarEl.style.borderColor = badge.borderColor;
-        console.log("[AVATAR] Couleur appliquée:", badge.borderColor);
-      }
-      if (badgeRing) {
-        badgeRing.style.borderColor = badge.borderColor;
-      }
+      // Glow avatar selon rang
+      applyRankGlow(rank.color);
 
-      // Afficher badge et XP
-      const xpBadgeEl = document.getElementById("xpBadge");
+      // Afficher niveau + rang
+      const xpBadgeEl  = document.getElementById("xpBadge");
       const xpAmountEl = document.getElementById("xpAmount");
-      console.log("[DOM] xpBadge:", !!xpBadgeEl, "xpAmount:", !!xpAmountEl);
-      
       if (xpBadgeEl) {
-        xpBadgeEl.textContent = `${badge.icon} ${badge.name}`;
-        xpBadgeEl.style.background = badge.bgColor;
-        xpBadgeEl.style.color = badge.color;
-        xpBadgeEl.style.borderColor = badge.borderColor;
+        xpBadgeEl.innerHTML = `<span class="xp-level-num">Niv.\u00a0${currentLevel}</span><span class="xp-rank-sep">•</span><span class="xp-rank-name">${rank.icon} ${rank.name}</span>`;
+        xpBadgeEl.style.background  = rank.bgColor;
+        xpBadgeEl.style.color       = rank.color;
+        xpBadgeEl.style.borderColor = rank.borderColor;
+        xpBadgeEl.style.boxShadow   = `0 0 10px ${rank.color}55`;
         xpBadgeEl.classList.remove("xp-skel");
       }
       if (xpAmountEl) {
@@ -1607,26 +1616,14 @@
         xpAmountEl.classList.remove("xp-skel");
       }
 
-      // Barre de progression
+      // Barre de progression (vers le niveau suivant)
       const xpBarFill = document.getElementById("xpBarFill");
-      const xpNeeded = document.getElementById("xpNeeded");
-      console.log("[XP-PROGRESS] Sélecteurs - xpBarFill:", !!xpBarFill, "xpNeeded:", !!xpNeeded);
-      console.log("[XP-PROGRESS] Total XP:", totalXp, "Progress:", progress);
-      
-      if (xpBarFill) {
-        const percent = progress.progressPercent || 0;
-        xpBarFill.style.width = percent + "%";
-        console.log("[XP-PROGRESS] ✅ Barre mise à jour - width:", percent + "%");
-      } else {
-        console.error("[XP-PROGRESS] ❌ xpBarFill non trouvé!");
-      }
-      
-      if (xpNeeded) {
-        xpNeeded.textContent = progress.xpNeeded > 0 ? `${progress.xpNeeded.toLocaleString("fr-FR")} XP avant ${progress.next?.name || "max"}` : "Max atteint !";
-      }
+      const xpNeeded  = document.getElementById("xpNeeded");
+      if (xpBarFill) xpBarFill.style.width = (progress.progressPercent || 0) + "%";
+      if (xpNeeded)  xpNeeded.textContent  = `${progress.xpNeeded.toLocaleString("fr-FR")} XP \u2192 Niv.\u00a0${currentLevel + 1}`;
 
       // 💾 Persister pour affichage instantané à la prochaine visite
-      saveXpSnapshot(totalXp, badge, progress);
+      saveXpSnapshot(totalXp, rank, progress);
 
       // Calculer les pourcentages de répartition
       const totalXpBreakdown = hoursXp + badgesXp + ancienneteXp;
@@ -1680,17 +1677,12 @@
       if (formulaSessionEl) formulaSessionEl.style.display = "none";
       if (formulaTotalEl) formulaTotalEl.style.display = "none";
 
-      // Activer les badges débloqués
+      // Activer les rangs débloqués
       const badgeItems = document.querySelectorAll(".badge-item");
-      console.log("[BADGES] Nombre de badges trouvés:", badgeItems.length, "Total XP:", totalXp);
-      
       badgeItems.forEach(item => {
-        const level = parseInt(item.dataset.level);
-        const badgeData = XP_SYSTEM.badges[level - 1];
-        if (totalXp >= badgeData.minXp) {
-          item.classList.add("unlocked");
-          console.log("[BADGES] Débloqué - Level", level, '(', badgeData.minXp, 'XP)');
-        }
+        const rankIdx  = parseInt(item.dataset.rankIdx);
+        const rankData = XP_SYSTEM.ranks[rankIdx];
+        if (rankData) item.classList.toggle("unlocked", currentLevel >= rankData.minLevel);
       });
 
       // 🧹 Nettoyer skeletons — batch 2 (Tautulli)
@@ -1729,15 +1721,12 @@
               xpAmountEl.classList.remove("skel");
             }
             
-            // Update badges
+            // Update rangs débloqués
             const badgeItems = document.querySelectorAll(".badge-item");
+            const newLevel   = XP_SYSTEM.getLevel(newTotalXp);
             badgeItems.forEach(item => {
-              item.classList.remove("unlocked");
-              const level = parseInt(item.dataset.level);
-              const badgeData = XP_SYSTEM.badges[level - 1];
-              if (newTotalXp >= badgeData.minXp) {
-                item.classList.add("unlocked");
-              }
+              const rankData = XP_SYSTEM.ranks[parseInt(item.dataset.rankIdx)];
+              if (rankData) item.classList.toggle("unlocked", newLevel >= rankData.minLevel);
             });
             
             // Update formules / sources d'XP
@@ -1957,20 +1946,19 @@
       if (el("detailProfilHours"))    el("detailProfilHours").textContent     = Math.round(totalHours * 10) / 10 + "h";
       if (el("detailProfilAnciennete")) el("detailProfilAnciennete").textContent = daysJoined + " j";
 
-      // Badge courant + barre XP
-      const currentBadge = XP_SYSTEM.getBadgeByXp(totalXp);
-      const progress     = XP_SYSTEM.getProgressToNextBadge(totalXp);
-      const avatar       = el("profileAvatar");
-      const badgeRing    = el("badgeRing");
+      // Rang + niveau courant + barre XP
+      const currentLevel = XP_SYSTEM.getLevel(totalXp);
+      const currentRank  = XP_SYSTEM.getRankByLevel(currentLevel);
+      const progress     = XP_SYSTEM.getProgressToNextLevel(totalXp);
       const xpBadgeEl    = el("xpBadge");
       const xpAmountEl   = el("xpAmount");
-      if (avatar)    avatar.style.borderColor    = currentBadge.borderColor;
-      if (badgeRing) badgeRing.style.borderColor = currentBadge.borderColor;
+      applyRankGlow(currentRank.color);
       if (xpBadgeEl) {
-        xpBadgeEl.textContent       = `${currentBadge.icon} ${currentBadge.name}`;
-        xpBadgeEl.style.background  = currentBadge.bgColor;
-        xpBadgeEl.style.color       = currentBadge.color;
-        xpBadgeEl.style.borderColor = currentBadge.borderColor;
+        xpBadgeEl.innerHTML     = `<span class="xp-level-num">Niv.\u00a0${currentLevel}</span><span class="xp-rank-sep">•</span><span class="xp-rank-name">${currentRank.icon} ${currentRank.name}</span>`;
+        xpBadgeEl.style.background  = currentRank.bgColor;
+        xpBadgeEl.style.color       = currentRank.color;
+        xpBadgeEl.style.borderColor = currentRank.borderColor;
+        xpBadgeEl.style.boxShadow   = `0 0 10px ${currentRank.color}55`;
         xpBadgeEl.classList.remove("xp-skel");
       }
       if (xpAmountEl) {
@@ -1978,23 +1966,22 @@
         xpAmountEl.classList.remove("xp-skel");
       }
       if (el("xpBarFill")) el("xpBarFill").style.width = progress.progressPercent + "%";
-      if (el("xpNeeded"))  el("xpNeeded").textContent  = progress.xpNeeded > 0
-        ? `${progress.xpNeeded.toLocaleString("fr-FR")} XP avant ${progress.next?.name || "max"}`
-        : "Max atteint !";
+      if (el("xpNeeded"))  el("xpNeeded").textContent  =
+        `${progress.xpNeeded.toLocaleString("fr-FR")} XP \u2192 Niv.\u00a0${currentLevel + 1}`;
 
       // 💾 Persister
-      saveXpSnapshot(totalXp, currentBadge, progress);
-      saveProfilSnapshot(); // mise à jour silencieuse du snapshot complet
+      saveXpSnapshot(totalXp, currentRank, progress);
+      saveProfilSnapshot();
 
-      // Badges débloqués
+      // Rangs débloqués
       const badgeItems = document.querySelectorAll(".badge-item");
       badgeItems.forEach(item => {
-        const badgeData = XP_SYSTEM.badges[parseInt(item.dataset.level) - 1];
-        if (badgeData) item.classList.toggle("unlocked", totalXp >= badgeData.minXp);
+        const rankData = XP_SYSTEM.ranks[parseInt(item.dataset.rankIdx)];
+        if (rankData) item.classList.toggle("unlocked", currentLevel >= rankData.minLevel);
       });
       if (el("detailProfilBadges")) {
         const unlockedCount = [...badgeItems].filter(i => i.classList.contains("unlocked")).length;
-        el("detailProfilBadges").textContent = unlockedCount + (XP_SYSTEM.badges.length ? "/" + XP_SYSTEM.badges.length : "");
+        el("detailProfilBadges").textContent = unlockedCount + "/" + XP_SYSTEM.ranks.length;
       }
     }
 

@@ -1,128 +1,83 @@
-// Système de badges et XP
+﻿// 
+// Système de rangs et niveaux XP
+//  XP  Niveau : level = floor(totalXp / XP_PAR_NIVEAU) + 1
+//  Niveau  Rang : tranches définies dans RANKS
+// 
+
+const XP_PAR_NIVEAU = 1000;
+
+const RANKS = [
+  { name: "Fer",        icon: "⚙️",  minLevel: 1,   maxLevel: 10,   color: "#8B9BA8", bgColor: "rgba(139,155,168,0.15)", borderColor: "#8B9BA8" },
+  { name: "Bronze",     icon: "🥉",  minLevel: 11,  maxLevel: 20,   color: "#CD7F32", bgColor: "rgba(205,127,50,0.15)",  borderColor: "#CD7F32" },
+  { name: "Argent",     icon: "🥈",  minLevel: 21,  maxLevel: 30,   color: "#C0C0C0", bgColor: "rgba(192,192,192,0.15)", borderColor: "#C0C0C0" },
+  { name: "Or",         icon: "🥇",  minLevel: 31,  maxLevel: 40,   color: "#E5A00D", bgColor: "rgba(229,160,13,0.15)",  borderColor: "#E5A00D" },
+  { name: "Platine",    icon: "💠",  minLevel: 41,  maxLevel: 50,   color: "#00D9FF", bgColor: "rgba(0,217,255,0.15)",   borderColor: "#00D9FF" },
+  { name: "Émeraude",   icon: "💚",  minLevel: 51,  maxLevel: 65,   color: "#2ECC71", bgColor: "rgba(46,204,113,0.15)",  borderColor: "#2ECC71" },
+  { name: "Diamant",    icon: "💎",  minLevel: 66,  maxLevel: 80,   color: "#7B68EE", bgColor: "rgba(123,104,238,0.15)", borderColor: "#7B68EE" },
+  { name: "Master",     icon: "🏆",  minLevel: 81,  maxLevel: 100,  color: "#FF6B35", bgColor: "rgba(255,107,53,0.15)",  borderColor: "#FF6B35" },
+  { name: "Challenger", icon: "👑",  minLevel: 101, maxLevel: 9999, color: "#FF1493", bgColor: "rgba(255,20,147,0.15)",  borderColor: "#FF1493" },
+];
 const XP_SYSTEM = {
-  badges: [
-    {
-      level: 1,
-      name: "Bronze",
-      icon: "🥉",
-      minXp: 0,
-      maxXp: 10000,
-      color: "#CD7F32",
-      bgColor: "rgba(205, 127, 50, 0.1)",
-      borderColor: "#CD7F32"
-    },
-    {
-      level: 2,
-      name: "Argent",
-      icon: "🥈",
-      minXp: 10000,
-      maxXp: 20000,
-      color: "#C0C0C0",
-      bgColor: "rgba(192, 192, 192, 0.1)",
-      borderColor: "#C0C0C0"
-    },
-    {
-      level: 3,
-      name: "Or",
-      icon: "🥇",
-      minXp: 20000,
-      maxXp: 30000,
-      color: "#E5A00D",
-      bgColor: "rgba(229, 160, 13, 0.1)",
-      borderColor: "#E5A00D"
-    },
-    {
-      level: 4,
-      name: "Platine",
-      icon: "💠",
-      minXp: 30000,
-      maxXp: 40000,
-      color: "#00D9FF",
-      bgColor: "rgba(0, 217, 255, 0.1)",
-      borderColor: "#00D9FF"
-    },
-    {
-      level: 5,
-      name: "Diamant",
-      icon: "💎",
-      minXp: 40000,
-      maxXp: 50000,
-      color: "#FF1493",
-      bgColor: "rgba(255, 20, 147, 0.1)",
-      borderColor: "#FF1493"
-    },
-    {
-      level: 6,
-      name: "Légende",
-      icon: "👑",
-      minXp: 50000,
-      maxXp: 100000,
-      color: "#7C3AED",
-      bgColor: "rgba(124, 58, 237, 0.1)",
-      borderColor: "#7C3AED"
-    }
-  ],
+  ranks: RANKS,
+  get badges() { return this.ranks; }, // rétrocompatibilité
 
-  // Calculer l'XP total de l'utilisateur
+  getLevel(totalXp) {
+    return Math.floor((totalXp || 0) / XP_PAR_NIVEAU) + 1;
+  },
+
+  getRankByLevel(level) {
+    return RANKS.find(r => level >= r.minLevel && level <= r.maxLevel)
+      || RANKS[RANKS.length - 1];
+  },
+
+  getRankByXp(totalXp) {
+    return this.getRankByLevel(this.getLevel(totalXp));
+  },
+
+  getBadgeByXp(totalXp) { return this.getRankByXp(totalXp); },
+
   calculateTotalXp(sessionCount, totalRequests) {
-    const xpFromSessions = (sessionCount || 0) * 2;
-    const xpFromRequests = (totalRequests || 0) * 15;
-    return xpFromSessions + xpFromRequests;
+    return ((sessionCount || 0) * 2) + ((totalRequests || 0) * 15);
   },
 
-  // Obtenir le badge actuel
-  getBadgeByXp(totalXp) {
-    return this.badges.find(b => totalXp >= b.minXp && totalXp < b.maxXp) || this.badges[this.badges.length - 1];
-  },
-
-  // Obtenir la progression vers le badge suivant
-  getProgressToNextBadge(totalXp) {
-    const currentBadge = this.getBadgeByXp(totalXp);
-    const nextBadge = this.badges.find(b => b.level === currentBadge.level + 1);
-    
-    if (!nextBadge) {
-      return {
-        current: currentBadge,
-        next: null,
-        currentXp: totalXp,
-        nextXpThreshold: null,
-        progressPercent: 100,
-        xpNeeded: 0
-      };
-    }
-
-    const xpInCurrentBadge = totalXp - currentBadge.minXp;
-    const xpNeededForNextBadge = nextBadge.minXp - currentBadge.minXp;
-    const progressPercent = Math.floor((xpInCurrentBadge / xpNeededForNextBadge) * 100);
-
+  getProgressToNextLevel(totalXp) {
+    const xp        = totalXp || 0;
+    const level     = this.getLevel(xp);
+    const rank      = this.getRankByLevel(level);
+    const xpInLevel = xp % XP_PAR_NIVEAU;
     return {
-      current: currentBadge,
-      next: nextBadge,
-      currentXp: totalXp,
-      nextXpThreshold: nextBadge.minXp,
-      progressPercent: Math.min(progressPercent, 100),
-      xpNeeded: Math.max(nextBadge.minXp - totalXp, 0)
+      current        : rank,
+      next           : this.getRankByLevel(level + 1),
+      level,
+      nextLevel      : level + 1,
+      currentXp      : xp,
+      xpInLevel,
+      progressPercent: Math.floor((xpInLevel / XP_PAR_NIVEAU) * 100),
+      xpNeeded       : XP_PAR_NIVEAU - xpInLevel,
+      rankChanged    : this.getRankByLevel(level + 1).name !== rank.name
     };
   },
 
-  // Obtenir les statistiques détaillées
-  getDetailedStats(sessionCount, totalRequests) {
-    const totalXp = this.calculateTotalXp(sessionCount, totalRequests);
-    const badge = this.getBadgeByXp(totalXp);
-    const progress = this.getProgressToNextBadge(totalXp);
+  getProgressToNextBadge(totalXp) { return this.getProgressToNextLevel(totalXp); },
 
+  getDetailedStats(sessionCount, totalRequests) {
+    const totalXp  = this.calculateTotalXp(sessionCount, totalRequests);
+    const level    = this.getLevel(totalXp);
+    const rank     = this.getRankByLevel(level);
+    const progress = this.getProgressToNextLevel(totalXp);
     return {
-      totalXp,
-      badge,
+      totalXp, level, rank,
+      badge: rank,
       progress,
       breakdown: {
-        sessionXp: sessionCount * 2,
-        requestXp: totalRequests * 15,
-        sessionCount,
-        totalRequests
+        sessionXp : (sessionCount || 0) * 2,
+        requestXp : (totalRequests || 0) * 15,
+        sessionCount, totalRequests
       }
     };
-  }
+  },
+
+  xpParNiveau: XP_PAR_NIVEAU
 };
 
 module.exports = { XP_SYSTEM };

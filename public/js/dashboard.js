@@ -93,10 +93,11 @@
 
       const sessionCount = tautulliData?.sessionCount || 0;
       const totalXp      = sessionCount * 2;
-      const badge        = XP_SYSTEM.getBadgeByXp(totalXp);
+      const rank         = XP_SYSTEM.getRankByXp(totalXp);
 
-      avatarEl.style.borderColor = badge.borderColor;
-      try { localStorage.setItem(AVATAR_KEY, JSON.stringify({ borderColor: badge.borderColor, savedAt: Date.now() })); } catch (_) {}
+      avatarEl.style.borderColor = rank.color;
+      avatarEl.style.boxShadow   = `0 0 14px ${rank.color}99, 0 0 28px ${rank.color}44`;
+      try { localStorage.setItem(AVATAR_KEY, JSON.stringify({ borderColor: rank.color, savedAt: Date.now() })); } catch (_) {}
     } catch (err) {
       console.debug("Avatar XP color update skipped:", err.message);
     }
