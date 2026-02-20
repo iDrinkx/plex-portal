@@ -565,4 +565,58 @@ router.delete("/api/admin/achievement/:achievementId", requireAuth, (req, res) =
   res.json({ success: true, revoked: achievementId });
 });
 
+/* ===============================
+   🎵 NOW PLAYING
+=============================== */
+router.get("/api/now-playing", requireAuth, async (req, res) => {
+  const plexUrl   = (process.env.PLEX_URL   || "").replace(/\/$/, "");
+  const plexToken = process.env.PLEX_TOKEN || "";
+  if (!plexUrl || !plexToken) return res.json({ playing: false });
+
+  try {
+    const r = await fetch(`${plexUrl}/status/sessions`, {
+      headers: { "X-Plex-Token": plexToken, "Accept": "application/json" },
+      timeout: 5000
+    });
+    if (!r.ok) return res.json({ playing: false });
+    const json = await r.json();
+    const sessions = json?.MediaContainer?.Metadata || [];
+
+    // Trouver la session de l'utilisateur connecté (par username ou titre)
+    const username = (req.session.user.username || "").toLowerCase();
+    const userId   = req.session.user.id;
+
+    const mySession = sessions.find(s => {
+      const su = (s.User?.title || "").toLowerCase();
+      const sid = String(s.User?.id || "");
+      return su === username || sid === String(userId);
+    });
+
+    if (!mySession) return res.json({ playing: false });
+
+    const duration    = mySession.duration || 0;
+    const viewOffset  = mySession.viewOffset || 0;
+    const progressPct = duration > 0 ? Math.round((viewOffset / duration) * 100) : 0;
+
+    const thumb = mySession.thumb
+      ? `${plexUrl}${mySession.thumb}?X-Plex-Token=${plexToken}`
+      : null;
+
+    res.json({
+      playing:      true,
+      state:        mySession.Player?.state || "playing",   // playing | paused | buffering
+      type:         mySession.type,                          // episode | movie | track
+      title:        mySession.title || "",
+      grandTitle:   mySession.grandparentTitle || "",        // Série ou artiste
+      year:         mySession.year || null,
+      thumb,
+      progressPct,
+      player:       mySession.Player?.title || "",           // nom de l'appareil
+    });
+  } catch (e) {
+    console.warn("[NowPlaying] Erreur:", e.message);
+    res.json({ playing: false });
+  }
+});
+
 module.exports = router;

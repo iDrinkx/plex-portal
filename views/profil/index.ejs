@@ -21,6 +21,27 @@
         <span class="xp-amount" id="xpAmount">0 XP</span>
       </div>
     </div>
+
+    <!-- LECTURE EN COURS -->
+    <div class="now-playing-widget" id="nowPlayingWidget" style="display:none">
+      <div class="np-thumb-wrap">
+        <img class="np-thumb" id="npThumb" src="" alt="" />
+        <div class="np-progress-ring">
+          <svg viewBox="0 0 36 36">
+            <circle class="np-ring-bg" cx="18" cy="18" r="15.9" />
+            <circle class="np-ring-fill" id="npRingFill" cx="18" cy="18" r="15.9"
+              stroke-dasharray="0 100" transform="rotate(-90 18 18)" />
+          </svg>
+          <span class="np-state-icon" id="npStateIcon">▶</span>
+        </div>
+      </div>
+      <div class="np-info">
+        <span class="np-label">EN COURS</span>
+        <span class="np-grand" id="npGrand"></span>
+        <span class="np-title" id="npTitle"></span>
+        <span class="np-player" id="npPlayer"></span>
+      </div>
+    </div>
   </div>
 
   <!-- PROGRESS BAR XP -->
@@ -40,10 +61,6 @@
     <div class="profil-card">
       <h2>👤 Profil</h2>
       <div class="card-content">
-        <div class="stat-row">
-          <span class="stat-label">Plateforme</span>
-          <span class="stat-value">Plex</span>
-        </div>
         <div class="stat-row">
           <span class="stat-label">Inscrit depuis</span>
           <span class="stat-value" id="joinedDate">Chargement...</span>
@@ -259,6 +276,92 @@
     border-radius: 16px;
     border: 1px solid rgba(255, 255, 255, 0.1);
   }
+
+  /* NOW PLAYING WIDGET */
+  .now-playing-widget {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 14px;
+    padding: 12px 18px 12px 12px;
+    max-width: 280px;
+    flex-shrink: 0;
+    animation: npFadeIn 0.4s ease;
+  }
+  @keyframes npFadeIn { from { opacity:0; transform:translateY(-6px);} to { opacity:1; transform:translateY(0);} }
+
+  .np-thumb-wrap {
+    position: relative;
+    width: 52px;
+    height: 52px;
+    flex-shrink: 0;
+  }
+  .np-thumb {
+    width: 52px;
+    height: 52px;
+    border-radius: 8px;
+    object-fit: cover;
+    display: block;
+  }
+  .np-progress-ring {
+    position: absolute;
+    inset: -5px;
+    pointer-events: none;
+  }
+  .np-progress-ring svg { width: 100%; height: 100%; }
+  .np-ring-bg   { fill: none; stroke: rgba(255,255,255,0.1); stroke-width: 2.5; }
+  .np-ring-fill { fill: none; stroke: #e5a00d; stroke-width: 2.5;
+                  stroke-linecap: round; transition: stroke-dasharray 1s linear; }
+  .np-state-icon {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    color: rgba(255,255,255,0.6);
+  }
+
+  .np-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+  .np-label {
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: #e5a00d;
+    text-transform: uppercase;
+  }
+  .np-grand {
+    font-size: 0.72rem;
+    color: #94a3b8;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .np-title {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: #f1f5f9;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .np-player {
+    font-size: 0.65rem;
+    color: #64748b;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .np-paused .np-ring-fill { stroke: #94a3b8; }
+  .np-paused .np-label { color: #94a3b8; }
 
   .avatar-wrapper {
     position: relative;
@@ -695,6 +798,10 @@
 
   /* RESPONSIVE */
   @media (max-width: 768px) {
+    .now-playing-widget {
+      display: none !important;
+    }
+
     .profil-header {
       flex-direction: column;
       text-align: center;
@@ -1408,5 +1515,47 @@
     } catch(err) {
       console.error("[PROFIL] ❌ Erreur:", err);
     }
+
+    // NOW PLAYING — polling toutes les 30s
+    async function refreshNowPlaying() {
+      try {
+        const r = await fetch(basePath + "/api/now-playing");
+        const d = await r.json();
+        const w = document.getElementById("nowPlayingWidget");
+        if (!d.playing) { w.style.display = "none"; return; }
+
+        // Thumb
+        const img = document.getElementById("npThumb");
+        if (d.thumb) { img.src = d.thumb; img.style.display = ""; }
+        else img.style.display = "none";
+
+        // Textes
+        const grand = document.getElementById("npGrand");
+        const title = document.getElementById("npTitle");
+        const player = document.getElementById("npPlayer");
+        grand.textContent  = d.grandTitle || "";
+        grand.style.display = d.grandTitle ? "" : "none";
+        title.textContent  = d.title || "";
+        player.textContent = d.player  ? "📺 " + d.player : "";
+
+        // Progression (anneau SVG — stroke-dasharray sur 100)
+        const ring = document.getElementById("npRingFill");
+        const circumference = 2 * Math.PI * 15.9;  // ≈ 99.9
+        const filled = (d.progressPct / 100) * circumference;
+        ring.setAttribute("stroke-dasharray", `${filled.toFixed(1)} ${(circumference - filled).toFixed(1)}`);
+
+        // État pause / play
+        const icon = document.getElementById("npStateIcon");
+        const isPaused = d.state === "paused";
+        icon.textContent = isPaused ? "⏸" : "▶";
+        w.classList.toggle("np-paused", isPaused);
+        const labelEl = w.querySelector(".np-label");
+        if (labelEl) labelEl.textContent = isPaused ? "EN PAUSE" : "EN COURS";
+
+        w.style.display = "flex";
+      } catch(e) { /* silencieux */ }
+    }
+    refreshNowPlaying();
+    setInterval(refreshNowPlaying, 30000);
   });
 </script>
