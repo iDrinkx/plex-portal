@@ -68,7 +68,7 @@
       <div class="xp-left-icon">🏆</div>
       <div class="xp-left-label">Succès</div>
       <div class="xp-left-count"><span id="xpUnlockedCount"><%= unlockedBadgesCount || 0 %>&nbsp;/&nbsp;<%= totalBadgesCount || 0 %></span></div>
-      <a href="<%= basePath %>/succes" class="action-pill action-pill--gold">Voir mes succès →</a>
+      <button class="action-pill action-pill--gold" onclick="openSuccesModal()">Voir mes succès →</button>
     </div>
 
     <!-- DROITE : barre XP -->
@@ -199,6 +199,19 @@
       <button class="action-pill" onclick="openXpModal()">⚡ Répartition XP →</button>
     </div>
     <div class="badges-container" id="badgesContainer"></div>
+  </div>
+
+  <!-- MODAL SUCCÈS (chargé via fetch embed) -->
+  <div id="succesModal" class="xp-modal" onclick="if(event.target===this)closeSuccesModal()">
+    <div class="xp-modal-content xp-modal-content--wide" id="succesModalContent">
+      <div class="xp-modal-header">
+        <h3>🏆 Mes Succès</h3>
+        <button class="xp-modal-close" onclick="closeSuccesModal()">✕</button>
+      </div>
+      <div id="succesModalBody" style="min-height:200px;display:flex;align-items:center;justify-content:center;color:#aaa">
+        Chargement...
+      </div>
+    </div>
   </div>
 
   <!-- MODAL RÉPARTITION XP -->
@@ -2169,6 +2182,32 @@
     startPolling();
   });
 
+  function openSuccesModal() {
+    const modal = document.getElementById('succesModal');
+    modal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+    const body = document.getElementById('succesModalBody');
+    if (body.dataset.loaded) return;
+    const base = window.APP_BASE_PATH || '';
+    fetch(base + '/succes?embed=1')
+      .then(r => r.text())
+      .then(html => {
+        body.innerHTML = html;
+        body.style.cssText = '';
+        body.dataset.loaded = '1';
+        // re-run scripts inside the loaded HTML
+        body.querySelectorAll('script').forEach(s => {
+          const ns = document.createElement('script');
+          ns.textContent = s.textContent;
+          s.replaceWith(ns);
+        });
+      })
+      .catch(() => { body.textContent = 'Erreur de chargement.'; });
+  }
+  function closeSuccesModal() {
+    document.getElementById('succesModal').classList.remove('active');
+    document.body.style.overflow = '';
+  }
   function openXpModal() {
     document.getElementById('xpModal').classList.add('active');
     document.body.style.overflow = 'hidden';
@@ -2178,6 +2217,6 @@
     document.body.style.overflow = '';
   }
   document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') closeXpModal();
+    if (e.key === 'Escape') { closeXpModal(); closeSuccesModal(); }
   });
 </script>

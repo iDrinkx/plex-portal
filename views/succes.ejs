@@ -28,6 +28,10 @@
     border: 1px solid rgba(160, 160, 160, 0.3);
     display: inline-block;
   }
+  <% if (typeof embed !== 'undefined' && embed) { %>
+  .back-button { display: none !important; }
+  .badges-container { padding-top: 0 !important; }
+  <% } %>
 
   .back-button:hover {
     color: #E5A00D;

@@ -206,7 +206,9 @@ router.get("/succes", requireAuth, async (req, res) => {
       XP_SYSTEM,
       ACHIEVEMENTS: achievementsByCategory,
       stats: stats_global,
-      progressMap
+      progressMap,
+      layout: req.query.embed === '1' ? false : 'layout',
+      embed: req.query.embed === '1'
     });
   } catch (err) {
     log.create('[Badges]').error(err.message);
@@ -217,7 +219,9 @@ router.get("/succes", requireAuth, async (req, res) => {
       ACHIEVEMENTS: {},
       stats: { total: 0, unlocked: 0, locked: 0, progress: 0 },
       progressMap: {},
-      error: "Erreur lors du chargement des achievements"
+      error: "Erreur lors du chargement des achievements",
+      layout: req.query.embed === '1' ? false : 'layout',
+      embed: req.query.embed === '1'
     });
   }
 });
