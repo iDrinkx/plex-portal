@@ -80,6 +80,7 @@ router.get("/auth-complete", async (req, res) => {
 
   req.session.user = user;
   req.session.user.joinedAtTimestamp = user.joinedAt; // Store the Unix timestamp from Plex OAuth
+  req.session.plexToken = authToken; // Store Plex auth token for Overseerr SSO
   delete req.session.pinId;
 
   res.redirect(req.basePath + "/dashboard");

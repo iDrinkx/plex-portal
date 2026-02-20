@@ -5,6 +5,7 @@ const path = require("path");
 
 const authRoutes = require("./routes/auth.routes");
 const dashboardRoutes = require("./routes/dashboard.routes");
+const overseerrRoutes = require("./routes/overseerr.routes");
 const reverseProxyMiddleware = require("./middleware/reverseproxy.middleware");
 const { startSessionCronJob } = require("./utils/cron-session-job");
 const { runHealthCheck } = require("./utils/health-check");  // 🏥 Health check au boot
@@ -76,6 +77,7 @@ app.set("layout", "layout");
 
 app.use("/", authRoutes);
 app.use("/", dashboardRoutes);
+app.use("/", overseerrRoutes);
 
 app.get("/", (req, res) => {
   if (req.session.user) {
