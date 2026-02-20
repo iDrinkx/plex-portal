@@ -49,26 +49,26 @@
 <div class="server-stats-bar" id="serverStatsBar">
   <div class="ssb-item" id="ssb-movies">
     <span class="ssb-icon">🎬</span>
-    <span class="ssb-num" id="ssb-movies-num">—</span>
+    <span class="ssb-num skel" id="ssb-movies-num"></span>
     <span class="ssb-label">Films</span>
   </div>
   <div class="ssb-divider"></div>
   <div class="ssb-item" id="ssb-shows">
     <span class="ssb-icon">📺</span>
-    <span class="ssb-num" id="ssb-shows-num">—</span>
+    <span class="ssb-num skel" id="ssb-shows-num"></span>
     <span class="ssb-label">Séries</span>
     <span class="ssb-sub" id="ssb-episodes"></span>
   </div>
   <div class="ssb-divider"></div>
   <div class="ssb-item" id="ssb-music">
     <span class="ssb-icon">🎵</span>
-    <span class="ssb-num" id="ssb-music-num">—</span>
+    <span class="ssb-num skel" id="ssb-music-num"></span>
     <span class="ssb-label">Musiques</span>
   </div>
   <div class="ssb-divider" id="ssb-div-audio"></div>
   <div class="ssb-item" id="ssb-audio">
     <span class="ssb-icon">🎧</span>
-    <span class="ssb-num" id="ssb-audio-num">—</span>
+    <span class="ssb-num skel" id="ssb-audio-num"></span>
     <span class="ssb-label">Livres audio</span>
   </div>
 </div>
@@ -76,30 +76,50 @@
 <script src="<%= basePath %>/js/dashboard.js"></script>
 <script>
 (function () {
-  const bp = '<%= basePath %>';
-  const fmt = n => n.toLocaleString('fr-FR');
+  const bp      = '<%= basePath %>';
+  const userId  = document.body.getAttribute('data-user-id') || 'guest';
+  const SSB_KEY = 'ssb_snap:' + userId;
+  const SSB_TTL = 10 * 60 * 1000; // 10 min (aligné avec le cache serveur)
+  const fmt     = n => n.toLocaleString('fr-FR');
 
+  function applyStats(d) {
+    if (!d.available) return;
+    const bar = document.getElementById('serverStatsBar');
+    if (bar) bar.classList.add('loaded');
+
+    const set = (id, val) => {
+      const el = document.getElementById(id);
+      if (el) { el.textContent = val; el.classList.remove('skel'); }
+    };
+    set('ssb-movies-num', fmt(d.movies));
+    set('ssb-shows-num',  fmt(d.shows));
+    set('ssb-music-num',  fmt(d.musicTracks));
+    set('ssb-audio-num',  fmt(d.audiobookCount));
+    if (d.episodes > 0) set('ssb-episodes', fmt(d.episodes) + ' épisodes');
+    if (d.audiobookCount === 0) {
+      const div  = document.getElementById('ssb-div-audio');
+      const item = document.getElementById('ssb-audio');
+      if (div)  div.style.display  = 'none';
+      if (item) item.style.display = 'none';
+    }
+  }
+
+  // ⚡ Restaurer instantanément
+  try {
+    const raw = localStorage.getItem(SSB_KEY);
+    if (raw) {
+      const snap = JSON.parse(raw);
+      if (snap.savedAt && Date.now() - snap.savedAt < SSB_TTL) applyStats(snap);
+    }
+  } catch (_) {}
+
+  // Rafraîchir en arrière-plan
   fetch(bp + '/api/server-stats')
     .then(r => r.json())
     .then(d => {
-      if (!d.available) return;
-      const bar = document.getElementById('serverStatsBar');
-      if (bar) bar.classList.add('loaded');
-
-      const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
-
-      set('ssb-movies-num', fmt(d.movies));
-      set('ssb-shows-num',  fmt(d.shows));
-      set('ssb-music-num',  fmt(d.musicTracks));
-      set('ssb-audio-num',  fmt(d.audiobookCount));
-
-      if (d.episodes > 0) set('ssb-episodes', fmt(d.episodes) + ' épisodes');
-
-      if (d.audiobookCount === 0) {
-        const div  = document.getElementById('ssb-div-audio');
-        const item = document.getElementById('ssb-audio');
-        if (div)  div.style.display  = 'none';
-        if (item) item.style.display = 'none';
+      applyStats(d);
+      if (d.available) {
+        try { localStorage.setItem(SSB_KEY, JSON.stringify({ ...d, savedAt: Date.now() })); } catch (_) {}
       }
     })
     .catch(() => {});

@@ -64,40 +64,39 @@
   =============================== */
 
   async function updateAvatarXpColor() {
-    try {
-      const avatarEl = document.querySelector(".user-avatar");
-      if (!avatarEl) return;
+    const avatarEl = document.querySelector(".user-avatar");
+    if (!avatarEl) return;
 
-      // Charger stats et overseerr
+    const AVATAR_KEY = 'avatar_border:' + userId;
+    const AVATAR_TTL = 24 * 60 * 60 * 1000;
+
+    // ⚡ Restaurer instantanément depuis le cache
+    try {
+      const raw = localStorage.getItem(AVATAR_KEY);
+      if (raw) {
+        const snap = JSON.parse(raw);
+        if (snap.savedAt && Date.now() - snap.savedAt < AVATAR_TTL && snap.borderColor) {
+          avatarEl.style.borderColor = snap.borderColor;
+        }
+      }
+    } catch (_) {}
+
+    // Puis recalculer en arrière-plan
+    try {
       let tautulliData = cacheManager.get("statsCache", STATS_CACHE_DURATION);
       if (!tautulliData) {
-        const res = await fetch(basePath + "/api/stats", {
-          headers: { "Accept": "application/json" }
-        });
+        const res = await fetch(basePath + "/api/stats", { headers: { "Accept": "application/json" } });
         if (!res.ok) return;
         tautulliData = await res.json();
         cacheManager.set("statsCache", tautulliData);
       }
 
-      let seerrData = cacheManager.get("seerrCache", STATS_CACHE_DURATION);
-      if (!seerrData) {
-        const res = await fetch(basePath + "/api/seerr", {
-          headers: { "Accept": "application/json" }
-        });
-        if (!res.ok) return;
-        seerrData = await res.json();
-        cacheManager.set("seerrCache", seerrData);
-      }
-
-      // Calculer l'XP
       const sessionCount = tautulliData?.sessionCount || 0;
-      const totalXp = sessionCount * 2; // Seerr ne procure plus d'XP
+      const totalXp      = sessionCount * 2;
+      const badge        = XP_SYSTEM.getBadgeByXp(totalXp);
 
-      // Obtenir le badge couleur
-      const badge = XP_SYSTEM.getBadgeByXp(totalXp);
-
-      // Mettre à jour la couleur du avatar
       avatarEl.style.borderColor = badge.borderColor;
+      try { localStorage.setItem(AVATAR_KEY, JSON.stringify({ borderColor: badge.borderColor, savedAt: Date.now() })); } catch (_) {}
     } catch (err) {
       console.debug("Avatar XP color update skipped:", err.message);
     }

@@ -98,17 +98,38 @@
 
   // --- Bulle abonnement navbar ---
   (function () {
-    const pill = document.getElementById('navSubPill');
+    const pill   = document.getElementById('navSubPill');
+    const userId = document.body.getAttribute('data-user-id') || 'guest';
     if (!pill) return;
+
+    const PILL_KEY = 'nav_pill_snap:' + userId;
+    const PILL_TTL = 24 * 60 * 60 * 1000; // 24 h
+
+    function applyPill(data) {
+      const numMatch = data.daysLeft && String(data.daysLeft).match(/\d+/);
+      if (data.status === 'unlimited') pill.textContent = '\u221e';
+      else if (numMatch)               pill.textContent = numMatch[0] + '\u00a0jours';
+      else                             pill.textContent = data.label || '\u2014';
+      pill.className = pill.className.replace(/\bnav-sub-pill--\S+/g, '');
+      pill.classList.add('nav-sub-pill--' + (data.status || 'loading'));
+    }
+
+    // ⚡ Restaurer instantanément depuis le cache
+    try {
+      const raw = localStorage.getItem(PILL_KEY);
+      if (raw) {
+        const snap = JSON.parse(raw);
+        if (snap.savedAt && Date.now() - snap.savedAt < PILL_TTL) applyPill(snap);
+      }
+    } catch (_) {}
+
+    // Puis rafraîchir en arrière-plan
     fetch((window.APP_BASE_PATH || '') + '/api/subscription')
       .then(r => r.ok ? r.json() : null)
       .then(data => {
         if (!data) return;
-        const numMatch = data.daysLeft && String(data.daysLeft).match(/\d+/);
-        if (data.status === 'unlimited') pill.textContent = '\u221e';
-        else if (numMatch) pill.textContent = numMatch[0] + '\u00a0jours';
-        else pill.textContent = data.label || '\u2014';
-        pill.classList.add('nav-sub-pill--' + (data.status || 'loading'));
+        applyPill(data);
+        try { localStorage.setItem(PILL_KEY, JSON.stringify({ ...data, savedAt: Date.now() })); } catch (_) {}
       })
       .catch(() => {});
   })();

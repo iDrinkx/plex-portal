@@ -79,11 +79,11 @@
       <div class="card-content">
         <div class="stat-row">
           <span class="stat-label">Inscrit depuis</span>
-          <span class="stat-value" id="joinedDate">Chargement...</span>
+          <span class="stat-value skel" id="joinedDate"></span>
         </div>
         <div class="stat-row">
           <span class="stat-label">Dernière activité</span>
-          <span class="stat-value" id="lastActivity">Chargement...</span>
+          <span class="stat-value skel" id="lastActivity"></span>
         </div>
       </div>
     </div>
@@ -94,15 +94,15 @@
       <div class="card-content">
         <div class="subscription-row">
           <span class="label">Statut</span>
-          <span class="status-badge loading" id="profilSubStatus">Chargement...</span>
+          <span class="status-badge skel" id="profilSubStatus"></span>
         </div>
         <div class="subscription-row">
           <span class="label">Jours restants</span>
-          <span class="value" id="profilSubDays">—</span>
+          <span class="value skel" id="profilSubDays"></span>
         </div>
         <div class="subscription-row">
           <span class="label">Expire le</span>
-          <span class="value" id="profilSubExpire">—</span>
+          <span class="value skel" id="profilSubExpire"></span>
         </div>
         <div class="progress-wrapper">
           <div class="progress-bar">
@@ -118,19 +118,19 @@
       <div class="card-content">
         <div class="stat-row">
           <span class="stat-label">Total demandes</span>
-          <span class="stat-value" id="totalRequests">0</span>
+          <span class="stat-value skel" id="totalRequests"></span>
         </div>
         <div class="stat-row">
           <span class="stat-label">Approuvées</span>
-          <span class="stat-value approved" id="approvedRequests">0</span>
+          <span class="stat-value approved skel" id="approvedRequests"></span>
         </div>
         <div class="stat-row">
           <span class="stat-label">En attente</span>
-          <span class="stat-value pending" id="pendingRequests">0</span>
+          <span class="stat-value pending skel" id="pendingRequests"></span>
         </div>
         <div class="stat-row">
           <span class="stat-label">Disponibles</span>
-          <span class="stat-value available" id="availableRequests">0</span>
+          <span class="stat-value available skel" id="availableRequests"></span>
         </div>
       </div>
     </div>
@@ -149,11 +149,9 @@
         <div class="stat-icon">📊</div>
         <div class="stat-content">
           <p class="stat-label">Lectures Totales</p>
-          <div class="stat-value counter" id="counterSessions" data-target="0">
-            0
-          </div>
+          <div class="stat-value counter skel" id="counterSessions" data-target="0"></div>
           <p class="stat-unit">lectures</p>
-          <p class="stat-sub" id="statTotalHours">0h visionnées</p>
+          <p class="stat-sub skel" id="statTotalHours"></p>
         </div>
       </div>
 
@@ -162,11 +160,9 @@
         <div class="stat-icon">🎬</div>
         <div class="stat-content">
           <p class="stat-label">Films Regardés</p>
-          <div class="stat-value counter" id="counterMovies" data-target="0">
-            0
-          </div>
+          <div class="stat-value counter skel" id="counterMovies" data-target="0"></div>
           <p class="stat-unit">films</p>
-          <p class="stat-sub" id="statMovieHours">0h de films</p>
+          <p class="stat-sub skel" id="statMovieHours"></p>
         </div>
       </div>
 
@@ -175,11 +171,9 @@
         <div class="stat-icon">📺</div>
         <div class="stat-content">
           <p class="stat-label">Épisodes Regardés</p>
-          <div class="stat-value counter" id="counterEpisodes" data-target="0">
-            0
-          </div>
+          <div class="stat-value counter skel" id="counterEpisodes" data-target="0"></div>
           <p class="stat-unit">épisodes</p>
-          <p class="stat-sub" id="statEpisodeHours">0h de séries</p>
+          <p class="stat-sub skel" id="statEpisodeHours"></p>
         </div>
       </div>
     </div>
@@ -1038,6 +1032,106 @@
     } catch (_) { return null; }
   }
 
+  /* ===============================
+     💾 PROFIL SNAPSHOT — stale-while-revalidate
+     Stocke toutes les valeurs dynamiques lentes (Tautulli, Wizarr, Seerr)
+     pour affichage instantané sans flash de valeurs fausses.
+  =============================== */
+
+  const _PROFIL_CACHE_KEY = () => `profil_snap_${document.body.getAttribute("data-user-id") || "guest"}`;
+  const _PROFIL_CACHE_TTL = 24 * 60 * 60 * 1000; // 24h
+
+  function saveProfilSnapshot() {
+    try {
+      const g = id => document.getElementById(id);
+      const t = id => { const el = g(id); return el ? el.textContent.trim() : ""; };
+      localStorage.setItem(_PROFIL_CACHE_KEY(), JSON.stringify({
+        // Profil dates (Tautulli)
+        joinedDate:       t("joinedDate"),
+        lastActivity:     t("lastActivity"),
+        // Abonnement (Wizarr)
+        subStatusText:    t("profilSubStatus"),
+        subStatusClass:   g("profilSubStatus")?.className  || "",
+        subCardClass:     g("profilSubCard")?.className    || "",
+        subDays:          t("profilSubDays"),
+        subExpire:        t("profilSubExpire"),
+        subProgress:      g("profilSubProgress")?.style.width || "0%",
+        // Demandes (Seerr)
+        totalRequests:    t("totalRequests"),
+        approvedRequests: t("approvedRequests"),
+        pendingRequests:  t("pendingRequests"),
+        availableRequests:t("availableRequests"),
+        // Visionnage (Tautulli)
+        sessionCount:     t("counterSessions"),
+        totalHours:       t("statTotalHours"),
+        movieCount:       t("counterMovies"),
+        movieHours:       t("statMovieHours"),
+        episodeCount:     t("counterEpisodes"),
+        episodeHours:     t("statEpisodeHours"),
+        savedAt: Date.now()
+      }));
+    } catch (_) {}
+  }
+
+  function loadProfilSnapshot() {
+    try {
+      const raw = localStorage.getItem(_PROFIL_CACHE_KEY());
+      if (!raw) return null;
+      const snap = JSON.parse(raw);
+      if (!snap.savedAt || Date.now() - snap.savedAt > _PROFIL_CACHE_TTL) {
+        localStorage.removeItem(_PROFIL_CACHE_KEY());
+        return null;
+      }
+      return snap;
+    } catch (_) { return null; }
+  }
+
+  function applyProfilSnapshot(snap) {
+    try {
+      const g  = id => document.getElementById(id);
+      // Set value and remove skeleton shimmer
+      const s  = (id, val) => {
+        const el = g(id);
+        if (el && val) { el.textContent = val; el.classList.remove("skel"); }
+      };
+      // Profil dates
+      s("joinedDate",        snap.joinedDate);
+      s("lastActivity",      snap.lastActivity);
+      // Abonnement
+      if (snap.subStatusText) {
+        const badge = g("profilSubStatus");
+        if (badge) {
+          badge.textContent = snap.subStatusText;
+          badge.className   = snap.subStatusClass || "status-badge";
+          badge.classList.remove("skel");
+        }
+        const card = g("profilSubCard");
+        if (card && snap.subCardClass) card.className = snap.subCardClass;
+      }
+      s("profilSubDays",    snap.subDays);
+      s("profilSubExpire",  snap.subExpire);
+      const prog = g("profilSubProgress");
+      if (prog && snap.subProgress) prog.style.width = snap.subProgress;
+      // Demandes
+      s("totalRequests",    snap.totalRequests);
+      s("approvedRequests", snap.approvedRequests);
+      s("pendingRequests",  snap.pendingRequests);
+      s("availableRequests",snap.availableRequests);
+      // Visionnage
+      s("counterSessions",  snap.sessionCount);
+      s("statTotalHours",   snap.totalHours);
+      s("counterMovies",    snap.movieCount);
+      s("statMovieHours",   snap.movieHours);
+      s("counterEpisodes",  snap.episodeCount);
+      s("statEpisodeHours", snap.episodeHours);
+    } catch (_) {}
+  }
+
+  // Supprime la classe skeleton sur une liste d'IDs (appelé après chaque batch)
+  function clearSkel(...ids) {
+    ids.forEach(id => { const el = document.getElementById(id); if (el) el.classList.remove("skel"); });
+  }
+
   const basePath = window.APP_BASE_PATH || "";
   const CACHE_DURATION = 30000; // 30 secondes
   const userId = document.body.getAttribute("data-user-id") || "guest";
@@ -1299,7 +1393,14 @@
     const _cachedSnap = loadXpSnapshot();
     if (_cachedSnap) {
       applyXpDisplay(_cachedSnap);
-      console.log("[XP-CACHE] ⚡ Snapshot restauré:", _cachedSnap.badge?.name, _cachedSnap.totalXp, "XP");
+      console.log("[XP-CACHE] ⚡ Snapshot XP restauré:", _cachedSnap.badge?.name, _cachedSnap.totalXp, "XP");
+    }
+
+    // ⚡ Stale-While-Revalidate — toutes les données lentes (Tautulli, Wizarr, Seerr)
+    const _cachedProfil = loadProfilSnapshot();
+    if (_cachedProfil) {
+      applyProfilSnapshot(_cachedProfil);
+      console.log("[PROFIL-CACHE] ⚡ Snapshot profil restauré");
     }
 
     try {
@@ -1354,6 +1455,11 @@
         profilSubStatus.className = 'status-badge not_found';
         profilSubStatus.textContent = 'Non trouvé';
       }
+
+      // 🧹 Nettoyer skeletons — batch 1 (Seerr + Abonnement)
+      clearSkel('totalRequests','approvedRequests','pendingRequests','availableRequests',
+                'profilSubStatus','profilSubDays','profilSubExpire');
+      saveProfilSnapshot();
       
       // ÉTAPE 3: Charger Tautulli en PARALLÈLE (peut prendre du temps)
       console.log("[PROFIL] Chargement Tautulli en arrière-plan (avec polling)...");
@@ -1587,6 +1693,11 @@
         }
       });
 
+      // 🧹 Nettoyer skeletons — batch 2 (Tautulli)
+      clearSkel('counterSessions','statTotalHours','counterMovies','statMovieHours',
+                'counterEpisodes','statEpisodeHours','joinedDate','lastActivity');
+      saveProfilSnapshot(); // snapshot complet (toutes données)
+
       // Rafraîchissement automatique si calcul en cours
       if (stats.status === "computing") {
         console.log("[PROFIL] � Calcul en cours - Attente SMART (au lieu de 30 polls)...");
@@ -1614,7 +1725,8 @@
             const newTotalXp = Math.round(newTotalHours);
             const xpAmountEl = document.getElementById("xpAmount");
             if (xpAmountEl) {
-              xpAmountEl.textContent = newTotalXp;
+              xpAmountEl.textContent = newTotalXp.toLocaleString("fr-FR") + " XP";
+              xpAmountEl.classList.remove("skel");
             }
             
             // Update badges
@@ -1702,6 +1814,11 @@
 
             // 💾 Persister
             saveXpSnapshot(newTotalXp, newBadge, newProgress);
+            clearSkel('counterSessions','statTotalHours','counterMovies','statMovieHours',
+                      'counterEpisodes','statEpisodeHours','joinedDate','lastActivity',
+                      'totalRequests','approvedRequests','pendingRequests','availableRequests',
+                      'profilSubStatus','profilSubDays','profilSubExpire');
+            saveProfilSnapshot();
             
             console.log("[PROFIL-UPDATE] ✅ Tous les éléments mis à jour!");
           } catch (err) {
@@ -1827,7 +1944,7 @@
       const anciennetePercent = Math.round((ancienneteXp / totalBreakdown) * 100);
       const successPct        = PAGE_TOTAL_BADGES > 0 ? Math.round((PAGE_UNLOCKED_BADGES / PAGE_TOTAL_BADGES) * 100) : 0;
 
-      if (el("xpAmount"))             el("xpAmount").textContent              = totalXp;
+      if (el("xpAmount")) { const _xa = el("xpAmount"); _xa.textContent = totalXp.toLocaleString("fr-FR") + " XP"; _xa.classList.remove("skel"); }
       if (el("xpHoursValue"))         el("xpHoursValue").textContent          = hoursXp.toLocaleString()      + " XP";
       if (el("xpHoursBar"))           el("xpHoursBar").style.width            = hoursPercent      + "%";
       if (el("xpHoursPercent"))       el("xpHoursPercent").textContent        = hoursPercent      + "%";
@@ -1867,6 +1984,7 @@
 
       // 💾 Persister
       saveXpSnapshot(totalXp, currentBadge, progress);
+      saveProfilSnapshot(); // mise à jour silencieuse du snapshot complet
 
       // Badges débloqués
       const badgeItems = document.querySelectorAll(".badge-item");

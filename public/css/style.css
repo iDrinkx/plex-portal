@@ -1125,3 +1125,30 @@ body {
     font-size: 28px;
   }
 }
+
+/* =========================
+   SKELETON LOADER (global)
+   Usage: add class "skel" to any element while its data is loading.
+   Remove the class once real data is applied.
+========================= */
+.skel {
+  color: transparent !important;
+  background: linear-gradient(
+    90deg,
+    rgba(255,255,255,0.06) 25%,
+    rgba(255,255,255,0.14) 50%,
+    rgba(255,255,255,0.06) 75%
+  ) !important;
+  background-size: 300% 100% !important;
+  animation: skel-shimmer 1.5s ease-in-out infinite !important;
+  border-radius: 6px !important;
+  border-color: transparent !important;
+  pointer-events: none;
+  min-width: 60px;
+  display: inline-block;
+}
+.skel::before, .skel::after { display: none !important; }
+@keyframes skel-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}

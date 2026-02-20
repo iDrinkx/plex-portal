@@ -1,11 +1,13 @@
 ﻿document.addEventListener("DOMContentLoaded", async () => {
 
-  const basePath = window.APP_BASE_PATH || "";
+  const basePath  = window.APP_BASE_PATH || "";
   const container = document.getElementById("statsContainer");
-  const CACHE_DURATION = 30000; // 30 secondes
+  const CACHE_DURATION = 30000; // 30 secondes (sessionStorage)
+  const SWR_TTL        = 30 * 60 * 1000; // 30 min (localStorage stale-while-revalidate)
 
   // Récupérer l'ID utilisateur depuis le body
   const userId = document.body.getAttribute("data-user-id") || "guest";
+  const SWR_KEY = 'stats_html_snap:' + userId;
 
   /* ===============================
      � DATE UTILITIES
@@ -64,6 +66,18 @@
       sessionStorage.removeItem(`${cacheKey}:time`);
     }
   };
+
+  // ⚡ Stale-While-Revalidate — restaurer instantanément depuis localStorage
+  try {
+    const raw = localStorage.getItem(SWR_KEY);
+    if (raw) {
+      const snap = JSON.parse(raw);
+      if (snap.savedAt && Date.now() - snap.savedAt < SWR_TTL && snap.html) {
+        container.innerHTML = snap.html;
+        container.classList.remove('skel');
+      }
+    }
+  } catch (_) {}
 
   /* ===============================
      📊 LOAD TAUTULLI STATS
@@ -184,6 +198,12 @@
     }
 
     container.innerHTML = html;
+    container.classList.remove('skel');
+
+    // 💾 Persister pour la prochaine visite (stale-while-revalidate)
+    try {
+      localStorage.setItem(SWR_KEY, JSON.stringify({ html, savedAt: Date.now() }));
+    } catch (_) {}
 
   } catch (err) {
     console.error("Stats loading error:", err);
