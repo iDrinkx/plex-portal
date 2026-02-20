@@ -30,8 +30,7 @@ const DURATION_VALIDATION = {
       return durationMs;
     }
   };
- * Utilise la DB Tautulli directe en priorité
- */
+
 async function getTautulliStats(username, TAUTULLI_URL, TAUTULLI_API_KEY, plexUserId, PLEX_URL, PLEX_TOKEN, joinedAtTimestamp = null) {
   try {
     const normalizedUsername = username.toLowerCase();
