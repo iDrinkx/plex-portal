@@ -4,6 +4,44 @@ const router = express.Router();
 
 const { isUserAuthorized } = require("../utils/plex");
 
+/**
+ * Grab le cookie connect.sid de Seerr via le token Plex.
+ * Même logique qu'Organizr sso-functions.php#L335.
+ * Le cookie est posé directement dans le browser → envoyé automatiquement
+ * à toutes les requêtes sous /overseerr-frame/.
+ */
+async function grabSeerrCookie(authToken, res, basePath) {
+  const overseerrUrl = (process.env.OVERSEERR_URL || "").replace(/\/$/, "");
+  if (!overseerrUrl || !authToken) return;
+  try {
+    const r = await fetch(`${overseerrUrl}/api/v1/auth/plex`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Accept": "application/json" },
+      body: JSON.stringify({ authToken })
+    });
+    if (!r.ok) {
+      console.warn(`[Auth] Seerr SSO échoué: HTTP ${r.status}`);
+      return;
+    }
+    const setCookies = r.headers.raw()["set-cookie"] || [];
+    const sidCookie = setCookies.find(c => c.startsWith("connect.sid="));
+    if (sidCookie) {
+      const value = sidCookie.split(";")[0].replace("connect.sid=", "");
+      // Poser le cookie dans le browser, restreint au path du proxy Seerr
+      res.cookie("connect.sid", decodeURIComponent(value), {
+        path: basePath + "/overseerr-frame",
+        httpOnly: true,
+        sameSite: "lax"
+      });
+      console.info(`[Auth] ✅ Cookie Seerr posé dans le browser (connect.sid @ ${basePath}/overseerr-frame)`);
+    } else {
+      console.warn("[Auth] Seerr n'a pas retourné de connect.sid");
+    }
+  } catch (e) {
+    console.warn("[Auth] Erreur grab cookie Seerr:", e.message);
+  }
+}
+
 router.get("/login", async (req, res) => {
 
   const response = await fetch("https://plex.tv/api/v2/pins?strong=true", {
@@ -79,9 +117,13 @@ router.get("/auth-complete", async (req, res) => {
   console.info(`[Auth] User authenticated via Plex OAuth\n`);
 
   req.session.user = user;
-  req.session.user.joinedAtTimestamp = user.joinedAt; // Store the Unix timestamp from Plex OAuth
-  req.session.plexToken = authToken; // Store Plex auth token for Overseerr SSO
+  req.session.user.joinedAtTimestamp = user.joinedAt;
+  req.session.plexToken = authToken;
   delete req.session.pinId;
+
+  // Grab le cookie Seerr immédiatement au login (same as Organizr)
+  // Le cookie connect.sid est posé dans le browser → pas besoin d'injection proxy
+  await grabSeerrCookie(authToken, res, req.basePath || "");
 
   res.redirect(req.basePath + "/dashboard");
 });
