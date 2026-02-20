@@ -15,6 +15,11 @@ const { initTautulliDatabase, getAllUserStatsFromTautulli } = require("./utils/t
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Indispensable derrière un reverse proxy (NPM, Traefik, etc.)
+// Permet à Express de faire confiance aux headers X-Forwarded-Proto/Host
+// et de poser les cookies secure:true même si la connexion interne est HTTP
+app.set('trust proxy', 1);
+
 /* =========================
    MIDDLEWARE
 ========================= */

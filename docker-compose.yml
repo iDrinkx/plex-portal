@@ -43,9 +43,9 @@ services:
       # Exemples :
       #   SEERR_URL: "http://192.168.1.100:5055"        ← IP Unraid + port
       #   SEERR_URL: "http://overseerr:5055"            ← réseau Docker custom
-      #   SEERR_PUBLIC_URL: "https://overseerr.idrinktv.ovh"  ← URL publique HTTPS
+      #   SEERR_PUBLIC_URL: "https://seerr.idrinktv.ovh"  ← URL publique HTTPS
       SEERR_URL: "http://192.168.1.100:5055"
-      SEERR_PUBLIC_URL: "https://overseerr.idrinktv.ovh"
+      SEERR_PUBLIC_URL: "https://seerr.idrinktv.ovh"
       SEERR_API_KEY: "your-key"
       
       # ⚠️ SÉCURITÉ - Whitelist utilisateurs Plex (FORTEMENT RECOMMANDÉ)
