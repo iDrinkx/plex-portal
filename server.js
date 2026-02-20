@@ -46,8 +46,8 @@ app.use(session({
   saveUninitialized: false,
   cookie: {
     httpOnly: true,
-    // secure: true dès que la requête arrive via HTTPS (reverse proxy)
-    secure: process.env.NODE_ENV === 'production' || process.env.COOKIE_SECURE === 'true',
+    // secure: contrôlé exclusivement par COOKIE_SECURE (true en prod derrière HTTPS, false en local)
+    secure: process.env.COOKIE_SECURE === 'true',
     sameSite: "lax",
     maxAge: 1000 * 60 * 60 * 24 // 24h
   }
