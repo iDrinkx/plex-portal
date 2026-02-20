@@ -1,172 +1,128 @@
 const fetch = require("node-fetch");
 
 /**
- * Récupère la liste des utilisateurs autorisés du serveur Plex
- * @param {string} PLEX_URL - URL du serveur Plex
- * @param {string} PLEX_TOKEN - Token d'authentification Plex
- * @returns {Promise<Array>} Liste des utilisateurs avec leurs infos
+ * Récupère l'ID Plex du propriétaire du serveur (le compte lié au PLEX_TOKEN admin).
+ * Utilise l'API cloud plex.tv — fiable même si le serveur local est en redémarrage.
  */
-async function getPlexUsers(PLEX_URL, PLEX_TOKEN) {
-  if (!PLEX_URL || !PLEX_TOKEN) {
-    console.warn("[Plex] Config missing:", { hasUrl: !!PLEX_URL, hasToken: !!PLEX_TOKEN });
-    return [];
-  }
-
-  console.debug(`[Plex] Fetching users from: ${PLEX_URL}`);
-
-  const url = `${PLEX_URL}/api/v2/accounts`;
-
-  // Laisser les erreurs réseau/timeout se propager (fetch peut throw si Plex est injoignable)
-  const res = await fetch(url, {
+async function getServerOwnerId(PLEX_TOKEN) {
+  const res = await fetch("https://plex.tv/api/v2/user", {
     headers: {
       "X-Plex-Token": PLEX_TOKEN,
+      "X-Plex-Client-Identifier": "plex-portal-app",
       "Accept": "application/json"
     }
   });
-
-  console.debug(`[Plex] Response status: ${res.status}`);
-
-  if (!res.ok) {
-    // Erreur serveur ou token invalide → propager pour que l'appelant puisse fail-open
-    throw new Error(`[Plex] Réponse HTTP ${res.status} depuis ${url}`);
-  }
-
-  const json = await res.json();
-
-  if (!Array.isArray(json?.data)) {
-    throw new Error(`[Plex] Format de réponse inattendu (data absent)`);
-  }
-
-  console.info(`[Plex] ✅ Found ${json.data.length} users on server:`);
-  json.data.forEach(u => {
-    console.info(`  - ID: ${u.id}, Email: ${u.email}, Username: ${u.username}`);
-  });
-
-  return json.data;
+  if (!res.ok) throw new Error(`plex.tv/api/v2/user → HTTP ${res.status}`);
+  const data = await res.json();
+  return data.id ? parseInt(data.id) : null;
 }
 
 /**
- * Récupère les infos détaillées d'un utilisateur Plex
- * @param {string|number} plexUserId - ID de l'utilisateur Plex
- * @param {string} PLEX_URL - URL du serveur Plex
- * @param {string} PLEX_TOKEN - Token d'authentification Plex
- * @returns {Promise<Object|null>} Infos utilisateur (ID, email, joinedAt, etc)
+ * Récupère la liste des amis/partagés du compte admin via l'API cloud plex.tv.
+ * Ces utilisateurs ont accès à au moins un des serveurs du compte admin.
  */
-async function getPlexUserInfo(plexUserId, PLEX_URL, PLEX_TOKEN) {
+async function getPlexFriends(PLEX_TOKEN) {
+  const res = await fetch("https://plex.tv/api/v2/friends", {
+    headers: {
+      "X-Plex-Token": PLEX_TOKEN,
+      "X-Plex-Client-Identifier": "plex-portal-app",
+      "Accept": "application/json"
+    }
+  });
+  if (!res.ok) throw new Error(`plex.tv/api/v2/friends → HTTP ${res.status}`);
+  const data = await res.json();
+  return Array.isArray(data) ? data : [];
+}
+
+/**
+ * Vérifie si un utilisateur Plex a accès au serveur.
+ * - Autorisé s'il est le propriétaire du token admin (l'admin lui-même)
+ * - Autorisé s'il figure dans la liste des amis partagés
+ * - Propagate les erreurs réseau → l'appelant décide du fail-open
+ */
+async function isUserAuthorized(plexUserId, _PLEX_URL, PLEX_TOKEN) {
+  const userId = parseInt(plexUserId);
+  console.info(`\n[Plex Auth] Vérification accès pour user ID: ${userId}`);
+
+  // 1. L'utilisateur est-il le propriétaire du serveur (admin) ?
+  const ownerId = await getServerOwnerId(PLEX_TOKEN);
+  if (ownerId && ownerId === userId) {
+    console.info(`✅ [Plex Auth] User ${userId} est le propriétaire du serveur`);
+    return true;
+  }
+
+  // 2. L'utilisateur est-il dans la liste des amis partagés ?
+  const friends = await getPlexFriends(PLEX_TOKEN);
+  console.info(`[Plex Auth] ${friends.length} amis trouvés — recherche de l'ID ${userId}…`);
+
+  const found = friends.find(f => parseInt(f.id) === userId);
+  if (found) {
+    console.info(`✅ [Plex Auth] User ${userId} (${found.email || found.username}) est un ami partagé`);
+    return true;
+  }
+
+  console.warn(`❌ [Plex Auth] User ${userId} absent du serveur (owner=${ownerId}, friends=[${friends.map(f => f.id).join(',')}])`);
+  return false;
+}
+
+/**
+ * Récupère les infos d'un utilisateur Plex (pour compatibilité avec le reste du code).
+ * Cherche parmi l'owner + les amis.
+ */
+async function getPlexUserInfo(plexUserId, _PLEX_URL, PLEX_TOKEN) {
   try {
-    if (!PLEX_URL || !PLEX_TOKEN || !plexUserId) {
-      console.debug("[Plex] Missing config for user info lookup");
-      return null;
+    const userId = parseInt(plexUserId);
+
+    // Vérifier si c'est l'owner
+    const ownerRes = await fetch("https://plex.tv/api/v2/user", {
+      headers: {
+        "X-Plex-Token": PLEX_TOKEN,
+        "X-Plex-Client-Identifier": "plex-portal-app",
+        "Accept": "application/json"
+      }
+    });
+    if (ownerRes.ok) {
+      const owner = await ownerRes.json();
+      if (parseInt(owner.id) === userId) return owner;
     }
 
-    console.debug(`[Plex] Looking for user ID ${plexUserId} in server's user list...`);
-
-    // Récupérer tous les users et chercher celui-ci
-    const users = await getPlexUsers(PLEX_URL, PLEX_TOKEN);
-    
-    const userIdNum = parseInt(plexUserId);
-    console.debug(`[Plex] Searching through ${users.length} users for ID: ${userIdNum}`);
-
-    const user = users.find(u => u.id === userIdNum);
-
-    if (user) {
-      console.debug(`[Plex] ✅ Found user: ID=${user.id}, Email=${user.email}`);
-    } else {
-      console.warn(`[Plex] ❌ User ID ${userIdNum} not found in list`);
-      console.warn(`[Plex] Available user IDs: ${users.map(u => u.id).join(', ')}`);
-    }
-
-    return user || null;
+    // Sinon chercher dans les amis
+    const friends = await getPlexFriends(PLEX_TOKEN);
+    return friends.find(f => parseInt(f.id) === userId) || null;
 
   } catch (err) {
-    console.error("[Plex] Error fetching user info:", err.message);
+    console.error("[Plex] Erreur getPlexUserInfo:", err.message);
     return null;
   }
 }
 
 /**
- * Vérifie si un utilisateur Plex est autorisé (dans la whitelist du serveur)
- * @param {string|number} plexUserId - ID de l'utilisateur Plex
- * @param {string} PLEX_URL - URL du serveur Plex
- * @param {string} PLEX_TOKEN - Token d'authentification Plex
- * @returns {Promise<boolean>} True si l'utilisateur est autorisé
+ * Compatibilité — conservé pour getPlexJoinDate.
+ * @deprecated Utiliser getPlexFriends() directement.
  */
-async function isUserAuthorized(plexUserId, PLEX_URL, PLEX_TOKEN) {
-  console.info(`\n[Plex Auth] Checking authorization for Plex user ID: ${plexUserId}`);
-  console.info(`[Plex Auth] Config - URL: ${PLEX_URL ? '✅ Set' : '❌ Missing'}, Token: ${PLEX_TOKEN ? '✅ Set' : '❌ Missing'}`);
-
-  // Laisser les erreurs réseau/timeout se propager vers l'appelant
-  // (qui peut alors décider de fail-open si Plex est temporairement indisponible)
-  const user = await getPlexUserInfo(plexUserId, PLEX_URL, PLEX_TOKEN);
-
-  if (!user) {
-    console.error(`❌ [Plex Auth] User ID ${plexUserId} NOT FOUND on server - UNAUTHORIZED`);
-    return false;
-  }
-
-  console.info(`✅ [Plex Auth] User ID ${plexUserId} (${user.email}) is authorized`);
-  return true;
+async function getPlexUsers(_PLEX_URL, PLEX_TOKEN) {
+  return getPlexFriends(PLEX_TOKEN);
 }
 
 /**
- * Récupère la date d'adhésion d'un utilisateur depuis le serveur Plex
- * Utilise en priorité le timestamp provenant de l'API cloud Plex OAuth
- * Fallback sur la requête locale seulement si le timestamp n'est pas disponible
- * @param {string|number} plexUserId - ID de l'utilisateur Plex
- * @param {string} PLEX_URL - URL du serveur Plex
- * @param {string} PLEX_TOKEN - Token d'authentification Plex
- * @param {number} joinedAtTimestamp - (Optionnel) Timestamp Unix de joinedAt depuis Plex OAuth
- * @returns {Promise<Date|null>} Date d'adhésion ou null
+ * Récupère la date d'adhésion d'un utilisateur.
+ * Utilise en priorité le timestamp Plex OAuth (le plus fiable).
  */
 async function getPlexJoinDate(plexUserId, PLEX_URL, PLEX_TOKEN, joinedAtTimestamp = null) {
   try {
-    // Si on a le timestamp depuis Plex OAuth, l'utiliser directement (c'est la source la plus fiable)
     if (joinedAtTimestamp) {
-      console.info(`[Plex JoinDate] Using timestamp from Plex OAuth: ${joinedAtTimestamp}`);
-      const joinDate = new Date(joinedAtTimestamp * 1000); // Convertir secondes en millisecondes
-      console.info(`[Plex JoinDate] ✅ User ${plexUserId} joined on ${joinDate.toISOString()}`);
+      const joinDate = new Date(joinedAtTimestamp * 1000);
+      console.info(`[Plex JoinDate] ✅ User ${plexUserId} joined ${joinDate.toISOString()} (depuis OAuth)`);
       return joinDate;
     }
 
-    // Fallback: essayer le serveur local Plex
-    if (!PLEX_URL || !PLEX_TOKEN || !plexUserId) {
-      console.warn("[Plex JoinDate] Missing config:", { hasUrl: !!PLEX_URL, hasToken: !!PLEX_TOKEN, hasUserId: !!plexUserId });
-      return null;
-    }
-
-    console.debug(`[Plex JoinDate] No OAuth timestamp available, trying local Plex server...`);
-    console.debug(`[Plex JoinDate] Fetching join date for user ID: ${plexUserId}`);
-
-    // Essayer de récupérer depuis les données de la bibliothèque
-    // La seule façon fiable est via l'API /accounts
-    const users = await getPlexUsers(PLEX_URL, PLEX_TOKEN);
-    console.debug(`[Plex JoinDate] Received ${users.length} users from Plex API`);
-    
-    const userIdNum = parseInt(plexUserId);
-    console.debug(`[Plex JoinDate] Looking for user ID: ${userIdNum}`);
-    
-    const user = users.find(u => u.id === userIdNum);
-
-    if (!user) {
-      console.warn(`[Plex JoinDate] User ID ${userIdNum} NOT FOUND in Plex users list`);
-      console.warn(`[Plex JoinDate] Available user IDs: ${users.map(u => `${u.id} (${u.email})`).join(', ')}`);
-      return null;
-    }
-
-    console.debug(`[Plex JoinDate] Found user: ID=${user.id}, Email=${user.email}`);
-    console.debug(`[Plex JoinDate] Raw createdAt value: ${user.createdAt} (type: ${typeof user.createdAt})`);
-
+    const user = await getPlexUserInfo(plexUserId, PLEX_URL, PLEX_TOKEN);
     if (user?.createdAt) {
-      const joinDate = new Date(user.createdAt * 1000);
-      console.info(`[Plex JoinDate] User ${plexUserId} joined on ${joinDate.toISOString()}`);
-      return joinDate;
+      return new Date(user.createdAt * 1000);
     }
-
-    console.warn(`[Plex JoinDate] User found but no createdAt timestamp`);
     return null;
-
   } catch (err) {
-    console.error("[Plex JoinDate] Error fetching join date:", err.message, err.stack);
+    console.error("[Plex JoinDate] Erreur:", err.message);
     return null;
   }
 }
