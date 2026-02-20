@@ -29,42 +29,50 @@
     display: inline-block;
   }
   <% if (typeof embed !== 'undefined' && embed) { %>
-  .back-button { display: none !important; }
-  .badges-container { padding-top: 0 !important; }
-  <% } %>
-  <% if (typeof embed !== 'undefined' && embed) { %>
-  /* ── MODE EMBED : overrides compact pour la modale ── */
-  .badges-container {
-    max-width: 100% !important;
-    padding: 0 4px 16px !important;
+  /* ════ MODE EMBED — ID #badges-embed pour spécificité max ════ */
+  #badges-embed {
+    max-width: 100%;
+    width: 100%;
+    padding: 0 0 12px;
+    box-sizing: border-box;
+    overflow-x: hidden;
   }
-  .badges-header { margin-bottom: 14px; }
-  .badges-title { font-size: 20px; }
-  .badges-subtitle { font-size: 12px; }
-  .badges-stats {
-    grid-template-columns: repeat(3, 1fr);
+  #badges-embed .badges-header-top { display: none; }
+  #badges-embed .badges-header     { margin-bottom: 10px; }
+  #badges-embed .badges-subtitle   { font-size: 11px; margin-bottom: 10px; }
+
+  #badges-embed .badges-stats {
+    display: flex;
+    flex-direction: row;
     gap: 8px;
-    margin-bottom: 16px;
+    margin-bottom: 14px;
   }
-  .stat-box { padding: 10px 8px; }
-  .stat-number { font-size: 20px; }
-  .stat-label { font-size: 10px; }
-  .achievements-grid {
-    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
-    gap: 8px;
+  #badges-embed .stat-box    { flex:1; padding: 9px 6px; }
+  #badges-embed .stat-number { font-size: 17px; }
+  #badges-embed .stat-label  { font-size: 9px; letter-spacing: 0.4px; }
+
+  #badges-embed .achievements-section  { margin-bottom: 14px; }
+  #badges-embed .category-header       { margin-bottom: 8px; padding-bottom: 6px; }
+  #badges-embed .category-name         { font-size: 13px; }
+  #badges-embed .category-icon         { font-size: 14px; }
+
+  #badges-embed .achievements-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
   }
-  .achievement-card {
-    padding: 10px 8px;
-    min-height: 130px;
+  #badges-embed .achievement-card {
+    padding: 9px 7px;
+    min-height: 0;
     border-radius: 8px;
   }
-  .achievement-icon { font-size: 22px; margin-bottom: 5px; }
-  .achievement-name { font-size: 10px; margin-bottom: 3px; }
-  .achievement-description { font-size: 10px; }
-  .achievement-date { font-size: 10px; }
-  .category-name { font-size: 15px; }
-  .category-icon { font-size: 16px; }
-  .achievements-section { margin-bottom: 18px; }
+  #badges-embed .achievement-icon        { font-size: 18px; margin-bottom: 4px; }
+  #badges-embed .achievement-name        { font-size: 10px; margin-bottom: 2px; line-height: 1.2; }
+  #badges-embed .achievement-description { font-size: 9px;  line-height: 1.3; margin-bottom: 3px; }
+  #badges-embed .achievement-date        { font-size: 9px;  }
+  #badges-embed .achievement-progress    { font-size: 9px;  }
+  #badges-embed .achievement-secret-text { font-size: 9px;  }
+  #badges-embed .achievement-card:hover  { transform: none; }
   <% } %>
 
   .back-button:hover {
@@ -313,7 +321,7 @@
   }
 </style>
 
-<div class="badges-container">
+<div class="badges-container"<% if (typeof embed !== 'undefined' && embed) { %> id="badges-embed"<% } %>>
   <!-- HEADER WITH BACK BUTTON -->
   <div class="badges-header">
     <div class="badges-header-top">

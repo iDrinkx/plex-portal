@@ -208,7 +208,7 @@
         <h3>🏆 Mes Succès</h3>
         <button class="xp-modal-close" onclick="closeSuccesModal()">✕</button>
       </div>
-      <div id="succesModalBody" style="min-height:200px;display:flex;align-items:center;justify-content:center;color:#aaa;overflow-x:hidden">
+      <div id="succesModalBody" style="min-height:120px;display:flex;align-items:center;justify-content:center;color:#aaa">
         Chargement...
       </div>
     </div>
@@ -786,8 +786,9 @@
 
   /* wide modal pour badges */
   .xp-modal-content--wide {
-    max-width: 900px;
+    max-width: 860px;
     overflow-x: hidden;
+    padding: 20px 20px 16px;
   }
 
   /* MODAL XP */
@@ -2194,7 +2195,9 @@
       .then(r => r.text())
       .then(html => {
         body.innerHTML = html;
-        body.style.cssText = 'overflow-x:hidden';
+        // Reset complet du style inline — laisse le CSS de succes.ejs prendre le relais
+        body.removeAttribute('style');
+        body.style.overflowX = 'hidden';
         body.dataset.loaded = '1';
         // re-run scripts inside the loaded HTML
         body.querySelectorAll('script').forEach(s => {
