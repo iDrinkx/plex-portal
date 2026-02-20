@@ -34,8 +34,13 @@ services:
       # TAUTULLI_URL: "http://tautulli.local:8181"
       # TAUTULLI_API_KEY: "your-api-key"
       
-      # OVERSEERR_URL: "http://overseerr.local"
-      # OVERSEERR_API_KEY: "your-key"
+      # ⭐ OVERSEERR / SEERR - Requis pour l'intégration SSO dans plex-portal
+      # ⚠️  Utilisez l'URL INTERNE (IP Unraid + port), pas l'URL publique
+      # Exemples :
+      #   OVERSEERR_URL: "http://192.168.1.100:5055"   ← IP Unraid + port exposé
+      #   OVERSEERR_URL: "http://overseerr:5055"       ← si même réseau Docker custom
+      OVERSEERR_URL: "http://192.168.1.100:5055"
+      OVERSEERR_API_KEY: "your-key"
       
       # ⚠️ SÉCURITÉ - Whitelist utilisateurs Plex (FORTEMENT RECOMMANDÉ)
       # Permet de restreindre l'accès aux utilisateurs du serveur Plex
