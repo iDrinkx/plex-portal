@@ -15,6 +15,7 @@
  */
 
 const express = require("express");
+const fetch   = require("node-fetch");
 const router  = express.Router();
 
 function requireAuth(req, res, next) {
@@ -24,22 +25,76 @@ function requireAuth(req, res, next) {
   next();
 }
 
+function getSeerrCookieDomain() {
+  const publicUrl = process.env.SEERR_PUBLIC_URL || "";
+  if (!publicUrl) return null;
+  try {
+    const hostname = new URL(publicUrl).hostname;
+    const parts = hostname.split(".");
+    if (parts.length >= 2) return "." + parts.slice(-2).join(".");
+  } catch (e) {}
+  return null;
+}
+
+async function grabSeerrCookie(authToken, res) {
+  const seerrUrl = (process.env.SEERR_URL || "").replace(/\/$/, "");
+  if (!seerrUrl || !authToken) return false;
+  try {
+    const r = await fetch(`${seerrUrl}/api/v1/auth/plex`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Accept": "application/json" },
+      body: JSON.stringify({ authToken })
+    });
+    if (!r.ok) {
+      console.warn(`[Seerr SSO] Échec HTTP ${r.status}`);
+      return false;
+    }
+    const setCookies = r.headers.raw()["set-cookie"] || [];
+    const sidCookie = setCookies.find(c => c.startsWith("connect.sid="));
+    if (sidCookie) {
+      const value = sidCookie.split(";")[0].replace("connect.sid=", "");
+      const cookieDomain = getSeerrCookieDomain();
+      const cookieOpts = { path: "/", httpOnly: true, sameSite: "lax", secure: true };
+      if (cookieDomain) cookieOpts.domain = cookieDomain;
+      res.cookie("connect.sid", decodeURIComponent(value), cookieOpts);
+      console.info(`[Seerr SSO] ✅ Cookie rafraîchi (domain=${cookieDomain || "courant"})`);
+      return true;
+    }
+    console.warn("[Seerr SSO] Pas de connect.sid dans la réponse");
+    return false;
+  } catch (e) {
+    console.warn("[Seerr SSO] Erreur:", e.message);
+    return false;
+  }
+}
+
 const seerrPublicUrl = (process.env.SEERR_PUBLIC_URL || "").replace(/\/$/, "");
 
-router.get("/seerr", requireAuth, (req, res) => {
+router.get("/seerr", requireAuth, async (req, res) => {
   if (!seerrPublicUrl) {
     return res.status(503).send(`
       <html><body style="background:#0f1117;color:#e2e8f0;font-family:sans-serif;
         display:flex;align-items:center;justify-content:center;height:100vh;margin:0">
         <div style="text-align:center">
           <div style="font-size:3rem"></div>
-          <h2>SEERR_PUBLIC_URL non configur�</h2>
+          <h2>SEERR_PUBLIC_URL non configuré</h2>
           <p style="color:#94a3b8">Ajoutez cette variable d'env dans votre docker-compose.yml</p>
           <code style="color:#64748b">SEERR_PUBLIC_URL: "https://seerr.votredomaine.com"</code>
         </div>
       </body></html>
     `);
   }
+
+  // Rafraîchir le cookie Seerr à chaque visite — gère les cas :
+  //  - premier passage après un redémarrage serveur
+  //  - session Seerr expirée sans que la session portail soit expirée
+  const plexToken = req.session.plexToken;
+  if (plexToken) {
+    await grabSeerrCookie(plexToken, res);
+  } else {
+    console.warn("[Seerr SSO] plexToken absent de la session — cookie non rafraîchi");
+  }
+
   // Rendu sans layout (page standalone full-screen)
   res.render("seerr/index", { layout: false, seerrPublicUrl });
 });
