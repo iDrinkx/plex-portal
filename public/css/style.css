@@ -1122,6 +1122,7 @@ body {
   color: #666;
   text-transform: uppercase;
   letter-spacing: 0.8px;
+  white-space: nowrap;
 }
 
 .ssb-sub {
