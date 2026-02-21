@@ -882,38 +882,39 @@ function getUserDetailedStats(username) {
   try {
     let rows = null;
 
-    // Tentative 1 : transcode_decision (API Tautulli standard)
+    // Tentative 1 : transcode_decision depuis session_history_media_info (correctement jointé)
     try {
       rows = tautulliDb.prepare(`
         SELECT
-          COALESCE(sh.transcode_decision, 'direct play') as decision,
+          COALESCE(shm.transcode_decision, 'direct play') as decision,
           COUNT(*) as cnt
         FROM users u
         JOIN session_history sh ON u.user_id = sh.user_id
+        JOIN session_history_media_info shm ON sh.id = shm.id
         WHERE LOWER(u.username) = ?
           AND sh.stopped > sh.started
           AND sh.media_type IN ('movie', 'episode')
-        GROUP BY decision
+        GROUP BY shm.transcode_decision
       `).all(norm);
       if (rows && rows.length > 0) {
-        log.debug('[playMethod] ✓ Query 1 (transcode_decision) success');
+        log.debug('[playMethod] ✓ Query 1 (transcode_decision from media_info) success');
       }
     } catch (e1) {
       log.debug(`[playMethod] Query 1 failed: ${e1.message}`);
 
-      // Fallback 2 : stream_video_decision + stream_audio_decision
+      // Fallback 2 : stream_video_decision + stream_audio_decision depuis media_info
       try {
         rows = tautulliDb.prepare(`
           SELECT
             CASE
-              WHEN sh.transcode_hw_encoding = 1 OR sh.transcode_hw_decoding = 1 THEN 'transcode'
-              WHEN sh.stream_video_decision = 'transcode' OR sh.stream_audio_decision = 'transcode' THEN 'transcode'
-              WHEN sh.stream_video_decision = 'copy' OR sh.stream_audio_decision = 'copy' THEN 'copy'
+              WHEN shm.stream_video_decision = 'transcode' OR shm.stream_audio_decision = 'transcode' THEN 'transcode'
+              WHEN shm.stream_video_decision = 'copy' OR shm.stream_audio_decision = 'copy' THEN 'copy'
               ELSE 'direct play'
             END as decision,
             COUNT(*) as cnt
           FROM users u
           JOIN session_history sh ON u.user_id = sh.user_id
+          JOIN session_history_media_info shm ON sh.id = shm.id
           WHERE LOWER(u.username) = ?
             AND sh.stopped > sh.started
             AND sh.media_type IN ('movie', 'episode')
