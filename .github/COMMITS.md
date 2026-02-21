@@ -46,7 +46,12 @@ git commit -m "feat!: refonte complète du système d'authentification"
 ## Processus de release
 
 1. Tu push sur `main` avec des commits conventionnels
-2. **Release Please** analyse les commits et ouvre automatiquement une PR intitulée `chore(main): release X.Y.Z`
-3. La PR contient le bump de version dans `package.json` + le `CHANGELOG.md` mis à jour
-4. Tu **merges la PR** → Release Please crée la GitHub Release + le tag `vX.Y.Z`
-5. Le workflow Docker rebuilde et pousse `ghcr.io/idrinkx/plex-portal:vX.Y.Z` + `latest`
+2. **semantic-release** analyse automatiquement les commits
+3. Si un `feat:` ou `fix:` est détecté → il exécute directement sur `main` :
+   - Bump de version dans `package.json`
+   - Mise à jour de `CHANGELOG.md`
+   - Commit de release `chore(release): vX.Y.Z [skip ci]`
+   - Création du tag `vX.Y.Z` et de la GitHub Release
+4. Le workflow Docker rebuilde et pousse `ghcr.io/idrinkx/plex-portal:vX.Y.Z` + `latest`
+
+> ⚡ **Aucune PR, aucune action manuelle requise.**

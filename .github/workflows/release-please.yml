@@ -1,4 +1,4 @@
-name: Release Please
+name: Release
 
 on:
   push:
@@ -7,32 +7,43 @@ on:
 
 permissions:
   contents: write
+  packages: write
+  issues: write
   pull-requests: write
 
 jobs:
-  release-please:
+  release:
     runs-on: ubuntu-latest
     outputs:
-      release_created: ${{ steps.release.outputs.release_created }}
-      tag_name:        ${{ steps.release.outputs.tag_name }}
-      version:         ${{ steps.release.outputs.version }}
+      new_release_published: ${{ steps.semantic.outputs.new_release_published }}
+      new_release_version:   ${{ steps.semantic.outputs.new_release_version }}
 
     steps:
-      - uses: googleapis/release-please-action@v4
-        id: release
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
-          config-file:   .github/release-please-config.json
-          manifest-file: .github/release-please-manifest.json
+          fetch-depth: 0
+          persist-credentials: false
 
-  # Quand une release est créée → rebuild Docker avec le tag de version
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install semantic-release
+        run: npm install --save-dev semantic-release @semantic-release/changelog @semantic-release/git @semantic-release/github conventional-changelog-conventionalcommits
+
+      - name: Run semantic-release
+        id: semantic
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx semantic-release
+
+  # Quand une release est publiée → rebuild Docker avec le tag de version
   docker-release:
-    needs: release-please
-    if: ${{ needs.release-please.outputs.release_created }}
+    needs: release
+    if: ${{ needs.release.outputs.new_release_published == 'true' }}
     runs-on: ubuntu-latest
-
-    permissions:
-      contents: read
-      packages: write
 
     steps:
       - name: Checkout repo
@@ -52,4 +63,4 @@ jobs:
           push: true
           tags: |
             ghcr.io/idrinkx/plex-portal:latest
-            ghcr.io/idrinkx/plex-portal:${{ needs.release-please.outputs.tag_name }}
+            ghcr.io/idrinkx/plex-portal:v${{ needs.release.outputs.new_release_version }}

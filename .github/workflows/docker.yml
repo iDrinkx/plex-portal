@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - main
-    # Ne pas déclencher sur les commits automatiques de Release Please
+    # Ne pas déclencher sur les commits automatiques de semantic-release ([skip ci])
     paths-ignore:
       - 'CHANGELOG.md'
       - 'package.json'
