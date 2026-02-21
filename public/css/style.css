@@ -278,7 +278,7 @@ body {
 }
 
 .hero-card-profil {
-  background: linear-gradient(135deg, #1a1822 0%, #17152a 100%);
+  background: linear-gradient(135deg, #1e1a10 0%, #231c0a 100%);
   border-color: rgba(229, 160, 13, 0.2);
 }
 
@@ -485,6 +485,17 @@ body {
 }
 .nav-link-demandes::after {
   background: #6d49ab;
+}
+
+/* nav link accent for profil */
+.nav-link-profil {
+  color: rgba(229, 160, 13, 0.9);
+}
+.nav-link-profil:hover {
+  color: #ffcc40;
+}
+.nav-link-profil::after {
+  background: #e5a00d;
 }
 
 /* =========================
