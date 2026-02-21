@@ -156,6 +156,10 @@ router.get("/statistiques", requireAuth, (req, res) => {
   res.render("statistiques/index", { user: req.session.user, basePath: req.basePath });
 });
 
+router.get("/mes-stats", requireAuth, (req, res) => {
+  res.render("statistiques/mes-stats", { user: req.session.user, basePath: req.basePath });
+});
+
 router.get("/succes", requireAuth, async (req, res) => {
   try {
     // ⚡ Rendu instantané depuis la DB uniquement — l'évaluation Tautulli
@@ -792,6 +796,34 @@ router.get('/api/server-stats', requireAuth, async (req, res) => {
   } catch (err) {
     logSrv.warn('Erreur librairies:', err.message);
     res.json({ available: false, reason: err.message });
+  }
+});
+
+/* ===============================
+   📊 MES STATISTIQUES
+=============================== */
+const logStats = log.create('[MesStats]');
+
+router.get('/api/mes-stats', requireAuth, async (req, res) => {
+  try {
+    const username = req.session.user.username;
+    const cacheKey = `mes_stats_${username}`;
+    const cached   = cache.get(cacheKey);
+    if (cached) return res.json(cached);
+
+    const { getUserDetailedStats, isTautulliReady } = require('../utils/tautulli-direct');
+    if (!isTautulliReady()) return res.json({ available: false, reason: 'tautulli_not_ready' });
+
+    const data = getUserDetailedStats(username);
+    if (!data) return res.json({ available: false, reason: 'no_data' });
+
+    const result = { available: true, ...data };
+    cache.set(cacheKey, result, 10 * 60 * 1000); // 10 min
+    logStats.debug(`Stats générées pour ${username}`);
+    res.json(result);
+  } catch (err) {
+    logStats.error('API mes-stats:', err.message);
+    res.status(500).json({ error: 'mes-stats failed' });
   }
 });
 

@@ -214,6 +214,13 @@
   .achievement-hidden-data { display: none; }
 
   /* Mini progression dans la carte (locked only) */
+  .ach-card-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+  }
+
   .ach-card-mini-bar {
     position: absolute;
     bottom: 0; left: 0; right: 0;
@@ -229,13 +236,14 @@
     transition: width 0.6s ease;
   }
   .ach-card-pct {
-    position: absolute;
-    bottom: 7px; left: 0; right: 0;
+    display: block;
+    width: 100%;
     text-align: center;
-    font-size: 9px;
+    font-size: 10px;
     font-weight: 600;
-    color: rgba(255,255,255,0.28);
+    color: rgba(255,255,255,0.35);
     line-height: 1;
+    margin-top: 5px;
     pointer-events: none;
     letter-spacing: 0.3px;
   }
@@ -379,14 +387,9 @@
       font-size: 34px;
     }
 
-    /* % collé juste au-dessus de la barre jaune (barre = 4px en bas) */
     .ach-card-pct {
-      position: absolute;
-      bottom: 7px;
-      left: 0; right: 0;
       font-size: 10px;
       color: rgba(255,255,255,0.45);
-      line-height: 1;
     }
 
     .ach-card-mini-bar {
@@ -456,6 +459,18 @@
             progressTotal = progInfo.total || 0;
           }
         %>
+          <%
+            let _pctDisplay = null;
+            if (progressTotal > 0) {
+              _pctDisplay = '0%';
+            } else if (isRevocable && !achievement.unlocked) {
+              const _pr = typeof progressMap !== 'undefined' && progressMap && progressMap[achievement.id];
+              if (_pr && _pr.total > 0) {
+                _pctDisplay = Math.min(100, Math.round((_pr.current / _pr.total) * 100)) + '%';
+              }
+            }
+          %>
+          <div class="ach-card-wrap">
           <div class="achievement-card <%= achievement.category %> <%= achievement.unlocked ? 'unlocked' : 'locked' %>"
                data-badge-id="<%= achievement.id %>"
                data-name="<%- achievement.name.replace(/"/g,'&quot;') %>"
@@ -472,7 +487,6 @@
                   <span class="current">0</span> / <span class="total"><%= progressTotal %></span> (<span class="percent">0</span>%)
                 </div>
               </div>
-              <span class="ach-card-pct" id="card-pct-<%= achievement.id %>">0%</span>
               <div class="ach-card-mini-bar"><div class="ach-card-mini-fill" id="card-fill-<%= achievement.id %>" style="width:0%"></div></div>
             <% } else if (isRevocable && !achievement.unlocked) { %>
               <% const prog = typeof progressMap !== 'undefined' && progressMap && progressMap[achievement.id]; %>
@@ -483,10 +497,13 @@
                     <span class="current"><%= prog.current %></span> / <span class="total"><%= prog.total %></span> (<span class="percent"><%= pct0 %></span>%)
                   </div>
                 </div>
-                <span class="ach-card-pct" id="card-pct-<%= achievement.id %>"><%= pct0 %>%</span>
                 <div class="ach-card-mini-bar"><div class="ach-card-mini-fill" id="card-fill-<%= achievement.id %>" style="width:<%= pct0 %>%"></div></div>
               <% } %>
             <% } %>
+          </div>
+          <% if (_pctDisplay !== null) { %>
+            <span class="ach-card-pct" id="card-pct-<%= achievement.id %>"><%= _pctDisplay %></span>
+          <% } %>
           </div>
         <% }); %>
       </div>

@@ -541,6 +541,17 @@ body {
   background: #3B82F6;
 }
 
+/* nav link accent for stats */
+.nav-link-stats {
+  color: rgba(16, 185, 129, 0.9);
+}
+.nav-link-stats:hover {
+  color: #34d399;
+}
+.nav-link-stats::after {
+  background: #10b981;
+}
+
 /* =========================
    NAVBAR SUBSCRIPTION PILL
 ========================= */

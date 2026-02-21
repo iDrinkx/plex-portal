@@ -712,6 +712,150 @@ function getLastPlayedItem(username) {
 }
 
 /**
+ * 📊 Statistiques détaillées d'un utilisateur pour la page "Mes Statistiques"
+ * Top contenu, genres, activité par heure/jour
+ */
+function getUserDetailedStats(username) {
+  if (!tautulliDb) return null;
+  const norm = username.toLowerCase();
+  const result = {};
+
+  // ── Top 10 contenu (heures cumulées) ──────────────────────────────
+  try {
+    const rows = tautulliDb.prepare(`
+      SELECT
+        CASE
+          WHEN sh.media_type = 'episode' THEN shm.grandparent_title
+          ELSE shm.title
+        END as title,
+        sh.media_type,
+        SUM(CAST((sh.stopped - sh.started) AS REAL) / 3600) as hours
+      FROM users u
+      JOIN session_history sh ON u.user_id = sh.user_id
+      JOIN session_history_metadata shm ON sh.id = shm.id
+      WHERE LOWER(u.username) = ?
+        AND sh.stopped > sh.started
+        AND sh.media_type IN ('movie', 'episode')
+        AND (shm.title IS NOT NULL OR shm.grandparent_title IS NOT NULL)
+      GROUP BY title
+      ORDER BY hours DESC
+      LIMIT 10
+    `).all(norm);
+    result.topContent = rows.map(r => ({
+      title: r.title || '?',
+      type: r.media_type,
+      hours: Math.round(r.hours * 10) / 10
+    }));
+  } catch (e) { result.topContent = []; }
+
+  // ── Répartition par type de contenu ───────────────────────────────
+  try {
+    const rows = tautulliDb.prepare(`
+      SELECT sh.media_type,
+        SUM(CAST((sh.stopped - sh.started) AS REAL) / 3600) as hours
+      FROM users u
+      JOIN session_history sh ON u.user_id = sh.user_id
+      WHERE LOWER(u.username) = ? AND sh.stopped > sh.started
+      GROUP BY sh.media_type
+    `).all(norm);
+    result.contentTypes = rows.map(r => ({
+      type: r.media_type,
+      hours: Math.round(r.hours * 10) / 10
+    }));
+  } catch (e) { result.contentTypes = []; }
+
+  // ── Genres films ───────────────────────────────────────────────────
+  try {
+    const rows = tautulliDb.prepare(`
+      SELECT shm.genres,
+        SUM(CAST((sh.stopped - sh.started) AS REAL) / 3600) as hours
+      FROM users u
+      JOIN session_history sh ON u.user_id = sh.user_id
+      JOIN session_history_metadata shm ON sh.id = shm.id
+      WHERE LOWER(u.username) = ? AND sh.stopped > sh.started
+        AND sh.media_type = 'movie'
+        AND shm.genres IS NOT NULL AND shm.genres != ''
+      GROUP BY shm.genres
+      ORDER BY hours DESC
+    `).all(norm);
+    const map = {};
+    for (const r of rows) {
+      for (const g of r.genres.split(',').map(s => s.trim()).filter(Boolean)) {
+        map[g] = (map[g] || 0) + r.hours;
+      }
+    }
+    result.movieGenres = Object.entries(map)
+      .sort((a, b) => b[1] - a[1]).slice(0, 8)
+      .map(([name, hours]) => ({ name, hours: Math.round(hours * 10) / 10 }));
+  } catch (e) { result.movieGenres = []; }
+
+  // ── Genres séries ─────────────────────────────────────────────────
+  try {
+    const rows = tautulliDb.prepare(`
+      SELECT shm.genres,
+        SUM(CAST((sh.stopped - sh.started) AS REAL) / 3600) as hours
+      FROM users u
+      JOIN session_history sh ON u.user_id = sh.user_id
+      JOIN session_history_metadata shm ON sh.id = shm.id
+      WHERE LOWER(u.username) = ? AND sh.stopped > sh.started
+        AND sh.media_type = 'episode'
+        AND shm.genres IS NOT NULL AND shm.genres != ''
+      GROUP BY shm.genres
+      ORDER BY hours DESC
+    `).all(norm);
+    const map = {};
+    for (const r of rows) {
+      for (const g of r.genres.split(',').map(s => s.trim()).filter(Boolean)) {
+        map[g] = (map[g] || 0) + r.hours;
+      }
+    }
+    result.seriesGenres = Object.entries(map)
+      .sort((a, b) => b[1] - a[1]).slice(0, 8)
+      .map(([name, hours]) => ({ name, hours: Math.round(hours * 10) / 10 }));
+  } catch (e) { result.seriesGenres = []; }
+
+  // ── Activité par heure du jour ─────────────────────────────────────
+  try {
+    const rows = tautulliDb.prepare(`
+      SELECT
+        CAST(strftime('%H', sh.started, 'unixepoch', 'localtime') AS INTEGER) as hour,
+        sh.media_type,
+        SUM(CAST((sh.stopped - sh.started) AS REAL) / 3600) as hours
+      FROM users u
+      JOIN session_history sh ON u.user_id = sh.user_id
+      WHERE LOWER(u.username) = ? AND sh.stopped > sh.started
+        AND sh.media_type IN ('movie', 'episode')
+      GROUP BY hour, sh.media_type
+      ORDER BY hour
+    `).all(norm);
+    result.hourActivity = rows.map(r => ({
+      hour: r.hour, type: r.media_type, hours: Math.round(r.hours * 10) / 10
+    }));
+  } catch (e) { result.hourActivity = []; }
+
+  // ── Activité par jour de la semaine ───────────────────────────────
+  try {
+    const rows = tautulliDb.prepare(`
+      SELECT
+        CAST(strftime('%w', sh.started, 'unixepoch', 'localtime') AS INTEGER) as dow,
+        sh.media_type,
+        SUM(CAST((sh.stopped - sh.started) AS REAL) / 3600) as hours
+      FROM users u
+      JOIN session_history sh ON u.user_id = sh.user_id
+      WHERE LOWER(u.username) = ? AND sh.stopped > sh.started
+        AND sh.media_type IN ('movie', 'episode')
+      GROUP BY dow, sh.media_type
+      ORDER BY dow
+    `).all(norm);
+    result.dayActivity = rows.map(r => ({
+      dow: r.dow, type: r.media_type, hours: Math.round(r.hours * 10) / 10
+    }));
+  } catch (e) { result.dayActivity = []; }
+
+  return result;
+}
+
+/**
  * Fermer la connexion (au shutdown)
  */
 function closeTautulliDatabase() {
@@ -733,5 +877,6 @@ module.exports = {
   evaluateSecretAchievements,
   getLiveUsers,
   getLastPlayedItem,
+  getUserDetailedStats,
   closeTautulliDatabase
 };

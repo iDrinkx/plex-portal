@@ -1,0 +1,691 @@
+<!-- ============================================================
+     MES STATISTIQUES — Page complète de stats personnelles
+============================================================ -->
+
+<div class="ms-page" id="msPage">
+
+  <!-- ── HEADER ──────────────────────────────────────────────── -->
+  <div class="ms-header">
+    <h1 class="ms-title">Mes Statistiques&nbsp;📊</h1>
+    <p class="ms-subtitle">Votre résumé de visionnage complet</p>
+  </div>
+
+  <!-- ── SKELETON loading ──────────────────────────────────────── -->
+  <div id="msSkeleton">
+    <div class="ms-overview-grid">
+      <div class="ms-skel-card"></div>
+      <div class="ms-skel-card"></div>
+      <div class="ms-skel-card"></div>
+      <div class="ms-skel-card ms-skel-wide"></div>
+    </div>
+    <div class="ms-skel-card ms-skel-tall"></div>
+    <div class="ms-row-2col">
+      <div class="ms-skel-card ms-skel-tall"></div>
+      <div class="ms-skel-card ms-skel-tall"></div>
+    </div>
+    <div class="ms-skel-card ms-skel-chart"></div>
+    <div class="ms-skel-card ms-skel-chart"></div>
+  </div>
+
+  <!-- ── MAIN CONTENT (hidden until data loads) ─────────────── -->
+  <div id="msContent" style="display:none">
+
+    <!-- OVERVIEW ──────────────────────────────────────────────── -->
+    <div class="ms-overview-grid">
+      <div class="ms-stat-pill ms-stat-series">
+        <div class="ms-stat-icon">📺</div>
+        <div class="ms-stat-info">
+          <div class="ms-stat-value" id="ovSeries">—</div>
+          <div class="ms-stat-label">Séries</div>
+        </div>
+      </div>
+      <div class="ms-stat-pill ms-stat-movies">
+        <div class="ms-stat-icon">🎬</div>
+        <div class="ms-stat-info">
+          <div class="ms-stat-value" id="ovMovies">—</div>
+          <div class="ms-stat-label">Films</div>
+        </div>
+      </div>
+      <div class="ms-stat-pill ms-stat-music">
+        <div class="ms-stat-icon">🎵</div>
+        <div class="ms-stat-info">
+          <div class="ms-stat-value" id="ovMusic">—</div>
+          <div class="ms-stat-label">Musique</div>
+        </div>
+      </div>
+      <div class="ms-donut-card">
+        <div class="ms-card-title">Répartition du temps</div>
+        <div class="ms-donut-wrap">
+          <canvas id="donutChart" width="160" height="160"></canvas>
+          <div class="ms-donut-legend" id="donutLegend"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TOP 10 ────────────────────────────────────────────────── -->
+    <div class="ms-card">
+      <div class="ms-card-title">🏆 Temps passé devant…</div>
+      <div class="ms-top10" id="top10List"></div>
+    </div>
+
+    <!-- GENRES ────────────────────────────────────────────────── -->
+    <div class="ms-row-2col">
+      <div class="ms-card">
+        <div class="ms-card-title">🎬 Genres Films préférés</div>
+        <div class="ms-genres" id="movieGenresList"></div>
+      </div>
+      <div class="ms-card">
+        <div class="ms-card-title">📺 Genres Séries préférés</div>
+        <div class="ms-genres" id="seriesGenresList"></div>
+      </div>
+    </div>
+
+    <!-- HEURE DU JOUR ─────────────────────────────────────────── -->
+    <div class="ms-card">
+      <div class="ms-card-title">⏰ Activité par heure du jour</div>
+      <div class="ms-chart-wrap">
+        <canvas id="hourChart"></canvas>
+      </div>
+    </div>
+
+    <!-- JOUR DE LA SEMAINE ────────────────────────────────────── -->
+    <div class="ms-card">
+      <div class="ms-card-title">📅 Activité par jour de la semaine</div>
+      <div class="ms-chart-wrap">
+        <canvas id="dayChart"></canvas>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- UNAVAILABLE ───────────────────────────────────────────────── -->
+  <div id="msUnavailable" style="display:none" class="ms-unavailable">
+    <div class="ms-unavail-icon">📡</div>
+    <p>Statistiques indisponibles</p>
+    <span>Tautulli n'est pas connecté ou vous n'avez pas encore de données.</span>
+  </div>
+
+</div>
+
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<style>
+/* ── Page layout ── */
+.ms-page {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding-bottom: 40px;
+}
+.ms-header {
+  margin-bottom: 28px;
+}
+.ms-title {
+  font-size: 24px;
+  font-weight: 800;
+  color: #fff;
+  margin: 0 0 4px 0;
+}
+.ms-subtitle {
+  font-size: 13px;
+  color: #555;
+  margin: 0;
+}
+
+/* ── Cards ── */
+.ms-card {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 16px;
+  padding: 22px 24px;
+  margin-bottom: 16px;
+}
+.ms-card-title {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #666;
+  margin-bottom: 18px;
+}
+
+/* ── Overview grid ── */
+.ms-overview-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1.6fr;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.ms-stat-pill {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 16px;
+  padding: 20px 18px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  transition: border-color 0.2s;
+}
+.ms-stat-pill:hover { border-color: rgba(255,255,255,0.12); }
+.ms-stat-icon { font-size: 26px; flex-shrink: 0; }
+.ms-stat-value {
+  font-size: 22px;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1.1;
+}
+.ms-stat-label {
+  font-size: 11px;
+  color: #555;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin-top: 2px;
+}
+.ms-stat-series { border-left: 3px solid #3B82F6; }
+.ms-stat-movies { border-left: 3px solid #E5A00D; }
+.ms-stat-music  { border-left: 3px solid #10b981; }
+
+/* ── Donut card ── */
+.ms-donut-card {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 16px;
+  padding: 20px 18px;
+}
+.ms-donut-wrap {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+.ms-donut-wrap canvas { width: 100px !important; height: 100px !important; flex-shrink: 0; }
+.ms-donut-legend { display: flex; flex-direction: column; gap: 8px; }
+.ms-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #ccc;
+}
+.ms-legend-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.ms-legend-pct { color: #666; font-size: 11px; margin-left: 2px; }
+
+/* ── Top 10 ── */
+.ms-top10 { display: flex; flex-direction: column; gap: 8px; }
+.ms-top-item {
+  display: grid;
+  grid-template-columns: 36px 1fr auto;
+  align-items: center;
+  gap: 12px;
+}
+.ms-top-rank {
+  font-size: 13px;
+  font-weight: 800;
+  color: #555;
+  text-align: right;
+}
+.ms-top-rank.gold   { color: #F0B429; }
+.ms-top-rank.silver { color: #94a3b8; }
+.ms-top-rank.bronze { color: #c97c5d; }
+.ms-top-bar-wrap {
+  position: relative;
+  height: 32px;
+  background: rgba(255,255,255,0.04);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.ms-top-bar-fill {
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  border-radius: 8px;
+  transition: width 0.8s cubic-bezier(0.4,0,0.2,1);
+  width: 0;
+}
+.ms-top-bar-label {
+  position: absolute;
+  left: 10px; top: 50%;
+  transform: translateY(-50%);
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: calc(100% - 20px);
+  pointer-events: none;
+}
+.ms-top-hours {
+  font-size: 13px;
+  font-weight: 700;
+  color: #888;
+  white-space: nowrap;
+  min-width: 48px;
+  text-align: right;
+}
+
+/* ── Genres ── */
+.ms-row-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.ms-genres { display: flex; flex-direction: column; gap: 9px; }
+.ms-genre-item { display: flex; flex-direction: column; gap: 4px; }
+.ms-genre-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.ms-genre-name { font-size: 12px; color: #ccc; font-weight: 500; }
+.ms-genre-hours { font-size: 11px; color: #555; }
+.ms-genre-bar {
+  height: 5px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.ms-genre-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.7s ease;
+  width: 0;
+}
+.ms-genres-empty {
+  text-align: center;
+  color: #444;
+  font-size: 13px;
+  padding: 20px 0;
+}
+
+/* ── Charts ── */
+.ms-chart-wrap { position: relative; height: 220px; }
+
+/* ── Unavailable ── */
+.ms-unavailable {
+  text-align: center;
+  padding: 80px 20px;
+  color: #555;
+}
+.ms-unavail-icon { font-size: 42px; margin-bottom: 12px; }
+.ms-unavailable p { font-size: 16px; color: #666; margin: 0 0 6px; }
+.ms-unavailable span { font-size: 13px; color: #444; }
+
+/* ── Skeleton ── */
+.ms-skel-card {
+  background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.07) 50%, rgba(255,255,255,0.04) 75%);
+  background-size: 200% 100%;
+  animation: ms-shimmer 1.4s infinite;
+  border-radius: 16px;
+  height: 90px;
+  margin-bottom: 0;
+}
+.ms-skel-wide  { height: 90px; }
+.ms-skel-tall  { height: 260px; }
+.ms-skel-chart { height: 240px; margin-bottom: 16px; }
+@keyframes ms-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+#msSkeleton .ms-overview-grid {
+  margin-bottom: 16px;
+}
+
+/* ── Mobile ── */
+@media (max-width: 700px) {
+  .ms-overview-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .ms-donut-card {
+    grid-column: 1 / -1;
+  }
+  .ms-row-2col {
+    grid-template-columns: 1fr;
+  }
+  .ms-chart-wrap { height: 180px; }
+  .ms-title { font-size: 20px; }
+  .ms-donut-wrap canvas { width: 80px !important; height: 80px !important; }
+}
+@media (max-width: 400px) {
+  .ms-overview-grid { grid-template-columns: 1fr; }
+  .ms-donut-card { grid-column: 1; }
+}
+</style>
+
+<script>
+(function () {
+  const bp = '<%= basePath %>';
+
+  /* ─────────────────────────────────────────────────────────────────
+     COULEURS
+  ───────────────────────────────────────────────────────────────── */
+  const C = {
+    series:  '#3B82F6',
+    movies:  '#E5A00D',
+    music:   '#10b981',
+    genres: ['#3B82F6','#ef4444','#f59e0b','#8b5cf6','#06b6d4','#ec4899','#f97316','#84cc16',
+             '#14b8a6','#a855f7','#6366f1','#22c55e'],
+    chartBg: 'rgba(255,255,255,0.03)',
+    gridLine: 'rgba(255,255,255,0.06)',
+    text: '#666',
+  };
+
+  /* ─────────────────────────────────────────────────────────────────
+     CHART.JS DEFAULTS
+  ───────────────────────────────────────────────────────────────── */
+  function setupChartDefaults() {
+    Chart.defaults.color = C.text;
+    Chart.defaults.font.family = '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+    Chart.defaults.font.size = 11;
+  }
+
+  /* ─────────────────────────────────────────────────────────────────
+     HELPERS
+  ───────────────────────────────────────────────────────────────── */
+  const fmtH = h => h >= 1 ? h.toFixed(1) + 'h' : Math.round(h * 60) + 'min';
+
+  /* ─────────────────────────────────────────────────────────────────
+     RENDER OVERVIEW
+  ───────────────────────────────────────────────────────────────── */
+  function renderOverview(contentTypes) {
+    let seriesH = 0, moviesH = 0, musicH = 0;
+    for (const ct of contentTypes) {
+      if (ct.type === 'episode') seriesH = ct.hours;
+      else if (ct.type === 'movie') moviesH = ct.hours;
+      else if (ct.type === 'track') musicH = ct.hours;
+    }
+    document.getElementById('ovSeries').textContent = fmtH(seriesH);
+    document.getElementById('ovMovies').textContent = fmtH(moviesH);
+    document.getElementById('ovMusic').textContent  = musicH > 0 ? fmtH(musicH) : '—';
+    return { seriesH, moviesH, musicH };
+  }
+
+  /* ─────────────────────────────────────────────────────────────────
+     RENDER DONUT
+  ───────────────────────────────────────────────────────────────── */
+  function renderDonut(seriesH, moviesH, musicH) {
+    const labels = [], data = [], colors = [];
+    if (seriesH > 0) { labels.push('Séries'); data.push(seriesH); colors.push(C.series); }
+    if (moviesH > 0) { labels.push('Films');  data.push(moviesH); colors.push(C.movies); }
+    if (musicH > 0)  { labels.push('Musique');data.push(musicH);  colors.push(C.music);  }
+
+    const total = data.reduce((s, v) => s + v, 0);
+    const ctx = document.getElementById('donutChart').getContext('2d');
+    new Chart(ctx, {
+      type: 'doughnut',
+      data: { labels, datasets: [{ data, backgroundColor: colors, borderWidth: 0, hoverOffset: 6 }] },
+      options: {
+        responsive: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: (c) => ` ${c.label}: ${c.raw.toFixed(1)}h (${total > 0 ? Math.round(c.raw / total * 100) : 0}%)`
+            }
+          }
+        },
+        cutout: '62%',
+        animation: { duration: 800 }
+      }
+    });
+
+    // Legend manuelle
+    const legendEl = document.getElementById('donutLegend');
+    legendEl.innerHTML = labels.map((l, i) => `
+      <div class="ms-legend-item">
+        <div class="ms-legend-dot" style="background:${colors[i]}"></div>
+        <span>${l}</span>
+        <span class="ms-legend-pct">${total > 0 ? Math.round(data[i] / total * 100) : 0}%</span>
+      </div>`).join('');
+  }
+
+  /* ─────────────────────────────────────────────────────────────────
+     RENDER TOP 10
+  ───────────────────────────────────────────────────────────────── */
+  function renderTop10(topContent) {
+    const el = document.getElementById('top10List');
+    if (!topContent.length) {
+      el.innerHTML = '<div class="ms-genres-empty">Aucun contenu trouvé</div>';
+      return;
+    }
+    const medals = ['gold', 'silver', 'bronze'];
+    const maxH = topContent[0]?.hours || 1;
+
+    el.innerHTML = topContent.map((item, i) => {
+      const pct = Math.max(4, (item.hours / maxH) * 100);
+      const color = item.type === 'movie' ? C.movies : C.series;
+      const rankClass = medals[i] || '';
+      const rankLabel = i < 3
+        ? ['🥇','🥈','🥉'][i]
+        : `#${i + 1}`;
+      return `
+        <div class="ms-top-item">
+          <div class="ms-top-rank ${rankClass}">${rankLabel}</div>
+          <div class="ms-top-bar-wrap">
+            <div class="ms-top-bar-fill" data-pct="${pct}"
+                 style="background: linear-gradient(90deg, ${color}55, ${color}99); width: 0"></div>
+            <div class="ms-top-bar-label">${item.title}</div>
+          </div>
+          <div class="ms-top-hours">${item.hours.toFixed(1)}h</div>
+        </div>`;
+    }).join('');
+
+    // Animate bars
+    requestAnimationFrame(() => {
+      el.querySelectorAll('.ms-top-bar-fill').forEach(bar => {
+        bar.style.width = bar.dataset.pct + '%';
+      });
+    });
+  }
+
+  /* ─────────────────────────────────────────────────────────────────
+     RENDER GENRES
+  ───────────────────────────────────────────────────────────────── */
+  function renderGenres(genres, elId) {
+    const el = document.getElementById(elId);
+    if (!genres.length) {
+      el.innerHTML = '<div class="ms-genres-empty">Aucun genre trouvé</div>';
+      return;
+    }
+    const maxH = genres[0]?.hours || 1;
+    el.innerHTML = genres.map((g, i) => {
+      const pct = Math.max(3, (g.hours / maxH) * 100);
+      const color = C.genres[i % C.genres.length];
+      return `
+        <div class="ms-genre-item">
+          <div class="ms-genre-header">
+            <span class="ms-genre-name">${g.name}</span>
+            <span class="ms-genre-hours">${g.hours.toFixed(1)}h</span>
+          </div>
+          <div class="ms-genre-bar">
+            <div class="ms-genre-fill" data-pct="${pct}" style="background:${color}; width:0"></div>
+          </div>
+        </div>`;
+    }).join('');
+
+    requestAnimationFrame(() => {
+      el.querySelectorAll('.ms-genre-fill').forEach(bar => {
+        bar.style.width = bar.dataset.pct + '%';
+      });
+    });
+  }
+
+  /* ─────────────────────────────────────────────────────────────────
+     RENDER HOUR CHART
+  ───────────────────────────────────────────────────────────────── */
+  function renderHourChart(hourActivity) {
+    const hoursM = Array(24).fill(0);
+    const hoursS = Array(24).fill(0);
+    for (const r of hourActivity) {
+      if (r.type === 'movie')   hoursM[r.hour] = (hoursM[r.hour] || 0) + r.hours;
+      if (r.type === 'episode') hoursS[r.hour] = (hoursS[r.hour] || 0) + r.hours;
+    }
+    const labels = Array.from({length: 24}, (_, i) => i + 'h');
+    const ctx = document.getElementById('hourChart').getContext('2d');
+    new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [
+          {
+            label: 'Films',
+            data: hoursM,
+            backgroundColor: C.movies + 'cc',
+            borderRadius: 3,
+            stack: 'a',
+          },
+          {
+            label: 'Séries',
+            data: hoursS,
+            backgroundColor: C.series + 'cc',
+            borderRadius: 3,
+            stack: 'a',
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'top',
+            labels: { boxWidth: 12, padding: 16, color: '#888' }
+          },
+          tooltip: {
+            callbacks: {
+              label: c => ` ${c.dataset.label}: ${c.raw.toFixed(1)}h`
+            }
+          }
+        },
+        scales: {
+          x: {
+            stacked: true,
+            grid: { color: C.gridLine },
+            ticks: { color: C.text }
+          },
+          y: {
+            stacked: true,
+            grid: { color: C.gridLine },
+            ticks: {
+              color: C.text,
+              callback: v => v.toFixed(0) + 'h'
+            }
+          }
+        },
+        animation: { duration: 600 }
+      }
+    });
+  }
+
+  /* ─────────────────────────────────────────────────────────────────
+     RENDER DAY CHART
+  ───────────────────────────────────────────────────────────────── */
+  function renderDayChart(dayActivity) {
+    const DAY_NAMES = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+    const hoursM = Array(7).fill(0);
+    const hoursS = Array(7).fill(0);
+    for (const r of dayActivity) {
+      if (r.type === 'movie')   hoursM[r.dow] = (hoursM[r.dow] || 0) + r.hours;
+      if (r.type === 'episode') hoursS[r.dow] = (hoursS[r.dow] || 0) + r.hours;
+    }
+    const ctx = document.getElementById('dayChart').getContext('2d');
+    new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: DAY_NAMES,
+        datasets: [
+          {
+            label: 'Films',
+            data: hoursM,
+            backgroundColor: C.movies + 'cc',
+            borderRadius: 4,
+            stack: 'a',
+          },
+          {
+            label: 'Séries',
+            data: hoursS,
+            backgroundColor: C.series + 'cc',
+            borderRadius: 4,
+            stack: 'a',
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'top',
+            labels: { boxWidth: 12, padding: 16, color: '#888' }
+          },
+          tooltip: {
+            callbacks: {
+              label: c => ` ${c.dataset.label}: ${c.raw.toFixed(1)}h`
+            }
+          }
+        },
+        scales: {
+          x: {
+            stacked: true,
+            grid: { color: C.gridLine },
+            ticks: { color: C.text }
+          },
+          y: {
+            stacked: true,
+            grid: { color: C.gridLine },
+            ticks: {
+              color: C.text,
+              callback: v => v.toFixed(0) + 'h'
+            }
+          }
+        },
+        animation: { duration: 600 }
+      }
+    });
+  }
+
+  /* ─────────────────────────────────────────────────────────────────
+     MAIN LOAD
+  ───────────────────────────────────────────────────────────────── */
+  async function load() {
+    try {
+      const res  = await fetch(bp + '/api/mes-stats');
+      const data = await res.json();
+
+      document.getElementById('msSkeleton').style.display = 'none';
+
+      if (!data.available) {
+        document.getElementById('msUnavailable').style.display = 'block';
+        return;
+      }
+
+      document.getElementById('msContent').style.display = 'block';
+
+      if (typeof Chart === 'undefined') {
+        // Chart.js not loaded yet — wait a bit
+        await new Promise(r => setTimeout(r, 400));
+      }
+      setupChartDefaults();
+
+      const { seriesH, moviesH, musicH } = renderOverview(data.contentTypes || []);
+      renderDonut(seriesH, moviesH, musicH);
+      renderTop10(data.topContent || []);
+      renderGenres(data.movieGenres  || [], 'movieGenresList');
+      renderGenres(data.seriesGenres || [], 'seriesGenresList');
+      renderHourChart(data.hourActivity || []);
+      renderDayChart(data.dayActivity  || []);
+
+    } catch (err) {
+      console.error('[MesStats]', err);
+      document.getElementById('msSkeleton').style.display = 'none';
+      document.getElementById('msUnavailable').style.display = 'block';
+    }
+  }
+
+  load();
+})();
+</script>
