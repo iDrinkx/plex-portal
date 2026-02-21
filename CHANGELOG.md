@@ -2,6 +2,12 @@
 
 Toutes les modifications notables de ce projet sont documentées dans ce fichier.
 
+## [1.9.3](https://github.com/iDrinkx/plex-portal/compare/v1.9.2...v1.9.3) (2026-02-21)
+
+### 🐛 Corrections de bugs
+
+* adjust margins, paddings, and font sizes for improved layout consistency ([04ad3e4](https://github.com/iDrinkx/plex-portal/commit/04ad3e4bc7629e0cd4c903b9301db0a345ff5577))
+
 ## [1.9.2](https://github.com/iDrinkx/plex-portal/compare/v1.9.1...v1.9.2) (2026-02-21)
 
 ### 🐛 Corrections de bugs
