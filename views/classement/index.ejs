@@ -173,6 +173,10 @@
   .lb-podium-card--1,
   .lb-podium-card--2,
   .lb-podium-card--3 { flex: 0 0 auto; width: 100%; max-width: 280px; }
+  /* Ordre mobile : 1er en haut, puis 2e, puis 3e */
+  .lb-podium-card--1 { order: 1; }
+  .lb-podium-card--2 { order: 2; }
+  .lb-podium-card--3 { order: 3; }
 }
 
 .lb-ranking-block {
@@ -296,17 +300,17 @@
     <div class="lb-rankings">
       <div class="lb-ranking-block">
         <div class="lb-ranking-header">
-          <span class="lb-ranking-icon">&#x1F3AC;</span>
-          <h2 class="lb-ranking-title">Plus d&rsquo;heures visionn&eacute;es</h2>
-        </div>
-        <div id="rankHoursList"></div>
-      </div>
-      <div class="lb-ranking-block">
-        <div class="lb-ranking-header">
           <span class="lb-ranking-icon">&#x2B50;</span>
           <h2 class="lb-ranking-title">Par niveau</h2>
         </div>
         <div id="rankLevelList"></div>
+      </div>
+      <div class="lb-ranking-block">
+        <div class="lb-ranking-header">
+          <span class="lb-ranking-icon">&#x1F3AC;</span>
+          <h2 class="lb-ranking-title">Plus d&rsquo;heures visionn&eacute;es</h2>
+        </div>
+        <div id="rankHoursList"></div>
       </div>
     </div>
 
@@ -388,11 +392,13 @@
     + '</div>';
   }
 
-  function renderTable(list, containerId, mode) {
-    var top10 = list.slice(0, 10);
+  function renderTable(list, containerId, mode, startFrom) {
+    startFrom = startFrom || 0;
+    var slice = list.slice(startFrom, startFrom + 10);
     var myPos = list.findIndex(function(u) { return u.username === ME; });
-    var html  = top10.map(function(u, i) { return rankRow(u, i, mode); }).join('');
-    if (myPos >= 10) {
+    var html  = slice.map(function(u, i) { return rankRow(u, i + startFrom, mode); }).join('');
+    // Afficher la position de l'user s'il est en dessous du tableau visible
+    if (myPos >= startFrom + 10) {
       html += '<div class="lb-row-sep"><span class="lb-row-sep-label">Votre position</span><span class="lb-row-sep-dots">\u00b7 \u00b7 \u00b7</span></div>';
       html += rankRow(list[myPos], myPos, mode);
     }
@@ -418,8 +424,8 @@
       document.getElementById('lbLoading').style.display = 'none';
       document.getElementById('lbContent').style.display = 'block';
       renderPodium(data.byLevel);
+      renderTable(data.byLevel, 'rankLevelList', 'level', 3);
       renderTable(data.byHours, 'rankHoursList', 'hours');
-      renderTable(data.byLevel, 'rankLevelList', 'level');
     })
     .catch(function() {
       document.getElementById('lbLoading').style.display = 'none';
