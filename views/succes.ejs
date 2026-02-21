@@ -363,12 +363,30 @@
     }
 
     .achievements-grid {
-      grid-template-columns: repeat(auto-fill, minmax(62px, 1fr));
-      gap: 8px;
+      grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
+      gap: 10px;
     }
 
+    .achievement-card {
+      /* Padding bas pour faire remonter l'emoji et laisser la place au % */
+      padding-bottom: 20px;
+    }
+
+    /* Sur mobile la carte n'est plus 1:1 car le padding-bottom la rend plus haute */
+    .achievement-card { aspect-ratio: unset; min-height: 88px; }
+
     .achievement-icon {
-      font-size: 28px;
+      font-size: 34px;
+    }
+
+    .ach-card-pct {
+      font-size: 10px;
+      bottom: 8px;
+      color: rgba(255,255,255,0.35);
+    }
+
+    .ach-card-mini-bar {
+      height: 4px;
     }
   }
 </style>
