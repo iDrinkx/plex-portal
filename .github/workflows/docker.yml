@@ -1,9 +1,13 @@
-name: Build and Push Docker Image
+name: Build and Push Docker Image (latest)
 
 on:
   push:
     branches:
       - main
+    # Ne pas déclencher sur les commits automatiques de Release Please
+    paths-ignore:
+      - 'CHANGELOG.md'
+      - 'package.json'
 
 jobs:
   build:

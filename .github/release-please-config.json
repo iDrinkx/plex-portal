@@ -1,0 +1,18 @@
+{
+  "packages": {
+    ".": {
+      "release-type": "node",
+      "package-name": "plex-portal",
+      "changelog-sections": [
+        { "type": "feat",     "section": "✨ Nouvelles fonctionnalités" },
+        { "type": "fix",      "section": "🐛 Corrections de bugs" },
+        { "type": "perf",     "section": "⚡ Performances" },
+        { "type": "refactor", "section": "♻️ Refactorisation" },
+        { "type": "style",    "section": "💄 Interface & style" },
+        { "type": "docs",     "section": "📚 Documentation" },
+        { "type": "chore",    "section": "🔧 Maintenance", "hidden": true },
+        { "type": "ci",       "section": "👷 CI/CD",       "hidden": true }
+      ]
+    }
+  }
+}
