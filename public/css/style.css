@@ -293,18 +293,18 @@ body {
 }
 
 .hero-card-demandes {
-  background: linear-gradient(135deg, #151a22 0%, #121e2a 100%);
-  border-color: rgba(33, 150, 243, 0.2);
+  background: linear-gradient(135deg, #17141e 0%, #1a1527 100%);
+  border-color: rgba(109, 73, 171, 0.2);
 }
 
 .hero-card-demandes::before {
-  background: linear-gradient(180deg, #2196f3, #00bcd4);
+  background: linear-gradient(180deg, #6d49ab, #9b6fd4);
 }
 
 .hero-card-demandes:hover {
   transform: translateY(-5px);
-  border-color: rgba(33, 150, 243, 0.55);
-  box-shadow: 0 20px 60px rgba(33, 150, 243, 0.12);
+  border-color: rgba(109, 73, 171, 0.55);
+  box-shadow: 0 20px 60px rgba(109, 73, 171, 0.15);
 }
 
 .hero-card-content {
@@ -382,8 +382,8 @@ body {
 }
 
 .hero-icon {
-  background: rgba(33, 150, 243, 0.12);
-  border: 1px solid rgba(33, 150, 243, 0.25);
+  background: rgba(109, 73, 171, 0.12);
+  border: 1px solid rgba(109, 73, 171, 0.25);
 }
 
 .hero-card-info {
@@ -404,7 +404,7 @@ body {
 }
 
 .hero-card-demandes .hero-card-label {
-  color: rgba(33, 150, 243, 0.65);
+  color: rgba(109, 73, 171, 0.85);
 }
 
 .hero-card-title {
@@ -436,7 +436,7 @@ body {
 }
 
 .hero-card-demandes:hover .hero-card-arrow {
-  color: #2196f3;
+  color: #9b6fd4;
   transform: translate(4px, -4px);
 }
 
@@ -461,8 +461,8 @@ body {
   height: 58px;
   object-fit: cover;
   border-radius: 50%;
-  border: 2px solid rgba(33, 150, 243, 0.45);
-  box-shadow: 0 4px 14px rgba(33, 150, 243, 0.15);
+  border: 2px solid rgba(109, 73, 171, 0.5);
+  box-shadow: 0 4px 14px rgba(109, 73, 171, 0.25);
 }
 
 /* Logo Seerr dans les card-header (widget overseerr) */
@@ -478,13 +478,13 @@ body {
 
 /* nav link accent for demandes */
 .nav-link-demandes {
-  color: rgba(33, 150, 243, 0.8);
+  color: rgba(109, 73, 171, 0.9);
 }
 .nav-link-demandes:hover {
-  color: #60c4ff;
+  color: #b48cf0;
 }
 .nav-link-demandes::after {
-  background: #2196f3;
+  background: #6d49ab;
 }
 
 /* =========================
