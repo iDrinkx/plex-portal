@@ -1223,11 +1223,24 @@ body {
 
 @media (max-width: 600px) {
   .server-stats-bar {
-    padding: 16px 12px;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr auto 1fr auto 1fr;
+    align-items: center;
+    padding: 16px 10px;
     gap: 0;
+    row-gap: 0;
   }
-  .ssb-item { min-width: 70px; padding: 0 6px; }
-  .ssb-num  { font-size: 18px; }
+  .ssb-item {
+    min-width: 0;
+    padding: 0 4px;
+    align-self: stretch;
+    justify-content: center;
+  }
+  .ssb-divider {
+    align-self: center;
+  }
+  .ssb-num  { font-size: 17px; }
+  .ssb-label { font-size: 10px; letter-spacing: 0.5px; }
 }
 
 /* Animation d'apparition */
