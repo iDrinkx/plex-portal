@@ -124,39 +124,76 @@
 
   /* CATEGORIES */
   .achievements-section {
-    margin-bottom: 20px;
+    margin-bottom: 32px;
+    animation: fadeIn 0.5s ease;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 
   .category-header {
     display: flex;
     align-items: center;
-    gap: 12px;
-    margin-bottom: 10px;
-    padding-bottom: 8px;
-    border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+    gap: 14px;
+    margin-bottom: 14px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid rgba(229, 160, 13, 0.2);
+    transition: border-color 0.3s ease;
+  }
+
+  .category-header:hover {
+    border-bottom-color: rgba(229, 160, 13, 0.4);
   }
 
   .category-icon {
-    font-size: 22px;
+    font-size: 24px;
+    filter: drop-shadow(0 0 4px rgba(229, 160, 13, 0.3));
+    transition: transform 0.3s ease;
+  }
+
+  .category-header:hover .category-icon {
+    transform: scale(1.1);
   }
 
   .category-name {
-    font-size: 20px;
-    font-weight: bold;
+    font-size: 18px;
+    font-weight: 600;
     color: #fff;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
   }
 
   .achievements-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(56px, 1fr));
-    gap: 8px;
+    grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+    gap: 10px;
+    animation: gridSlideIn 0.4s ease;
   }
 
-  /* ACHIEVEMENT CARD — icon-only */
+  @keyframes gridSlideIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  /* ACHIEVEMENT CARD — Glassmorphism design */
   .achievement-card {
-    background: rgba(255, 255, 255, 0.03);
-    border: 1.5px solid rgba(255, 255, 255, 0.1);
-    border-radius: 12px;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02));
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1.5px solid rgba(255, 255, 255, 0.15);
+    border-radius: 16px;
     width: 100%;
     aspect-ratio: 1 / 1;
     display: flex;
@@ -164,75 +201,115 @@
     justify-content: center;
     cursor: pointer;
     position: relative;
-    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     overflow: hidden;
   }
 
   .achievement-card:hover {
-    transform: translateY(-3px) scale(1.06);
-    border-color: rgba(255, 255, 255, 0.35);
-    box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+    transform: translateY(-6px) scale(1.08);
+    border-color: rgba(255, 255, 255, 0.4);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.05));
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.2);
   }
 
   .achievement-card.locked {
-    opacity: 0.45;
-    border-color: rgba(255, 255, 255, 0.06);
+    opacity: 0.5;
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+
+  .achievement-card.locked:hover {
+    opacity: 0.65;
+    transform: translateY(-3px) scale(1.04);
   }
 
   .achievement-card.locked .achievement-icon {
-    filter: grayscale(100%);
+    filter: grayscale(100%) brightness(0.8);
   }
 
-  /* Couleurs de bordure par catégorie */
-  .achievement-card.unlocked.temporels  { border-color: #E67E22; box-shadow: 0 0 10px #E67E2233; }
-  .achievement-card.unlocked.activites  { border-color: #E74C3C; box-shadow: 0 0 10px #E74C3C33; }
-  .achievement-card.unlocked.films      { border-color: #E67E22; box-shadow: 0 0 10px #E67E2233; }
-  .achievement-card.unlocked.series     { border-color: #3498DB; box-shadow: 0 0 10px #3498DB33; }
-  .achievement-card.unlocked.mensuels   { border-color: #F39C12; box-shadow: 0 0 10px #F39C1233; }
-  .achievement-card.unlocked.secrets    { border-color: #9B59B6; box-shadow: 0 0 10px #9B59B633; }
-  .achievement-card.unlocked.collections { border-color: #E5A00D; box-shadow: 0 0 10px #E5A00D33; }
+  /* Couleurs de bordure par catégorie avec gradients au survol */
+  .achievement-card.unlocked.temporels  { border-color: #E67E22; }
+  .achievement-card.unlocked.temporels:hover  { box-shadow: 0 0 20px #E67E22AA, 0 12px 30px rgba(0, 0, 0, 0.5); }
 
-  /* Petit checkmark débloqué - en bas à droite, sous le badge XP s'il existe */
+  .achievement-card.unlocked.activites  { border-color: #E74C3C; }
+  .achievement-card.unlocked.activites:hover  { box-shadow: 0 0 20px #E74C3CAA, 0 12px 30px rgba(0, 0, 0, 0.5); }
+
+  .achievement-card.unlocked.films      { border-color: #E67E22; }
+  .achievement-card.unlocked.films:hover      { box-shadow: 0 0 20px #E67E22AA, 0 12px 30px rgba(0, 0, 0, 0.5); }
+
+  .achievement-card.unlocked.series     { border-color: #3498DB; }
+  .achievement-card.unlocked.series:hover     { box-shadow: 0 0 20px #3498DBAA, 0 12px 30px rgba(0, 0, 0, 0.5); }
+
+  .achievement-card.unlocked.mensuels   { border-color: #F39C12; }
+  .achievement-card.unlocked.mensuels:hover   { box-shadow: 0 0 20px #F39C12AA, 0 12px 30px rgba(0, 0, 0, 0.5); }
+
+  .achievement-card.unlocked.secrets    { border-color: #9B59B6; }
+  .achievement-card.unlocked.secrets:hover    { box-shadow: 0 0 20px #9B59B6AA, 0 12px 30px rgba(0, 0, 0, 0.5); }
+
+  .achievement-card.unlocked.collections { border-color: #E5A00D; }
+  .achievement-card.unlocked.collections:hover { box-shadow: 0 0 20px #E5A00DAA, 0 12px 30px rgba(0, 0, 0, 0.5); }
+
+  /* Checkmark débloqué avec animation */
   .achievement-card.unlocked::after {
     content: '✓';
     position: absolute;
-    bottom: 4px;
+    bottom: 5px;
     left: 6px;
-    font-size: 9px;
+    font-size: 11px;
     color: #8BC34A;
     font-weight: 700;
     line-height: 1;
     z-index: 5;
+    opacity: 0.8;
+    transition: opacity 0.3s ease;
   }
 
+  .achievement-card.unlocked:hover::after {
+    opacity: 1;
+  }
+
+  /* Icon avec meilleure présentation */
   .achievement-icon {
-    font-size: 24px;
+    font-size: 28px;
     display: block;
     line-height: 1;
     pointer-events: none;
+    transition: transform 0.3s ease;
   }
 
-  /* XP Badge - desktop : petit badge en haut à droite */
+  .achievement-card:hover .achievement-icon {
+    transform: scale(1.15);
+  }
+
+  /* XP Badge - Desktop: elegant et discret */
   .achievement-xp-badge {
     position: absolute;
-    top: 3px;
-    right: 3px;
-    font-size: 8px;
+    top: 6px;
+    right: 6px;
+    font-size: 10px;
     font-weight: 700;
     color: #E5A00D;
-    background: rgba(229, 160, 13, 0.2);
-    border: 1px solid rgba(229, 160, 13, 0.4);
-    border-radius: 3px;
-    padding: 2px 3px;
-    line-height: 1;
+    background: rgba(229, 160, 13, 0.15);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(229, 160, 13, 0.5);
+    border-radius: 6px;
+    padding: 3px 5px;
+    line-height: 1.2;
     pointer-events: none;
     z-index: 10;
+    transition: all 0.3s ease;
+    letter-spacing: 0.3px;
+  }
+
+  .achievement-card:hover .achievement-xp-badge {
+    background: rgba(229, 160, 13, 0.25);
+    border-color: rgba(229, 160, 13, 0.7);
   }
 
   .achievement-card.locked .achievement-xp-badge {
-    color: #666;
-    background: rgba(255, 255, 255, 0.06);
-    border-color: rgba(255, 255, 255, 0.12);
+    color: #888;
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.15);
+    opacity: 0.7;
   }
 
   /* XP Label - affiché sous la carte sur mobile */
@@ -245,6 +322,33 @@
     color: #E5A00D;
     margin-top: 4px;
     pointer-events: none;
+  }
+
+  /* Tooltip - affiche le nom du succès au survol (desktop) */
+  .achievement-tooltip {
+    position: absolute;
+    top: -38px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(20, 20, 25, 0.98);
+    backdrop-filter: blur(10px);
+    color: #fff;
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 500;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s ease, top 0.2s ease;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    z-index: 100;
+    letter-spacing: 0.3px;
+  }
+
+  .achievement-card:hover .achievement-tooltip {
+    opacity: 1;
+    top: -33px;
   }
 
   /* Éléments cachés utilisés uniquement pour les mises à jour JS */
@@ -544,6 +648,7 @@
                data-secret="<%= isSecret && !isRevocable ? 'true' : 'false' %>"
                data-category="<%= achievement.category %>"
                data-has-progress="<%= progressTotal > 0 ? 'true' : 'false' %>">
+            <span class="achievement-tooltip"><%= achievement.name %></span>
             <span class="achievement-icon"><%= achievement.icon %></span>
             <% if (achievement.xp) { %>
               <span class="achievement-xp-badge">+<%= achievement.xp %> XP</span>
