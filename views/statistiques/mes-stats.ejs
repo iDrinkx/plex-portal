@@ -12,12 +12,7 @@
 
   <!-- ── SKELETON loading ──────────────────────────────────────── -->
   <div id="msSkeleton">
-    <div class="ms-overview-grid">
-      <div class="ms-skel-card"></div>
-      <div class="ms-skel-card"></div>
-      <div class="ms-skel-card"></div>
-      <div class="ms-skel-card ms-skel-wide"></div>
-    </div>
+    <div class="ms-skel-card ms-skel-wide"></div>
     <div class="ms-skel-card ms-skel-tall"></div>
     <div class="ms-row-2col">
       <div class="ms-skel-card ms-skel-tall"></div>
@@ -407,9 +402,6 @@
       else if (ct.type === 'movie') moviesH = ct.hours;
       else if (ct.type === 'track') musicH = ct.hours;
     }
-    document.getElementById('ovSeries').textContent = fmtH(seriesH);
-    document.getElementById('ovMovies').textContent = fmtH(moviesH);
-    document.getElementById('ovMusic').textContent  = musicH > 0 ? fmtH(musicH) : '—';
     return { seriesH, moviesH, musicH };
   }
 

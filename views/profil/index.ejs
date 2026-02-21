@@ -189,6 +189,17 @@
           <p class="stat-sub skel" id="statEpisodeHours"></p>
         </div>
       </div>
+
+      <!-- Carte : Musique & Livres audio -->
+      <div class="stat-card">
+        <div class="stat-icon">🎵</div>
+        <div class="stat-content">
+          <p class="stat-label">Musique & Livres audio</p>
+          <div class="stat-value counter skel" id="counterMusic" data-target="0"></div>
+          <p class="stat-unit">pistes</p>
+          <p class="stat-sub skel" id="statMusicHours"></p>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -1244,6 +1255,8 @@
         movieHours:       t("statMovieHours"),
         episodeCount:     t("counterEpisodes"),
         episodeHours:     t("statEpisodeHours"),
+        musicCount:       t("counterMusic"),
+        musicHours:       t("statMusicHours"),
         savedAt: Date.now()
       }));
     } catch (_) {}
@@ -1300,6 +1313,8 @@
       s("statMovieHours",   snap.movieHours);
       s("counterEpisodes",  snap.episodeCount);
       s("statEpisodeHours", snap.episodeHours);
+      s("counterMusic",     snap.musicCount);
+      s("statMusicHours",   snap.musicHours);
     } catch (_) {}
   }
 
@@ -1696,6 +1711,18 @@
           const episodeH = Math.round((watchStats.episodeHours || 0) * 10) / 10;
           episodeHoursEl.textContent = episodeH + 'h de séries';
         }
+
+        // Musique & Livres audio
+        const musicEl = document.getElementById('counterMusic');
+        if (musicEl) {
+          musicEl.textContent = watchStats.musicCount || 0;
+          musicEl.setAttribute('data-target', watchStats.musicCount || 0);
+        }
+        const musicHoursEl = document.getElementById('statMusicHours');
+        if (musicHoursEl) {
+          const musicH = Math.round((watchStats.musicHours || 0) * 10) / 10;
+          musicHoursEl.textContent = musicH + "h d'écoute";
+        }
         
         console.log("[WATCH-STATS] 🎉 Compteurs mis à jour");
       }
@@ -1849,7 +1876,8 @@
 
       // Nettoyer skeletons batch 2 (Tautulli)
       clearSkel('counterSessions','statTotalHours','counterMovies','statMovieHours',
-                'counterEpisodes','statEpisodeHours','joinedDate','lastActivity');
+                'counterEpisodes','statEpisodeHours','counterMusic','statMusicHours',
+                'joinedDate','lastActivity');
       saveProfilSnapshot(); // snapshot complet (toutes données)
 
       // Rafraîchissement automatique si calcul en cours
@@ -1972,7 +2000,8 @@
             // 💾 Persister
             saveXpSnapshot(newTotalXp, newBadge, newProgress);
             clearSkel('counterSessions','statTotalHours','counterMovies','statMovieHours',
-                      'counterEpisodes','statEpisodeHours','joinedDate','lastActivity',
+                      'counterEpisodes','statEpisodeHours','counterMusic','statMusicHours',
+                      'joinedDate','lastActivity',
                       'totalRequests','approvedRequests','pendingRequests','availableRequests',
                       'profilSubStatus','profilSubDays','profilSubExpire');
             saveProfilSnapshot();

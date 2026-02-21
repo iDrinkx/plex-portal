@@ -59,7 +59,9 @@ async function getTautulliStats(username, TAUTULLI_URL, TAUTULLI_API_KEY, plexUs
               movieHours: directStats.movieHours,
               movieCount: directStats.movieCount,
               episodeHours: directStats.episodeHours,
-              episodeCount: directStats.episodeCount
+              episodeCount: directStats.episodeCount,
+              musicCount: directStats.musicCount || 0,
+              musicHours: directStats.musicHours || 0
             }
           };
         }
@@ -83,7 +85,9 @@ async function getTautulliStats(username, TAUTULLI_URL, TAUTULLI_API_KEY, plexUs
           movieHours: dbStats.movieHours,
           movieCount: dbStats.movieCount,
           episodeHours: dbStats.episodeHours,
-          episodeCount: dbStats.episodeCount
+          episodeCount: dbStats.episodeCount,
+          musicCount: dbStats.musicCount || 0,
+          musicHours: dbStats.musicHours || 0
         }
       };
     }

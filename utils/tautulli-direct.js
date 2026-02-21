@@ -124,7 +124,9 @@ function getUserStatsFromTautulli(username) {
         SUM(CASE WHEN sh.media_type = 'movie' THEN 1 ELSE 0 END) as movie_count,
         SUM(CASE WHEN sh.media_type = 'movie' THEN CAST((sh.stopped - sh.started) AS INTEGER) ELSE 0 END) as movie_duration_seconds,
         SUM(CASE WHEN sh.media_type = 'episode' THEN 1 ELSE 0 END) as episode_count,
-        SUM(CASE WHEN sh.media_type = 'episode' THEN CAST((sh.stopped - sh.started) AS INTEGER) ELSE 0 END) as episode_duration_seconds
+        SUM(CASE WHEN sh.media_type = 'episode' THEN CAST((sh.stopped - sh.started) AS INTEGER) ELSE 0 END) as episode_duration_seconds,
+        SUM(CASE WHEN sh.media_type = 'track' THEN 1 ELSE 0 END) as music_count,
+        SUM(CASE WHEN sh.media_type = 'track' THEN CAST((sh.stopped - sh.started) AS INTEGER) ELSE 0 END) as music_duration_seconds
       FROM users u
       LEFT JOIN session_history sh ON u.user_id = sh.user_id
       WHERE LOWER(u.username) = ?
@@ -139,6 +141,7 @@ function getUserStatsFromTautulli(username) {
     const totalHours = stats.total_duration_seconds ? Math.round(stats.total_duration_seconds / 3600 * 10) / 10 : 0;
     const movieHours = stats.movie_duration_seconds ? Math.round(stats.movie_duration_seconds / 3600 * 10) / 10 : 0;
     const episodeHours = stats.episode_duration_seconds ? Math.round(stats.episode_duration_seconds / 3600 * 10) / 10 : 0;
+    const musicHours = stats.music_duration_seconds ? Math.round(stats.music_duration_seconds / 3600 * 10) / 10 : 0;
     
     log.debug(`${normalizedUsername} — ${stats.session_count} sessions`);
     
@@ -151,6 +154,8 @@ function getUserStatsFromTautulli(username) {
       movieHours: movieHours,
       episodeCount: stats.episode_count || 0,
       episodeHours: episodeHours,
+      musicCount: stats.music_count || 0,
+      musicHours: musicHours,
       lastSessionTimestamp: stats.last_session_timestamp,
       lastSessionDate: stats.last_session_timestamp ? new Date(stats.last_session_timestamp * 1000).toISOString() : null
     };
@@ -181,7 +186,9 @@ function getAllUserStatsFromTautulli() {
         SUM(CASE WHEN sh.media_type = 'movie' THEN 1 ELSE 0 END) as movie_count,
         SUM(CASE WHEN sh.media_type = 'movie' THEN CAST((sh.stopped - sh.started) AS INTEGER) ELSE 0 END) as movie_duration_seconds,
         SUM(CASE WHEN sh.media_type = 'episode' THEN 1 ELSE 0 END) as episode_count,
-        SUM(CASE WHEN sh.media_type = 'episode' THEN CAST((sh.stopped - sh.started) AS INTEGER) ELSE 0 END) as episode_duration_seconds
+        SUM(CASE WHEN sh.media_type = 'episode' THEN CAST((sh.stopped - sh.started) AS INTEGER) ELSE 0 END) as episode_duration_seconds,
+        SUM(CASE WHEN sh.media_type = 'track' THEN 1 ELSE 0 END) as music_count,
+        SUM(CASE WHEN sh.media_type = 'track' THEN CAST((sh.stopped - sh.started) AS INTEGER) ELSE 0 END) as music_duration_seconds
       FROM users u
       LEFT JOIN session_history sh ON u.user_id = sh.user_id
       GROUP BY u.user_id, u.username
@@ -194,6 +201,7 @@ function getAllUserStatsFromTautulli() {
       const totalHours = stats.total_duration_seconds ? Math.round(stats.total_duration_seconds / 3600 * 10) / 10 : 0;
       const movieHours = stats.movie_duration_seconds ? Math.round(stats.movie_duration_seconds / 3600 * 10) / 10 : 0;
       const episodeHours = stats.episode_duration_seconds ? Math.round(stats.episode_duration_seconds / 3600 * 10) / 10 : 0;
+      const musicHours = stats.music_duration_seconds ? Math.round(stats.music_duration_seconds / 3600 * 10) / 10 : 0;
       
       return {
         userId: stats.user_id,
@@ -204,6 +212,8 @@ function getAllUserStatsFromTautulli() {
         movieHours: movieHours,
         episodeCount: stats.episode_count || 0,
         episodeHours: episodeHours,
+        musicCount: stats.music_count || 0,
+        musicHours: musicHours,
         lastSessionTimestamp: stats.last_session_timestamp,
         lastSessionDate: stats.last_session_timestamp ? new Date(stats.last_session_timestamp * 1000).toISOString() : null
       };
