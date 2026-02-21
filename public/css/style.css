@@ -333,13 +333,15 @@ body {
 .rank-ring {
   position: absolute;
   border-radius: 50%;
-  /* background injecté directement par JS */
-  background: conic-gradient(from -90deg, #5B9BD52e 0deg, #5B9BD5 90deg, #5B9BD5cc 180deg, #5B9BD5 270deg, #5B9BD52e 360deg);
+  /* background injecté directement par JS – transparent par défaut pour éviter le bleu flash */
+  background: transparent;
   -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #fff calc(100% - 3px));
   mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #fff calc(100% - 3px));
   animation: rank-ring-breathe 3.5s ease-in-out infinite;
   pointer-events: none;
-  transition: background 0.5s ease, box-shadow 0.5s ease;
+  transition: background 0.5s ease;
+  /* NB: box-shadow NE fonctionne PAS ici car le mask le coupe — le halo est géré par
+     filter:drop-shadow sur le wrapper parent (.hero-avatar-ring / .avatar-wrapper) */
 }
 
 /* Dashboard : anneau de 3px autour de 58px = inset -4px → 66px */

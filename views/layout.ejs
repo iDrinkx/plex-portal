@@ -149,10 +149,13 @@
     const XP_TTL = 24 * 60 * 60 * 1000;
 
     function applyGlow(color) {
-      const ring = document.getElementById('heroRankRing');
+      const ring    = document.getElementById('heroRankRing');
+      const wrapper = document.getElementById('heroAvatarRing');
       if (!ring) return;
+      // Couleur du ring directement injectée en string (les CSS vars dans @keyframes ne marchent pas)
       ring.style.background = `conic-gradient(from -90deg, ${color}2e 0deg, ${color} 90deg, ${color}cc 180deg, ${color} 270deg, ${color}2e 360deg)`;
-      ring.style.boxShadow  = `0 0 8px ${color}66, 0 0 18px ${color}33`;
+      // Halo sur le wrapper NON masqué → drop-shadow suit la forme du ring et respire avec l'animation
+      if (wrapper) wrapper.style.filter = `drop-shadow(0 0 7px ${color}cc) drop-shadow(0 0 16px ${color}66)`;
     }
 
     // ⚡ Appliquer instantanément depuis le cache (alimenté par /profil ou ce même script)

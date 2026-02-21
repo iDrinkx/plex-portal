@@ -1143,11 +1143,14 @@
   }
   function applyRankGlow(color) {
     const ringEl    = document.getElementById("profilRankRing");
+    const wrapperEl = document.getElementById("avatarWrapper");
     const xpBarFill = document.getElementById("xpBarFill");
     if (ringEl) {
       ringEl.style.background = _rankGrad(color);
-      ringEl.style.boxShadow  = `0 0 10px ${color}66, 0 0 22px ${color}33`;
+      // Pas de boxShadow ici : le mask coupe l'ombre portée
     }
+    // Halo sur le wrapper NON masqué → drop-shadow suit la forme du ring et respire avec l'animation
+    if (wrapperEl) wrapperEl.style.filter = `drop-shadow(0 0 9px ${color}cc) drop-shadow(0 0 20px ${color}66)`;
     if (xpBarFill) {
       xpBarFill.style.background = `linear-gradient(90deg, ${color}88, ${color})`;
       xpBarFill.style.boxShadow  = `0 0 12px ${color}88`;
@@ -1936,8 +1939,9 @@
               const ringEl2 = document.getElementById("profilRankRing");
               if (ringEl2) {
                 ringEl2.style.background = _rankGrad(_c);
-                ringEl2.style.boxShadow  = `0 0 10px ${_c}66, 0 0 22px ${_c}33`;
               }
+              // Halo sur le wrapper (le mask coupe box-shadow sur le ring lui-même)
+              wrapperEl2.style.filter = `drop-shadow(0 0 9px ${_c}cc) drop-shadow(0 0 20px ${_c}66)`;
             }
             if (xpBadgeEl) {
               xpBadgeEl.textContent = `${newBadge.icon} ${newBadge.name}`;
