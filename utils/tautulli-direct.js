@@ -891,7 +891,8 @@ function getUserDetailedStats(username) {
         AND sh.media_type IN ('movie', 'episode')
       GROUP BY decision
     `).all(norm);
-    const total = rows.reduce((s, r) => s + r.cnt, 0) || 1;
+    const total = rows.reduce((s, r) => s + r.cnt, 0);
+    const safeTotal = total || 1;
     const map = { 'direct play': 0, 'copy': 0, 'transcode': 0 };
     for (const r of rows) {
       const key = (r.decision || '').toLowerCase();
@@ -900,10 +901,10 @@ function getUserDetailedStats(username) {
       else                        map['transcode']  += r.cnt;
     }
     result.playMethod = {
-      directPlay:   { count: map['direct play'], pct: Math.round(map['direct play']  / total * 100) },
-      directStream: { count: map['copy'],        pct: Math.round(map['copy']         / total * 100) },
-      transcode:    { count: map['transcode'],   pct: Math.round(map['transcode']    / total * 100) },
-      total
+      directPlay:   { count: map['direct play'], pct: Math.round(map['direct play']  / safeTotal * 100) },
+      directStream: { count: map['copy'],        pct: Math.round(map['copy']         / safeTotal * 100) },
+      transcode:    { count: map['transcode'],   pct: Math.round(map['transcode']    / safeTotal * 100) },
+      total  // 0 si aucune session → frontend affiche "Aucune donnée disponible"
     };
   } catch (e) { log.warn('getUserDetailedStats playMethod:', e.message); result.playMethod = null; }
 

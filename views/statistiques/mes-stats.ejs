@@ -12,7 +12,10 @@
 
   <!-- ── SKELETON loading ──────────────────────────────────────── -->
   <div id="msSkeleton">
-    <div class="ms-skel-card ms-skel-wide"></div>
+    <div class="ms-row-2col" style="margin-bottom:20px">
+      <div class="ms-skel-card ms-skel-tall"></div>
+      <div class="ms-skel-card ms-skel-tall"></div>
+    </div>
     <div class="ms-skel-card ms-skel-tall"></div>
     <div class="ms-row-2col">
       <div class="ms-skel-card ms-skel-tall"></div>
@@ -299,6 +302,11 @@
   grid-template-columns: 1fr 1fr;
   gap: 12px;
   margin-bottom: 16px;
+}
+/* Première row (donut + play method) : hauteur naturelle, espacement plus généreux */
+.ms-row-top {
+  align-items: start;
+  margin-bottom: 20px;
 }
 .ms-genres { display: flex; flex-direction: column; gap: 9px; }
 .ms-genre-item { display: flex; flex-direction: column; gap: 4px; }
