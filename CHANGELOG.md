@@ -2,6 +2,12 @@
 
 Toutes les modifications notables de ce projet sont documentées dans ce fichier.
 
+## [1.10.0](https://github.com/iDrinkx/plex-portal/compare/v1.9.3...v1.10.0) (2026-02-21)
+
+### ✨ Nouvelles fonctionnalités
+
+* add play method statistics to user stats page ([656685d](https://github.com/iDrinkx/plex-portal/commit/656685d333259856f1bf11e95eefe610964abe11))
+
 ## [1.9.3](https://github.com/iDrinkx/plex-portal/compare/v1.9.2...v1.9.3) (2026-02-21)
 
 ### 🐛 Corrections de bugs
