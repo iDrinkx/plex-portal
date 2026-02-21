@@ -2,6 +2,12 @@
 
 Toutes les modifications notables de ce projet sont documentées dans ce fichier.
 
+## [1.5.0](https://github.com/iDrinkx/plex-portal/compare/v1.4.0...v1.5.0) (2026-02-21)
+
+### ✨ Nouvelles fonctionnalités
+
+* improve achievement card layout for better alignment and responsiveness ([312b676](https://github.com/iDrinkx/plex-portal/commit/312b67694f7f4768cd70df51be560c8b002869de))
+
 ## [1.4.0](https://github.com/iDrinkx/plex-portal/compare/v1.3.0...v1.4.0) (2026-02-21)
 
 ### ✨ Nouvelles fonctionnalités
