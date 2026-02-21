@@ -465,8 +465,10 @@ body {
 }
 
 .hero-icon--classement {
-  background: rgba(59, 130, 246, 0.12);
-  border: 1px solid rgba(59, 130, 246, 0.25);
+  background: transparent;
+  border: 2px solid rgba(59, 130, 246, 0.5);
+  border-radius: 50%;
+  box-shadow: 0 4px 14px rgba(59, 130, 246, 0.2);
   font-size: 28px;
 }
 

@@ -367,27 +367,25 @@
       gap: 10px;
     }
 
-    /* Flex colonne : emoji centré + % en dessous en flow normal */
+    /* Carte carrée, emoji centré comme les débloqués */
     .achievement-card {
-      flex-direction: column;
+      flex-direction: row;
       justify-content: center;
       align-items: center;
-      gap: 4px;
-      padding: 8px 4px 18px;
+      padding: 0;
     }
 
     .achievement-icon {
       font-size: 34px;
     }
 
-    /* % en flow normal sous l'emoji, plus en absolu */
+    /* % collé juste au-dessus de la barre jaune (barre = 4px en bas) */
     .ach-card-pct {
-      position: relative;
-      bottom: auto;
-      left: auto;
-      right: auto;
+      position: absolute;
+      bottom: 7px;
+      left: 0; right: 0;
       font-size: 10px;
-      color: rgba(255,255,255,0.38);
+      color: rgba(255,255,255,0.45);
       line-height: 1;
     }
 
