@@ -880,31 +880,53 @@ function getUserDetailedStats(username) {
 
   // ── Mode de lecture (direct play / copy / transcode) ───────────────
   try {
-    const rows = tautulliDb.prepare(`
-      SELECT
-        COALESCE(sh.transcode_decision, 'direct play') as decision,
-        COUNT(*) as cnt
-      FROM users u
-      JOIN session_history sh ON u.user_id = sh.user_id
-      WHERE LOWER(u.username) = ?
-        AND sh.stopped > sh.started
-        AND sh.media_type IN ('movie', 'episode')
-      GROUP BY decision
-    `).all(norm);
+    let rows = null;
+    // Tentative 1 : transcode_decision (si colonne existe)
+    try {
+      rows = tautulliDb.prepare(`
+        SELECT
+          COALESCE(sh.transcode_decision, 'direct play') as decision,
+          COUNT(*) as cnt
+        FROM users u
+        JOIN session_history sh ON u.user_id = sh.user_id
+        WHERE LOWER(u.username) = ?
+          AND sh.stopped > sh.started
+          AND sh.media_type IN ('movie', 'episode')
+        GROUP BY decision
+      `).all(norm);
+    } catch (e1) {
+      // Fallback : transcode_video/transcode_audio + video_decision/audio_decision
+      rows = tautulliDb.prepare(`
+        SELECT
+          CASE
+            WHEN (sh.transcode_video = 1 OR sh.transcode_audio = 1) THEN 'transcode'
+            WHEN (sh.video_decision = 'copy' OR sh.audio_decision = 'copy') THEN 'copy'
+            ELSE 'direct play'
+          END as decision,
+          COUNT(*) as cnt
+        FROM users u
+        JOIN session_history sh ON u.user_id = sh.user_id
+        WHERE LOWER(u.username) = ?
+          AND sh.stopped > sh.started
+          AND sh.media_type IN ('movie', 'episode')
+        GROUP BY decision
+      `).all(norm);
+    }
+
     const total = rows.reduce((s, r) => s + r.cnt, 0);
     const safeTotal = total || 1;
     const map = { 'direct play': 0, 'copy': 0, 'transcode': 0 };
     for (const r of rows) {
       const key = (r.decision || '').toLowerCase();
-      if (key === 'direct play')  map['direct play'] += r.cnt;
-      else if (key === 'copy')    map['copy']       += r.cnt;
-      else                        map['transcode']  += r.cnt;
+      if (key === 'direct play' || key === 'directplay')  map['direct play'] += r.cnt;
+      else if (key === 'copy')                            map['copy']       += r.cnt;
+      else                                                map['transcode']  += r.cnt;
     }
     result.playMethod = {
       directPlay:   { count: map['direct play'], pct: Math.round(map['direct play']  / safeTotal * 100) },
       directStream: { count: map['copy'],        pct: Math.round(map['copy']         / safeTotal * 100) },
       transcode:    { count: map['transcode'],   pct: Math.round(map['transcode']    / safeTotal * 100) },
-      total  // 0 si aucune session → frontend affiche "Aucune donnée disponible"
+      total
     };
   } catch (e) { log.warn('getUserDetailedStats playMethod:', e.message); result.playMethod = null; }
 
