@@ -2,6 +2,12 @@
 
 Toutes les modifications notables de ce projet sont documentées dans ce fichier.
 
+## [1.11.1](https://github.com/iDrinkx/plex-portal/compare/v1.11.0...v1.11.1) (2026-02-21)
+
+### 🐛 Corrections de bugs
+
+* improve achievement card design with XP badge positioning and responsive styles ([617fe50](https://github.com/iDrinkx/plex-portal/commit/617fe5075a948d47815d16d8d4cd227247811dff))
+
 ## [1.11.0](https://github.com/iDrinkx/plex-portal/compare/v1.10.5...v1.11.0) (2026-02-21)
 
 ### ✨ Nouvelles fonctionnalités
