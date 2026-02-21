@@ -82,7 +82,7 @@
 
     <!-- HEURE DU JOUR ─────────────────────────────────────────── -->
     <div class="ms-card">
-      <div class="ms-card-title">⏰ Activité par heure du jour</div>
+      <div class="ms-card-title">⏰ Activité par heure du jour <span class="ms-card-subtitle">moyenne par jour actif</span></div>
       <div class="ms-chart-wrap">
         <canvas id="hourChart"></canvas>
       </div>
@@ -90,7 +90,7 @@
 
     <!-- JOUR DE LA SEMAINE ────────────────────────────────────── -->
     <div class="ms-card">
-      <div class="ms-card-title">📅 Activité par jour de la semaine</div>
+      <div class="ms-card-title">📅 Activité par jour de la semaine <span class="ms-card-subtitle">moyenne par semaine</span></div>
       <div class="ms-chart-wrap">
         <canvas id="dayChart"></canvas>
       </div>
@@ -265,6 +265,15 @@
   white-space: nowrap;
   min-width: 48px;
   text-align: right;
+}
+
+.ms-card-subtitle {
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+  color: #444;
+  margin-left: 6px;
 }
 
 /* ── Genres ── */
@@ -517,6 +526,21 @@
   /* ─────────────────────────────────────────────────────────────────
      RENDER HOUR CHART
   ───────────────────────────────────────────────────────────────── */
+  /* ─────────────────────────────────────────────────────────────────
+     RENDER HOUR CHART
+  ───────────────────────────────────────────────────────────────── */
+  const fmtAvg = v => {
+    if (v <= 0) return '0 min';
+    if (v < 1 / 60) return '< 1 min';
+    if (v < 1) return Math.round(v * 60) + ' min';
+    return v.toFixed(1) + 'h';
+  };
+  const fmtYAxis = v => {
+    if (v === 0) return '0';
+    if (v < 1) return Math.round(v * 60) + 'min';
+    return v.toFixed(0) + 'h';
+  };
+
   function renderHourChart(hourActivity) {
     const hoursM = Array(24).fill(0);
     const hoursS = Array(24).fill(0);
@@ -557,7 +581,11 @@
           },
           tooltip: {
             callbacks: {
-              label: c => ` ${c.dataset.label}: ${c.raw.toFixed(1)}h`
+              label: c => c.raw > 0 ? ` ${c.dataset.label} : ${fmtAvg(c.raw)}` : null,
+              footer: items => {
+                const total = items.reduce((s, i) => s + i.raw, 0);
+                return total > 0 ? 'Total moyen : ' + fmtAvg(total) : '';
+              }
             }
           }
         },
@@ -572,7 +600,7 @@
             grid: { color: C.gridLine },
             ticks: {
               color: C.text,
-              callback: v => v.toFixed(0) + 'h'
+              callback: fmtYAxis
             }
           }
         },
@@ -624,7 +652,11 @@
           },
           tooltip: {
             callbacks: {
-              label: c => ` ${c.dataset.label}: ${c.raw.toFixed(1)}h`
+              label: c => c.raw > 0 ? ` ${c.dataset.label}\u00a0: ${fmtAvg(c.raw)}` : null,
+              footer: items => {
+                const total = items.reduce((s, i) => s + i.raw, 0);
+                return total > 0 ? 'Total moyen\u00a0: ' + fmtAvg(total) : '';
+              }
             }
           }
         },
@@ -639,7 +671,7 @@
             grid: { color: C.gridLine },
             ticks: {
               color: C.text,
-              callback: v => v.toFixed(0) + 'h'
+              callback: fmtYAxis
             }
           }
         },

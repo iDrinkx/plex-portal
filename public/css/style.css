@@ -472,6 +472,38 @@ body {
   font-size: 28px;
 }
 
+.hero-card-stats {
+  background: linear-gradient(135deg, #0d1a18 0%, #0b1c15 100%);
+  border-color: rgba(16, 185, 129, 0.2);
+}
+
+.hero-card-stats::before {
+  background: linear-gradient(180deg, #10b981, #34d399);
+}
+
+.hero-card-stats:hover {
+  transform: translateY(-5px);
+  border-color: rgba(16, 185, 129, 0.55);
+  box-shadow: 0 20px 60px rgba(16, 185, 129, 0.14);
+}
+
+.hero-card-stats .hero-card-label {
+  color: rgba(16, 185, 129, 0.85);
+}
+
+.hero-card-stats:hover .hero-card-arrow {
+  color: #34d399;
+  transform: translateX(5px);
+}
+
+.hero-icon--stats {
+  background: transparent;
+  border: 2px solid rgba(16, 185, 129, 0.5);
+  border-radius: 50%;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.2);
+  font-size: 28px;
+}
+
 /* Logo Seerr dans la navbar */
 .nav-seerr-logo {
   width: 16px;

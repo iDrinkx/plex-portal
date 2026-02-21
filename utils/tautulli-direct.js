@@ -741,12 +741,72 @@ function getUserDetailedStats(username) {
       ORDER BY hours DESC
       LIMIT 10
     `).all(norm);
-    result.topContent = rows.map(r => ({
-      title: r.title || '?',
-      type: r.media_type,
-      hours: Math.round(r.hours * 10) / 10
-    }));
-  } catch (e) { result.topContent = []; }
+    if (rows.length > 0) {
+      result.topContent = rows.map(r => ({
+        title: r.title || '?',
+        type: r.media_type,
+        hours: Math.round(r.hours * 10) / 10
+      }));
+    } else {
+      // Fallback : utiliser les colonnes directes de session_history (sans metadata)
+      const fallback = tautulliDb.prepare(`
+        SELECT
+          CASE
+            WHEN sh.media_type = 'episode' THEN sh.grandparent_title
+            ELSE sh.full_title
+          END as title,
+          sh.media_type,
+          SUM(CAST((sh.stopped - sh.started) AS REAL) / 3600) as hours
+        FROM users u
+        JOIN session_history sh ON u.user_id = sh.user_id
+        WHERE LOWER(u.username) = ?
+          AND sh.stopped > sh.started
+          AND sh.media_type IN ('movie', 'episode')
+        GROUP BY title
+        ORDER BY hours DESC
+        LIMIT 10
+      `).all(norm);
+      result.topContent = fallback
+        .filter(r => r.title)
+        .map(r => ({
+          title: r.title,
+          type: r.media_type,
+          hours: Math.round(r.hours * 10) / 10
+        }));
+    }
+  } catch (e) {
+    log.warn('getUserDetailedStats topContent:', e.message);
+    // Dernier recours : colonnes directes de session_history
+    try {
+      const fallback = tautulliDb.prepare(`
+        SELECT
+          CASE
+            WHEN sh.media_type = 'episode' THEN sh.grandparent_title
+            ELSE sh.full_title
+          END as title,
+          sh.media_type,
+          SUM(CAST((sh.stopped - sh.started) AS REAL) / 3600) as hours
+        FROM users u
+        JOIN session_history sh ON u.user_id = sh.user_id
+        WHERE LOWER(u.username) = ?
+          AND sh.stopped > sh.started
+          AND sh.media_type IN ('movie', 'episode')
+        GROUP BY title
+        ORDER BY hours DESC
+        LIMIT 10
+      `).all(norm);
+      result.topContent = fallback
+        .filter(r => r.title)
+        .map(r => ({
+          title: r.title,
+          type: r.media_type,
+          hours: Math.round(r.hours * 10) / 10
+        }));
+    } catch (e2) {
+      log.warn('getUserDetailedStats topContent fallback:', e2.message);
+      result.topContent = [];
+    }
+  }
 
   // ── Répartition par type de contenu ───────────────────────────────
   try {
@@ -780,14 +840,14 @@ function getUserDetailedStats(username) {
     `).all(norm);
     const map = {};
     for (const r of rows) {
-      for (const g of r.genres.split(',').map(s => s.trim()).filter(Boolean)) {
+      for (const g of r.genres.split(/[;,]/).map(s => s.trim()).filter(Boolean)) {
         map[g] = (map[g] || 0) + r.hours;
       }
     }
     result.movieGenres = Object.entries(map)
       .sort((a, b) => b[1] - a[1]).slice(0, 8)
       .map(([name, hours]) => ({ name, hours: Math.round(hours * 10) / 10 }));
-  } catch (e) { result.movieGenres = []; }
+  } catch (e) { log.warn('getUserDetailedStats movieGenres:', e.message); result.movieGenres = []; }
 
   // ── Genres séries ─────────────────────────────────────────────────
   try {
@@ -805,16 +865,29 @@ function getUserDetailedStats(username) {
     `).all(norm);
     const map = {};
     for (const r of rows) {
-      for (const g of r.genres.split(',').map(s => s.trim()).filter(Boolean)) {
+      for (const g of r.genres.split(/[;,]/).map(s => s.trim()).filter(Boolean)) {
         map[g] = (map[g] || 0) + r.hours;
       }
     }
     result.seriesGenres = Object.entries(map)
       .sort((a, b) => b[1] - a[1]).slice(0, 8)
       .map(([name, hours]) => ({ name, hours: Math.round(hours * 10) / 10 }));
-  } catch (e) { result.seriesGenres = []; }
+  } catch (e) { log.warn('getUserDetailedStats seriesGenres:', e.message); result.seriesGenres = []; }
 
-  // ── Activité par heure du jour ─────────────────────────────────────
+  // ── Nombre de jours actifs (pour normaliser l'heure du jour) ──────
+  let activeDaysCount = 1;
+  try {
+    const row = tautulliDb.prepare(`
+      SELECT COUNT(DISTINCT date(sh.started, 'unixepoch', 'localtime')) as cnt
+      FROM users u
+      JOIN session_history sh ON u.user_id = sh.user_id
+      WHERE LOWER(u.username) = ? AND sh.stopped > sh.started
+        AND sh.media_type IN ('movie', 'episode')
+    `).get(norm);
+    activeDaysCount = Math.max(1, row?.cnt || 1);
+  } catch (e) {}
+
+  // ── Activité par heure du jour (moyenne par jour actif) ───────────
   try {
     const rows = tautulliDb.prepare(`
       SELECT
@@ -829,12 +902,41 @@ function getUserDetailedStats(username) {
       ORDER BY hour
     `).all(norm);
     result.hourActivity = rows.map(r => ({
-      hour: r.hour, type: r.media_type, hours: Math.round(r.hours * 10) / 10
+      hour: r.hour,
+      type: r.media_type,
+      hours: Math.round((r.hours / activeDaysCount) * 100) / 100
     }));
+    result.activeDaysCount = activeDaysCount;
   } catch (e) { result.hourActivity = []; }
 
-  // ── Activité par jour de la semaine ───────────────────────────────
+  // ── Activité par jour de la semaine (moyenne par occurrence) ──────
   try {
+    // Nombre d'occurrences de chaque jour de semaine entre la 1ère et dernière session
+    const rangeRow = tautulliDb.prepare(`
+      SELECT MIN(sh.started) as first_ts, MAX(sh.started) as last_ts
+      FROM users u
+      JOIN session_history sh ON u.user_id = sh.user_id
+      WHERE LOWER(u.username) = ? AND sh.stopped > sh.started
+    `).get(norm);
+
+    // Calcul JS du nombre d'occurrences de chaque DOW dans la période
+    const dowCounts = Array(7).fill(1);
+    if (rangeRow?.first_ts && rangeRow?.last_ts) {
+      const start = new Date(rangeRow.first_ts * 1000);
+      const end   = new Date(rangeRow.last_ts  * 1000);
+      const totalDays = Math.max(1, Math.round((end - start) / 86400000));
+      const fullWeeks = Math.floor(totalDays / 7);
+      for (let d = 0; d < 7; d++) {
+        let count = fullWeeks;
+        // Jours supplémentaires dans la semaine partielle
+        for (let i = 0; i < (totalDays % 7); i++) {
+          const dayOfWeek = (start.getDay() + i) % 7;
+          if (dayOfWeek === d) count++;
+        }
+        dowCounts[d] = Math.max(1, count);
+      }
+    }
+
     const rows = tautulliDb.prepare(`
       SELECT
         CAST(strftime('%w', sh.started, 'unixepoch', 'localtime') AS INTEGER) as dow,
@@ -848,7 +950,9 @@ function getUserDetailedStats(username) {
       ORDER BY dow
     `).all(norm);
     result.dayActivity = rows.map(r => ({
-      dow: r.dow, type: r.media_type, hours: Math.round(r.hours * 10) / 10
+      dow: r.dow,
+      type: r.media_type,
+      hours: Math.round((r.hours / dowCounts[r.dow]) * 100) / 100
     }));
   } catch (e) { result.dayActivity = []; }
 
