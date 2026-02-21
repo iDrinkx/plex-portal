@@ -149,15 +149,10 @@
     const XP_TTL = 24 * 60 * 60 * 1000;
 
     function applyGlow(color) {
-      const ring = document.getElementById('heroAvatarRing');
+      const ring = document.getElementById('heroRankRing');
       if (!ring) return;
-      ring.style.setProperty('--rank-color', color);
-      ring.style.setProperty('--rg-1', color + 'cc');
-      ring.style.setProperty('--rg-2', color + '73');
-      ring.style.setProperty('--rg-3', color + '2e');
-      ring.style.setProperty('--rg-4', color);
-      ring.style.setProperty('--rg-5', color + 'ad');
-      ring.style.setProperty('--rg-6', color + '4d');
+      ring.style.background = `conic-gradient(from -90deg, ${color}2e 0deg, ${color} 90deg, ${color}cc 180deg, ${color} 270deg, ${color}2e 360deg)`;
+      ring.style.boxShadow  = `0 0 8px ${color}66, 0 0 18px ${color}33`;
     }
 
     // ⚡ Appliquer instantanément depuis le cache (alimenté par /profil ou ce même script)

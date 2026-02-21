@@ -324,52 +324,32 @@ body {
 .hero-avatar-ring {
   position: relative;
   flex-shrink: 0;
-  border-radius: 50%;
-  padding: 4px;
-  --rank-color: #5B9BD5;
-  --rg-1: #5B9BD5cc;
-  --rg-2: #5B9BD573;
-  --rg-3: #5B9BD52e;
-  --rg-4: #5B9BD5;
-  --rg-5: #5B9BD5ad;
-  --rg-6: #5B9BD54d;
-  animation: hero-ring-breathe 3.5s ease-in-out infinite;
-  transition: filter 0.5s ease;
+  width: 58px;
+  height: 58px;
+  line-height: 0;
 }
 
-.hero-avatar-ring::before {
-  content: '';
+/* Anneau dégradé partagé (dashboard + profil) */
+.rank-ring {
   position: absolute;
-  inset: 0;
   border-radius: 50%;
-  padding: 3px;
-  background: conic-gradient(
-    from -90deg,
-    var(--rg-3)       0deg,
-    var(--rank-color) 90deg,
-    var(--rg-1)       180deg,
-    var(--rank-color) 270deg,
-    var(--rg-3)       360deg
-  );
-  -webkit-mask: linear-gradient(#fff 0 0) content-box,
-                linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
+  /* background injecté directement par JS */
+  background: conic-gradient(from -90deg, #5B9BD52e 0deg, #5B9BD5 90deg, #5B9BD5cc 180deg, #5B9BD5 270deg, #5B9BD52e 360deg);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #fff calc(100% - 3px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #fff calc(100% - 3px));
+  animation: rank-ring-breathe 3.5s ease-in-out infinite;
   pointer-events: none;
+  transition: background 0.5s ease, box-shadow 0.5s ease;
 }
 
-@keyframes hero-ring-breathe {
-  0%, 100% {
-    filter:
-      drop-shadow(0 0 5px var(--rg-1))
-      drop-shadow(0 0 14px var(--rg-2));
-  }
-  50% {
-    filter:
-      drop-shadow(0 0 10px var(--rank-color))
-      drop-shadow(0 0 26px var(--rg-1))
-      drop-shadow(0 0 48px var(--rg-2));
-  }
+/* Dashboard : anneau de 3px autour de 58px = inset -4px → 66px */
+.hero-avatar-ring .rank-ring {
+  inset: -4px;
+}
+
+@keyframes rank-ring-breathe {
+  0%, 100% { opacity: 0.55; }
+  50%       { opacity: 1.0; }
 }
 
 .hero-avatar {
@@ -378,6 +358,8 @@ body {
   border-radius: 50%;
   object-fit: cover;
   display: block;
+  position: relative;
+  z-index: 1;
 }
 
 .hero-avatar-placeholder,

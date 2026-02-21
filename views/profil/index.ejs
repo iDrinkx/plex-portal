@@ -6,6 +6,7 @@
       const estimatedXp = (user.sessionCount || 0) * 2;
     %>
     <div class="avatar-wrapper" id="avatarWrapper">
+      <div class="rank-ring" id="profilRankRing"></div>
       <% if (user.thumb) { %>
         <img src="<%= user.thumb %>" alt="<%= user.username %>" class="profile-avatar" id="profileAvatar" />
       <% } %>
@@ -487,52 +488,15 @@
   .avatar-wrapper {
     position: relative;
     flex-shrink: 0;
-    border-radius: 50%;
-    padding: 6px;
-    --rank-color: #5B9BD5;
-    --rg-1: #5B9BD5cc;
-    --rg-2: #5B9BD573;
-    --rg-3: #5B9BD52e;
-    --rg-4: #5B9BD5;
-    --rg-5: #5B9BD5ad;
-    --rg-6: #5B9BD54d;
-    animation: profile-ring-breathe 3.5s ease-in-out infinite;
-    transition: filter 0.5s ease;
+    width: 100px;
+    height: 100px;
   }
 
-  .avatar-wrapper::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border-radius: 50%;
-    padding: 4px;
-    background: conic-gradient(
-      from -90deg,
-      var(--rg-3)       0deg,
-      var(--rank-color) 90deg,
-      var(--rg-1)       180deg,
-      var(--rank-color) 270deg,
-      var(--rg-3)       360deg
-    );
-    -webkit-mask: linear-gradient(#fff 0 0) content-box,
-                  linear-gradient(#fff 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
-    pointer-events: none;
-  }
-
-  @keyframes profile-ring-breathe {
-    0%, 100% {
-      filter:
-        drop-shadow(0 0 6px var(--rg-1))
-        drop-shadow(0 0 18px var(--rg-2));
-    }
-    50% {
-      filter:
-        drop-shadow(0 0 14px var(--rank-color))
-        drop-shadow(0 0 36px var(--rg-1))
-        drop-shadow(0 0 65px var(--rg-2));
-    }
+  /* Profil : anneau de 4px autour de 100px = inset -5px → 110px */
+  .avatar-wrapper .rank-ring {
+    inset: -5px;
+    -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #fff calc(100% - 4px));
+    mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #fff calc(100% - 4px));
   }
 
   .profile-avatar {
@@ -542,7 +506,7 @@
     object-fit: cover;
     display: block;
     position: relative;
-    z-index: 2;
+    z-index: 1;
   }
 
   .profile-info {
@@ -1174,17 +1138,15 @@
   const _XP_CACHE_TTL  = 24 * 60 * 60 * 1000;
 
   // ─── Applique le rang coloré sur avatar ring + barre XP ──────────────
+  function _rankGrad(c) {
+    return `conic-gradient(from -90deg, ${c}2e 0deg, ${c} 90deg, ${c}cc 180deg, ${c} 270deg, ${c}2e 360deg)`;
+  }
   function applyRankGlow(color) {
-    const wrapperEl = document.getElementById("avatarWrapper");
+    const ringEl    = document.getElementById("profilRankRing");
     const xpBarFill = document.getElementById("xpBarFill");
-    if (wrapperEl) {
-      wrapperEl.style.setProperty('--rank-color', color);
-      wrapperEl.style.setProperty('--rg-1', color + 'cc');
-      wrapperEl.style.setProperty('--rg-2', color + '73');
-      wrapperEl.style.setProperty('--rg-3', color + '2e');
-      wrapperEl.style.setProperty('--rg-4', color);
-      wrapperEl.style.setProperty('--rg-5', color + 'ad');
-      wrapperEl.style.setProperty('--rg-6', color + '4d');
+    if (ringEl) {
+      ringEl.style.background = _rankGrad(color);
+      ringEl.style.boxShadow  = `0 0 10px ${color}66, 0 0 22px ${color}33`;
     }
     if (xpBarFill) {
       xpBarFill.style.background = `linear-gradient(90deg, ${color}88, ${color})`;
@@ -1971,13 +1933,11 @@
             
             if (wrapperEl2) {
               const _c = newBadge.borderColor;
-              wrapperEl2.style.setProperty('--rank-color', _c);
-              wrapperEl2.style.setProperty('--rg-1', _c + 'cc');
-              wrapperEl2.style.setProperty('--rg-2', _c + '73');
-              wrapperEl2.style.setProperty('--rg-3', _c + '2e');
-              wrapperEl2.style.setProperty('--rg-4', _c);
-              wrapperEl2.style.setProperty('--rg-5', _c + 'ad');
-              wrapperEl2.style.setProperty('--rg-6', _c + '4d');
+              const ringEl2 = document.getElementById("profilRankRing");
+              if (ringEl2) {
+                ringEl2.style.background = _rankGrad(_c);
+                ringEl2.style.boxShadow  = `0 0 10px ${_c}66, 0 0 22px ${_c}33`;
+              }
             }
             if (xpBadgeEl) {
               xpBadgeEl.textContent = `${newBadge.icon} ${newBadge.name}`;

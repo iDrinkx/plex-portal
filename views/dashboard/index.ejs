@@ -14,6 +14,7 @@
       <div class="hero-card-icon-wrap">
         <% if (user.thumb) { %>
           <div class="hero-avatar-ring" id="heroAvatarRing">
+            <div class="rank-ring" id="heroRankRing"></div>
             <img src="<%= user.thumb %>" class="hero-avatar" id="heroAvatar" alt="<%= user.username %>" />
           </div>
         <% } else { %>
