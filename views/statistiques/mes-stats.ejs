@@ -303,10 +303,25 @@
   gap: 12px;
   margin-bottom: 16px;
 }
-/* Première row (donut + play method) : hauteur naturelle, espacement plus généreux */
+/* Première row (donut + play method) : cartes alignées à la même hauteur */
 .ms-row-top {
-  align-items: start;
+  align-items: stretch;
   margin-bottom: 20px;
+}
+.ms-row-top .ms-card {
+  display: flex;
+  flex-direction: column;
+}
+.ms-row-top .ms-play-methods {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.ms-row-top .ms-donut-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .ms-genres { display: flex; flex-direction: column; gap: 9px; }
 .ms-genre-item { display: flex; flex-direction: column; gap: 4px; }
