@@ -437,6 +437,62 @@ router.get("/api/stats-wait", requireAuth, async (req, res) => {
 });
 
 /* ===============================
+   ⭐ API XP-SNAPSHOT (prefetch glow)
+   Retourne le rang/niveau calculé de l'user courant.
+   Utilisé par layout.ejs pour alimenter le localStorage
+   dès la connexion — sans attendre la page Profil.
+=============================== */
+
+router.get("/api/xp-snapshot", requireAuth, async (req, res) => {
+  try {
+    const user         = req.session.user;
+    const joinedAtTs   = user.joinedAtTimestamp || 0;
+    const daysJoined   = Math.floor((Date.now() - (joinedAtTs * 1000)) / (1000 * 60 * 60 * 24));
+
+    // Stats Tautulli (depuis le cache serveur si déjà calculé, sinon rapide)
+    let totalHours = 0;
+    try {
+      const stats = await Promise.race([
+        getTautulliStats(
+          user.username, process.env.TAUTULLI_URL, process.env.TAUTULLI_API_KEY,
+          user.id, process.env.PLEX_URL, process.env.PLEX_TOKEN, joinedAtTs
+        ),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('XP_TIMEOUT')), 4000))
+      ]);
+      totalHours = stats?.watchStats?.totalHours || 0;
+    } catch (_) {}
+
+    // Badges débloqués (lecture DB ultra-rapide)
+    let unlockedCount = 0;
+    try {
+      const dbUser = UserQueries.getByUsername(user.username);
+      if (dbUser) {
+        const map = UserAchievementQueries.getForUser(dbUser.id);
+        unlockedCount = Object.keys(map).length;
+      }
+    } catch (_) {}
+
+    // Calcul XP (même formule que la page Profil)
+    const XP_MULTIPLIERS = { HOURS: 8, BADGE: 140, ANCIENNETE: 5 };
+    const totalXp      = Math.round(totalHours * XP_MULTIPLIERS.HOURS)
+                       + unlockedCount * XP_MULTIPLIERS.BADGE
+                       + daysJoined * XP_MULTIPLIERS.ANCIENNETE;
+    const level    = XP_SYSTEM.getLevel(totalXp);
+    const rank     = XP_SYSTEM.getRankByLevel(level);
+    const progress = XP_SYSTEM.getProgressToNextLevel(totalXp);
+
+    res.json({
+      rank: { color: rank.color, name: rank.name, icon: rank.icon, bgColor: rank.bgColor, borderColor: rank.borderColor },
+      level, totalXp,
+      progressPercent: progress.progressPercent,
+      xpNeeded: progress.xpNeeded
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'xp-snapshot failed' });
+  }
+});
+
+/* ===============================
    🎬 API SEERR
 =============================== */
 

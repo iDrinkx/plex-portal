@@ -9,7 +9,6 @@
       <% if (user.thumb) { %>
         <img src="<%= user.thumb %>" alt="<%= user.username %>" class="profile-avatar" id="profileAvatar" />
       <% } %>
-      <div class="badge-ring" id="badgeRing"></div>
     </div>
 
     <div class="profile-info">
@@ -495,32 +494,27 @@
     height: 100px;
     border-radius: 50%;
     object-fit: cover;
-    border: 3px solid #5B9BD5;
-    box-shadow: 0 0 22px #5B9BD5cc, 0 0 55px #5B9BD566, 0 0 90px #5B9BD522;
-    transition: border-color 0.4s ease, box-shadow 0.4s ease;
+    --rank-color: #5B9BD5;
+    border: 3px solid var(--rank-color);
+    animation: profile-avatar-breathe 3.5s ease-in-out infinite;
     position: relative;
     z-index: 2;
+    transition: border-color 0.5s ease;
   }
 
-  .badge-ring {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 120px;
-    height: 120px;
-    border-radius: 50%;
-    border: 2.5px solid #5B9BD5;
-    box-shadow: 0 0 22px #5B9BD5, 0 0 45px #5B9BD5cc, 0 0 80px #5B9BD555;
-    opacity: 0.85;
-    transition: border-color 0.4s ease, box-shadow 0.4s ease;
-    animation: ring-pulse 2.2s ease-in-out infinite;
-    z-index: 1;
-  }
-
-  @keyframes ring-pulse {
-    0%, 100% { opacity: 0.85; transform: translate(-50%, -50%) scale(1); }
-    50%       { opacity: 0.2;  transform: translate(-50%, -50%) scale(1.14); }
+  @keyframes profile-avatar-breathe {
+    0%, 100% {
+      box-shadow:
+        0 0 16px color-mix(in srgb, var(--rank-color) 80%, transparent),
+        0 0 38px color-mix(in srgb, var(--rank-color) 45%, transparent),
+        0 0 70px color-mix(in srgb, var(--rank-color) 18%, transparent);
+    }
+    50% {
+      box-shadow:
+        0 0 30px color-mix(in srgb, var(--rank-color) 100%, transparent),
+        0 0 65px color-mix(in srgb, var(--rank-color) 68%, transparent),
+        0 0 115px color-mix(in srgb, var(--rank-color) 30%, transparent);
+    }
   }
 
   .profile-info {
@@ -1151,18 +1145,14 @@
   const _XP_CACHE_KEY = () => `xp_snapshot_${document.body.getAttribute("data-user-id") || "guest"}`;
   const _XP_CACHE_TTL  = 24 * 60 * 60 * 1000;
 
-  // ─── Applique le glow coloré sur avatar + ring + barre XP ─────────
+  // ─── Applique le rang coloré sur avatar + barre XP ────────────────────
   function applyRankGlow(color) {
     const avatarEl  = document.getElementById("profileAvatar");
-    const badgeRing = document.getElementById("badgeRing");
     const xpBarFill = document.getElementById("xpBarFill");
+    // Utilise une CSS variable → l'animation CSS breathing suit automatiquement
     if (avatarEl) {
+      avatarEl.style.setProperty('--rank-color', color);
       avatarEl.style.borderColor = color;
-      avatarEl.style.boxShadow   = `0 0 22px ${color}cc, 0 0 55px ${color}66, 0 0 90px ${color}22`;
-    }
-    if (badgeRing) {
-      badgeRing.style.borderColor = color;
-      badgeRing.style.boxShadow   = `0 0 24px ${color}, 0 0 50px ${color}dd, 0 0 90px ${color}66, 0 0 130px ${color}22`;
     }
     if (xpBarFill) {
       xpBarFill.style.background = `linear-gradient(90deg, ${color}88, ${color})`;
@@ -1945,11 +1935,12 @@
             // Update badge and avatar color
             const newBadge = XP_SYSTEM.getBadgeByXp(newTotalXp);
             const avatarEl = document.getElementById("profileAvatar");
-            const badgeRing = document.getElementById("badgeRing");
             const xpBadgeEl = document.getElementById("xpBadge");
             
-            if (avatarEl) avatarEl.style.borderColor = newBadge.borderColor;
-            if (badgeRing) badgeRing.style.borderColor = newBadge.borderColor;
+            if (avatarEl) {
+              avatarEl.style.setProperty('--rank-color', newBadge.borderColor);
+              avatarEl.style.borderColor = newBadge.borderColor;
+            }
             if (xpBadgeEl) {
               xpBadgeEl.textContent = `${newBadge.icon} ${newBadge.name}`;
               xpBadgeEl.style.background = newBadge.bgColor;

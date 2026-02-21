@@ -12,14 +12,11 @@
   <a href="<%= basePath %>/profil" class="hero-card hero-card-profil">
     <div class="hero-card-content">
       <div class="hero-card-icon-wrap">
-        <div class="hero-avatar-wrapper">
-          <% if (user.thumb) { %>
-            <img src="<%= user.thumb %>" class="hero-avatar" id="heroAvatar" alt="<%= user.username %>" />
-          <% } else { %>
-            <div class="hero-avatar-placeholder">👤</div>
-          <% } %>
-          <div class="hero-badge-ring" id="heroBadgeRing"></div>
-        </div>
+        <% if (user.thumb) { %>
+          <img src="<%= user.thumb %>" class="hero-avatar" id="heroAvatar" alt="<%= user.username %>" />
+        <% } else { %>
+          <div class="hero-avatar-placeholder">👤</div>
+        <% } %>
       </div>
       <div class="hero-card-info">
         <p class="hero-card-label">Mon Profil</p>
@@ -130,35 +127,4 @@
       }
     })
     .catch(() => {});
-})();
-
-// ─── Glow niveau sur l'avatar dashboard (depuis cache XP) ──────────────
-(function () {
-  const userId = document.body.getAttribute('data-user-id') || 'guest';
-  const XP_KEY = 'xp_snapshot_' + userId;
-  const XP_TTL = 24 * 60 * 60 * 1000;
-
-  function applyHeroGlow(color) {
-    const avatarEl = document.getElementById('heroAvatar');
-    const ringEl   = document.getElementById('heroBadgeRing');
-    if (avatarEl) {
-      avatarEl.style.borderColor = color;
-      avatarEl.style.boxShadow   = `0 0 22px ${color}cc, 0 0 55px ${color}66, 0 0 90px ${color}22`;
-    }
-    if (ringEl) {
-      ringEl.style.borderColor = color;
-      ringEl.style.boxShadow   = `0 0 22px ${color}, 0 0 45px ${color}cc, 0 0 80px ${color}55`;
-    }
-  }
-
-  // ⚡ Appliquer instantanément depuis le cache XP (alimenté par la page Profil)
-  try {
-    const raw = localStorage.getItem(XP_KEY);
-    if (raw) {
-      const snap = JSON.parse(raw);
-      if (snap.savedAt && Date.now() - snap.savedAt < XP_TTL && snap.rank && snap.rank.color) {
-        applyHeroGlow(snap.rank.color);
-      }
-    }
-  } catch (_) {}
 })();
