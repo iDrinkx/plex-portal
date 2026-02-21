@@ -371,7 +371,7 @@
 
     var statHtml = mode === 'hours'
       ? '<div class="lb-row-stat"><div class="lb-row-stat-main">' + hrs(user.totalHours) + '</div><div class="lb-row-stat-sub">heures</div></div>'
-      : '<div class="lb-row-stat"><div class="lb-row-level" style="background:' + user.rank.bgColor + ';color:' + user.rank.color + '">Nv.\u00a0' + user.level + '</div><div class="lb-row-stat-sub" style="margin-top:3px;text-align:center">' + user.rank.icon + '</div></div>';
+      : '<div class="lb-row-stat"><div class="lb-row-level" style="background:' + user.rank.bgColor + ';color:' + user.rank.color + '">Nv.\u00a0' + user.level + '</div></div>';
 
     var imgPart = user.thumb
       ? '<img src="' + user.thumb + '" class="lb-row-avatar" width="40" height="40" alt="" loading="lazy" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'">'
