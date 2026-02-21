@@ -487,13 +487,8 @@
   .avatar-wrapper {
     position: relative;
     flex-shrink: 0;
-  }
-
-  .profile-avatar {
-    width: 100px;
-    height: 100px;
     border-radius: 50%;
-    object-fit: cover;
+    padding: 6px;
     --rank-color: #5B9BD5;
     --rg-1: #5B9BD5cc;
     --rg-2: #5B9BD573;
@@ -501,26 +496,53 @@
     --rg-4: #5B9BD5;
     --rg-5: #5B9BD5ad;
     --rg-6: #5B9BD54d;
-    border: 3px solid var(--rank-color);
-    animation: profile-avatar-breathe 3.5s ease-in-out infinite;
-    position: relative;
-    z-index: 2;
-    transition: border-color 0.5s ease;
+    animation: profile-ring-breathe 3.5s ease-in-out infinite;
+    transition: filter 0.5s ease;
   }
 
-  @keyframes profile-avatar-breathe {
+  .avatar-wrapper::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    padding: 4px;
+    background: conic-gradient(
+      from -90deg,
+      var(--rg-3)       0deg,
+      var(--rank-color) 90deg,
+      var(--rg-1)       180deg,
+      var(--rank-color) 270deg,
+      var(--rg-3)       360deg
+    );
+    -webkit-mask: linear-gradient(#fff 0 0) content-box,
+                  linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+
+  @keyframes profile-ring-breathe {
     0%, 100% {
-      box-shadow:
-        0 0 16px var(--rg-1),
-        0 0 38px var(--rg-2),
-        0 0 70px var(--rg-3);
+      filter:
+        drop-shadow(0 0 6px var(--rg-1))
+        drop-shadow(0 0 18px var(--rg-2));
     }
     50% {
-      box-shadow:
-        0 0 30px var(--rg-4),
-        0 0 65px var(--rg-5),
-        0 0 115px var(--rg-6);
+      filter:
+        drop-shadow(0 0 14px var(--rank-color))
+        drop-shadow(0 0 36px var(--rg-1))
+        drop-shadow(0 0 65px var(--rg-2));
     }
+  }
+
+  .profile-avatar {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    object-fit: cover;
+    display: block;
+    position: relative;
+    z-index: 2;
   }
 
   .profile-info {
@@ -1151,20 +1173,18 @@
   const _XP_CACHE_KEY = () => `xp_snapshot_${document.body.getAttribute("data-user-id") || "guest"}`;
   const _XP_CACHE_TTL  = 24 * 60 * 60 * 1000;
 
-  // ─── Applique le rang coloré sur avatar + barre XP ────────────────────
+  // ─── Applique le rang coloré sur avatar ring + barre XP ──────────────
   function applyRankGlow(color) {
-    const avatarEl  = document.getElementById("profileAvatar");
+    const wrapperEl = document.getElementById("avatarWrapper");
     const xpBarFill = document.getElementById("xpBarFill");
-    if (avatarEl) {
-      // Pré-calculer les 6 niveaux d'opacité en hex (pas de color-mix → cross-browser)
-      avatarEl.style.setProperty('--rank-color', color);
-      avatarEl.style.setProperty('--rg-1', color + 'cc'); // 80%
-      avatarEl.style.setProperty('--rg-2', color + '73'); // 45%
-      avatarEl.style.setProperty('--rg-3', color + '2e'); // 18%
-      avatarEl.style.setProperty('--rg-4', color);         // 100%
-      avatarEl.style.setProperty('--rg-5', color + 'ad'); // 68%
-      avatarEl.style.setProperty('--rg-6', color + '4d'); // 30%
-      avatarEl.style.borderColor = color;
+    if (wrapperEl) {
+      wrapperEl.style.setProperty('--rank-color', color);
+      wrapperEl.style.setProperty('--rg-1', color + 'cc');
+      wrapperEl.style.setProperty('--rg-2', color + '73');
+      wrapperEl.style.setProperty('--rg-3', color + '2e');
+      wrapperEl.style.setProperty('--rg-4', color);
+      wrapperEl.style.setProperty('--rg-5', color + 'ad');
+      wrapperEl.style.setProperty('--rg-6', color + '4d');
     }
     if (xpBarFill) {
       xpBarFill.style.background = `linear-gradient(90deg, ${color}88, ${color})`;
@@ -1946,19 +1966,18 @@
             
             // Update badge and avatar color
             const newBadge = XP_SYSTEM.getBadgeByXp(newTotalXp);
-            const avatarEl = document.getElementById("profileAvatar");
+            const wrapperEl2 = document.getElementById("avatarWrapper");
             const xpBadgeEl = document.getElementById("xpBadge");
             
-            if (avatarEl) {
+            if (wrapperEl2) {
               const _c = newBadge.borderColor;
-              avatarEl.style.setProperty('--rank-color', _c);
-              avatarEl.style.setProperty('--rg-1', _c + 'cc');
-              avatarEl.style.setProperty('--rg-2', _c + '73');
-              avatarEl.style.setProperty('--rg-3', _c + '2e');
-              avatarEl.style.setProperty('--rg-4', _c);
-              avatarEl.style.setProperty('--rg-5', _c + 'ad');
-              avatarEl.style.setProperty('--rg-6', _c + '4d');
-              avatarEl.style.borderColor = _c;
+              wrapperEl2.style.setProperty('--rank-color', _c);
+              wrapperEl2.style.setProperty('--rg-1', _c + 'cc');
+              wrapperEl2.style.setProperty('--rg-2', _c + '73');
+              wrapperEl2.style.setProperty('--rg-3', _c + '2e');
+              wrapperEl2.style.setProperty('--rg-4', _c);
+              wrapperEl2.style.setProperty('--rg-5', _c + 'ad');
+              wrapperEl2.style.setProperty('--rg-6', _c + '4d');
             }
             if (xpBadgeEl) {
               xpBadgeEl.textContent = `${newBadge.icon} ${newBadge.name}`;

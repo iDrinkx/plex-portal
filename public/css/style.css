@@ -320,11 +320,12 @@ body {
   flex-shrink: 0;
 }
 
-.hero-avatar {
-  width: 58px;
-  height: 58px;
+/* ── HERO AVATAR GRADIENT RING ── */
+.hero-avatar-ring {
+  position: relative;
+  flex-shrink: 0;
   border-radius: 50%;
-  object-fit: cover;
+  padding: 4px;
   --rank-color: #5B9BD5;
   --rg-1: #5B9BD5cc;
   --rg-2: #5B9BD573;
@@ -332,25 +333,51 @@ body {
   --rg-4: #5B9BD5;
   --rg-5: #5B9BD5ad;
   --rg-6: #5B9BD54d;
-  border: 2.5px solid var(--rank-color);
-  animation: hero-avatar-breathe 3.5s ease-in-out infinite;
-  transition: border-color 0.5s ease;
-  display: block;
+  animation: hero-ring-breathe 3.5s ease-in-out infinite;
+  transition: filter 0.5s ease;
 }
 
-@keyframes hero-avatar-breathe {
+.hero-avatar-ring::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  padding: 3px;
+  background: conic-gradient(
+    from -90deg,
+    var(--rg-3)       0deg,
+    var(--rank-color) 90deg,
+    var(--rg-1)       180deg,
+    var(--rank-color) 270deg,
+    var(--rg-3)       360deg
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box,
+                linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+@keyframes hero-ring-breathe {
   0%, 100% {
-    box-shadow:
-      0 0 14px var(--rg-1),
-      0 0 32px var(--rg-2),
-      0 0 58px var(--rg-3);
+    filter:
+      drop-shadow(0 0 5px var(--rg-1))
+      drop-shadow(0 0 14px var(--rg-2));
   }
   50% {
-    box-shadow:
-      0 0 26px var(--rg-4),
-      0 0 56px var(--rg-5),
-      0 0 95px var(--rg-6);
+    filter:
+      drop-shadow(0 0 10px var(--rank-color))
+      drop-shadow(0 0 26px var(--rg-1))
+      drop-shadow(0 0 48px var(--rg-2));
   }
+}
+
+.hero-avatar {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
 }
 
 .hero-avatar-placeholder,

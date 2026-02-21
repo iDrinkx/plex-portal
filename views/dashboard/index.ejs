@@ -13,7 +13,9 @@
     <div class="hero-card-content">
       <div class="hero-card-icon-wrap">
         <% if (user.thumb) { %>
-          <img src="<%= user.thumb %>" class="hero-avatar" id="heroAvatar" alt="<%= user.username %>" />
+          <div class="hero-avatar-ring" id="heroAvatarRing">
+            <img src="<%= user.thumb %>" class="hero-avatar" id="heroAvatar" alt="<%= user.username %>" />
+          </div>
         <% } else { %>
           <div class="hero-avatar-placeholder">👤</div>
         <% } %>
