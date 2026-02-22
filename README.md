@@ -4,15 +4,15 @@ Application web pour gérer votre accès Plex, afficher abonnements, statistique
 
 ##  Fonctionnalités
 
--  **Authentification Plex**  Connexion via compte Plex (OAuth)
--  **Dashboard**  Vue d'ensemble : abonnement, statistiques, demandes Seerr
--  **Abonnements Wizarr**  Affichage de la date d'expiration et du groupe (optionnel)
--  **Statistiques Tautulli**  Historique de visionnage, temps total, collections (optionnel)
--  **Intégration Seerr (SSO)**  Accès à Seerr dans une iframe full-page sans re-connexion
--  **Système XP & Succès**  Points d'expérience et badges selon l'activité de visionnage
--  **Page Profil**  Stats personnelles, demandes Seerr, succès débloqués
--  **Reverse Proxy Automatique**  Détection auto via headers `X-Forwarded-*`
--  **Configuration Minimale**  Juste `SESSION_SECRET` en obligatoire
+🔐 **Authentification Plex** : Connexion via compte Plex (OAuth)
+📊 **Dashboard** : Vue d'ensemble (abonnement, statistiques, demandes Seerr)
+🎫 **Abonnements Wizarr** : Date d'expiration et groupe (requis pour toutes les fonctionnalités)
+📈 **Statistiques Tautulli** : Historique de visionnage, temps total, collections (requis pour toutes les fonctionnalités)
+🛡️ **Intégration Seerr (SSO)** : Accès à Seerr dans une iframe full-page sans re-connexion
+🏆 **Système XP & Succès** : Points d'expérience et badges selon l'activité de visionnage
+👤 **Page Profil** : Stats personnelles, demandes Seerr, succès débloqués
+🔄 **Reverse Proxy Automatique** : Détection auto via headers `X-Forwarded-*`
+⚡ **Configuration Minimale** : Juste `SESSION_SECRET` en obligatoire
 
 ---
 
@@ -20,21 +20,10 @@ Application web pour gérer votre accès Plex, afficher abonnements, statistique
 
 ### Prérequis
 
-- Docker & Docker Compose
-- Compte Plex
-- _(Optionnel)_ Wizarr, Tautulli, Seerr
+🛠️ Docker & Docker Compose
+👤 Compte Plex
+🔗 Wizarr, Tautulli, Seerr (requis pour toutes les fonctionnalités)
 
-### Local (30 secondes)
-
-```bash
-git clone https://github.com/idrinkx/plex-portal.git
-cd plex-portal
-
-# Changer SESSION_SECRET dans docker-compose.yml, puis :
-docker compose up -d
-
-# Ouvrir http://localhost:3000
-```
 
 ### Production (Unraid + ngx proxy manager)
 
@@ -84,40 +73,66 @@ plex-portal/
        _overseerr.ejs
        _stats.ejs
        _subscription.ejs
-    profil/
+
+     profil/
        index.ejs
-    seerr/
+     seerr/
        index.ejs                   # Iframe full-page Seerr
-    statistiques/
+     statistiques/
         index.ejs
         activite.ejs
 
- public/
-    css/style.css
-    js/
+   public/
+     css/style.css
+     js/
         dashboard.js
         statistiques.js
 
- utils/
-    achievements.js                 # Système de succès
-    cache.js                        # Couche de cache mémoire
-    cron-session-job.js             # Job cron sessions/stats
-    database.js                     # SQLite (sessions, XP, cache)
-    health-check.js                 # Vérification santé services
-    plex.js                         # Whitelist utilisateurs Plex
-    seerr.js                        # API Seerr (stats demandes)
-    session-stats-cache.js
-    session-stats-cache-db.js
-    tautulli.js                     # API Tautulli
-    tautulli-direct.js              # Lecture directe DB Tautulli
-    tautulli-events.js
-    logger.js                       # Logger unifié (timestamp + couleurs)
-    wizarr.js                       # API Wizarr
-    xp-system.js                    # Calcul XP et niveaux
+   utils/
+     achievements.js                 # Système de succès
+     cache.js                        # Couche de cache mémoire
+     cron-session-job.js             # Job cron sessions/stats
+     database.js                     # SQLite (sessions, XP, cache)
+     health-check.js                 # Vérification santé services
+     plex.js                         # Whitelist utilisateurs Plex
+     seerr.js                        # API Seerr (stats demandes)
+     session-stats-cache.js
+     session-stats-cache-db.js
+     tautulli.js                     # API Tautulli
+     tautulli-direct.js              # Lecture directe DB Tautulli
+     tautulli-events.js
+     logger.js                       # Logger unifié (timestamp + couleurs)
+     wizarr.js                       # API Wizarr
+     xp-system.js                    # Calcul XP et niveaux
 
- config/
-     logo.png                        # Logo personnalisable
-```
+   config/
+      logo.png                        # Logo personnalisable
+  ```
+
+  ---
+
+
+---
+
+##  Système XP, Succès, Badges et Classement
+
+Plex Portal propose un système de gamification avancé pour encourager l'engagement :
+
+- **XP (Points d'expérience)** : Gagnez des points en fonction de votre activité de visionnage (heures, films, séries, sessions).
+- **Badges & Succès** : Débloquez des badges selon des critères variés (nombre de films, séries, heures, collections, événements spéciaux, etc.). Certains badges sont révoqués si les conditions ne sont plus remplies.
+- **Catégories de succès** : Plusieurs catégories (visionnage, collections, activité, événements, etc.) avec progression visible.
+- **Classement** : Comparez votre progression avec les autres utilisateurs via une page podium dynamique.
+- **Progression & Modalités** : Visualisez votre progression via des barres, modals et liens dédiés sur le dashboard et le profil.
+- **XP Breakdown** : Accédez à un détail de vos sources d'XP (modal explicative).
+
+Exemples de badges :
+- "Cinema God" (nombre de films vus)
+- "Series Overlord" (nombre d'épisodes)
+- "Collections Master" (collections complètes)
+- Succès spéciaux (événements, horaires, etc.)
+
+Pour plus de détails, consultez la page `/succes` ou le dashboard.
+
 
 ---
 
@@ -322,13 +337,12 @@ R : Placez votre `logo.png` dans le volume `./config:/config`.
 
 ---
 
-##  Contribution
+## Contribution
 
-1. Fork le projet
-2. Créer une branche (`git checkout -b feature/ma-feature`)
-3. Commit (`git commit -m 'feat: ma feature'`)
-4. Push (`git push origin feature/ma-feature`)
-5. Ouvrir une Pull Request
+Les contributions publiques ne sont pas autorisées.
+
+Si vous souhaitez proposer une amélioration ou signaler un bug,
+merci d’ouvrir une issue ou de me contacter directement.
 
 ---
 
@@ -342,6 +356,12 @@ R : Placez votre `logo.png` dans le volume `./config:/config`.
 
 ---
 
-##  Licence
+## Licence
 
-Ce projet est sous [MIT License](LICENSE)
+Ce projet est propriétaire.
+
+L'utilisation de l'image Docker officielle est autorisée pour un usage personnel ou interne uniquement.
+
+Toute modification, redistribution ou usage commercial est strictement interdit sans autorisation écrite de l'auteur.
+
+Voir le fichier [LICENSE](LICENSE) pour plus d'informations.
