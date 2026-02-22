@@ -943,4 +943,17 @@ router.get('/api/classement', requireAuth, async (req, res) => {
   }
 });
 
+/* ===============================
+   📦 VERSION & CHANGELOG
+=============================== */
+
+router.get('/api/version', (req, res) => {
+  try {
+    const { version } = require('../package.json');
+    res.json({ version });
+  } catch (err) {
+    res.status(500).json({ error: 'Could not read version' });
+  }
+});
+
 module.exports = router;
