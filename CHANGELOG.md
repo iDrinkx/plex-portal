@@ -2,6 +2,11 @@
 
 Toutes les modifications notables de ce projet sont documentées dans ce fichier.
 
+## <small>1.17.2 (2026-02-22)</small>
+
+* Merge branch 'main' of https://github.com/iDrinkx/plex-portal ([a5d2fc2](https://github.com/iDrinkx/plex-portal/commit/a5d2fc2))
+* refactor: remove unnecessary wait and fetch steps from release workflow ([91ca1b8](https://github.com/iDrinkx/plex-portal/commit/91ca1b8))
+
 ## <small>1.17.1 (2026-02-22)</small>
 
 * Merge branch 'main' of https://github.com/iDrinkx/plex-portal ([231ef7a](https://github.com/iDrinkx/plex-portal/commit/231ef7a))
