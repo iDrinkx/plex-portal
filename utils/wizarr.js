@@ -77,8 +77,14 @@ async function checkWizarrAccess(user, wizarrUrl, apiKey) {
     return { authorized: true, reason: 'Wizarr non configuré — accès accordé par défaut' };
   }
 
+  if (!user.email) {
+    return { authorized: false, reason: 'Email Plex manquant' };
+  }
+
   try {
-    const resp = await fetch(`${wizarrUrl}/api/users`, {
+    // Filtrer par email directement côté serveur Wizarr (plus rapide)
+    const emailParam = encodeURIComponent(user.email);
+    const resp = await fetch(`${wizarrUrl}/api/users?email=${emailParam}`, {
       headers: {
         Accept: "application/json",
         "X-API-Key": apiKey
@@ -90,24 +96,13 @@ async function checkWizarrAccess(user, wizarrUrl, apiKey) {
     }
 
     const payload = await resp.json();
-    const list =
-      Array.isArray(payload) ? payload :
-      Array.isArray(payload?.users) ? payload.users :
-      Array.isArray(payload?.data) ? payload.data :
-      [];
+    const list = Array.isArray(payload?.users) ? payload.users : [];
 
-    const norm = s => (s || "").toLowerCase().trim();
-    const plexEmail = norm(user.email);
-
-    if (!plexEmail) {
-      return { authorized: false, reason: 'Email Plex manquant' };
-    }
-
-    const wizUser = list.find(u => norm(u.email) === plexEmail);
-
-    if (!wizUser) {
+    if (!list.length) {
       return { authorized: false, reason: 'Utilisateur non trouvé dans Wizarr' };
     }
+
+    const wizUser = list[0]; // Premier résultat (email exact match)
 
     // Vérifier que l'abonnement est actif (illimité ou pas expiré)
     if (!wizUser.expires) {
