@@ -196,10 +196,10 @@
       }
     }
 
-    // Load changelog from file
+    // Load changelog from API
     async function loadChangelog() {
       try {
-        const response = await fetch((window.APP_BASE_PATH || '') + '/CHANGELOG.md');
+        const response = await fetch((window.APP_BASE_PATH || '') + '/api/changelog');
         if (!response.ok) throw new Error('Failed to fetch changelog');
         const markdown = await response.text();
         changelogBody.innerHTML = '<pre style="white-space: pre-wrap; word-wrap: break-word; font-size: 0.9em; line-height: 1.6;">' +

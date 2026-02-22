@@ -956,4 +956,17 @@ router.get('/api/version', (req, res) => {
   }
 });
 
+router.get('/api/changelog', (_, res) => {
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    const changelogPath = path.join(__dirname, '../CHANGELOG.md');
+    const changelog = fs.readFileSync(changelogPath, 'utf8');
+    res.setHeader('Content-Type', 'text/markdown; charset=utf-8');
+    res.send(changelog);
+  } catch (err) {
+    res.status(404).json({ error: 'Changelog not found' });
+  }
+});
+
 module.exports = router;
