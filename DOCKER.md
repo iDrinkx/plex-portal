@@ -217,8 +217,16 @@ environment:
 
 ---
 
+
 ## 📚 Documentation complète
 
 - [SETUP.md](./SETUP.md) - Guide pas à pas
 - [UNRAID.md](./UNRAID.md) - Configuration Unraid spécifique
 - [README.md](./README.md) - Vue d'ensemble
+
+---
+
+## Code source
+
+Le code source de Plex Portal n'est pas public. Seule l'image Docker officielle et la documentation sont disponibles.
+Pour toute suggestion ou bug, ouvrez une issue ou contactez l'auteur.

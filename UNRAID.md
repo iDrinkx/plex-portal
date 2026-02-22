@@ -348,8 +348,16 @@ docker-compose up -d
 
 ---
 
+
 ## 🆘 Support
 
 - 📖 Consulter [DOCKER.md](./DOCKER.md)
 - 📖 Consulter [SETUP.md](./SETUP.md)
 - 💬 Ouvrir une issue sur GitHub
+
+---
+
+## Code source et contributions
+
+Le code source de Plex Portal n'est pas public. Seule l'image Docker officielle et la documentation sont disponibles.
+Pour toute suggestion ou bug, ouvrez une issue ou contactez l'auteur.

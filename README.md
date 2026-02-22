@@ -5,13 +5,21 @@ Application web pour gérer votre accès Plex, afficher abonnements, statistique
 ##  Fonctionnalités
 
 🔐 **Authentification Plex** : Connexion via compte Plex (OAuth)
+
 📊 **Dashboard** : Vue d'ensemble (abonnement, statistiques, demandes Seerr)
+
 🎫 **Abonnements Wizarr** : Date d'expiration et groupe (requis pour toutes les fonctionnalités)
+
 📈 **Statistiques Tautulli** : Historique de visionnage, temps total, collections (requis pour toutes les fonctionnalités)
+
 🛡️ **Intégration Seerr (SSO)** : Accès à Seerr dans une iframe full-page sans re-connexion
+
 🏆 **Système XP & Succès** : Points d'expérience et badges selon l'activité de visionnage
+
 👤 **Page Profil** : Stats personnelles, demandes Seerr, succès débloqués
+
 🔄 **Reverse Proxy Automatique** : Détection auto via headers `X-Forwarded-*`
+
 ⚡ **Configuration Minimale** : Juste `SESSION_SECRET` en obligatoire
 
 ---
@@ -298,21 +306,15 @@ Aucune configuration manuelle requise.
 - **Base de données** : SQLite (sessions, XP, cache stats)
 - **Container** : Docker
 
-### Installation locale sans Docker
 
-```bash
-npm install
-# Configurer les variables d'env (voir docker-compose.yml)
-npm start
-# http://localhost:3000
-```
+---
 
-### Build et push image Docker
+## Code source et contributions
 
-```bash
-docker build -t ghcr.io/idrinkx/plex-portal:latest .
-docker push ghcr.io/idrinkx/plex-portal:latest
-```
+Le code source de Plex Portal n'est pas public. Seule l'image Docker officielle et la documentation sont disponibles.
+
+Pour toute suggestion ou bug, ouvrez une issue ou contactez l'auteur.
+
 
 ---
 

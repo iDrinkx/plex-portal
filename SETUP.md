@@ -9,25 +9,7 @@
 
 ---
 
-## 🎯 Étape 1: Télécharger le projet
-
-### Option A: Git (recommandé)
-
-```bash
-git clone https://github.com/idrinkx/plex-portal.git
-cd plex-portal
-```
-
-### Option B: Télécharger le ZIP
-
-1. Aller sur [GitHub](https://github.com/idrinkx/plex-portal)
-2. Cliquer sur **Code** ➜ **Download ZIP**
-3. Extraire le fichier
-4. Ouvrir le dossier
-
----
-
-## ⚙️ Étape 2: Configuration (minimale!)
+## ⚙️ Étape 1: Configuration (minimale!)
 
 ### 1. Éditer `docker-compose.yml`
 
