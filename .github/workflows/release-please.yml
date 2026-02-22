@@ -39,27 +39,34 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npx semantic-release
 
+      - name: Fetch latest changes
+        if: ${{ steps.semantic.outputs.new_release_published == 'true' }}
+        run: git fetch origin main
+
       - name: Update README version badge
         if: ${{ steps.semantic.outputs.new_release_published == 'true' }}
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ steps.semantic.outputs.new_release_version }}
         run: |
-          if [ -z "$VERSION" ]; then
-            echo "⚠️  No version from semantic-release, using package.json"
-            VERSION=$(node -p "require('./package.json').version")
-          fi
+          VERSION=${VERSION:-$(node -p "require('./package.json').version")}
           echo "📦 Updating README badge to v$VERSION"
+
+          # Update README
           sed -i "s/Version-[0-9]*\.[0-9]*\.[0-9]*/Version-$VERSION/" README.md
+
+          # Check if there are changes
+          if git diff --quiet README.md; then
+            echo "✓ README already up to date"
+            exit 0
+          fi
+
+          # Commit and push
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add README.md
-          if git diff --cached --quiet; then
-            echo "✓ No changes to commit"
-          else
-            git commit -m "chore: update version badge to v$VERSION [skip ci]"
-            git push "https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git" HEAD:main
-          fi
+          git commit -m "chore: update version badge to v$VERSION [skip ci]"
+          git push origin main
 
   # Quand une release est publiée → rebuild Docker avec le tag de version
   docker-release:
