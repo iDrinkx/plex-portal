@@ -2,6 +2,16 @@
 
 Toutes les modifications notables de ce projet sont documentées dans ce fichier.
 
+## 1.18.0 (2026-02-22)
+
+* Merge pull request #2 from iDrinkx/develop ([5bfef60](https://github.com/iDrinkx/plex-portal/commit/5bfef60)), closes [#2](https://github.com/iDrinkx/plex-portal/issues/2)
+* feat: add develop branch to Docker workflow triggers ([9bb5dea](https://github.com/iDrinkx/plex-portal/commit/9bb5dea))
+* feat: add Wizarr access check for user authentication ([794ce72](https://github.com/iDrinkx/plex-portal/commit/794ce72))
+* feat: enhance authentication flow by parallelizing Plex and Wizarr access checks ([34548bb](https://github.com/iDrinkx/plex-portal/commit/34548bb))
+* feat: improve Wizarr access check by filtering users by email and handling missing email case ([01b17ab](https://github.com/iDrinkx/plex-portal/commit/01b17ab))
+* feat: run Seerr SSO cookie grab in the background during login ([b62de25](https://github.com/iDrinkx/plex-portal/commit/b62de25))
+* feat: streamline Plex access check and move Wizarr verification to background ([5dcc2c9](https://github.com/iDrinkx/plex-portal/commit/5dcc2c9))
+
 ## <small>1.17.3 (2026-02-22)</small>
 
 * Merge branch 'main' of https://github.com/iDrinkx/plex-portal ([15025f1](https://github.com/iDrinkx/plex-portal/commit/15025f1))
