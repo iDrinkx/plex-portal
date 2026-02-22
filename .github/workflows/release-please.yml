@@ -39,9 +39,13 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npx semantic-release
 
-      - name: Fetch latest changes
+      - name: Checkout with credentials for README update
         if: ${{ steps.semantic.outputs.new_release_published == 'true' }}
-        run: git fetch origin main
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Update README version badge
         if: ${{ steps.semantic.outputs.new_release_published == 'true' }}
@@ -49,24 +53,38 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ steps.semantic.outputs.new_release_version }}
         run: |
+          # Get version from semantic-release output or package.json
           VERSION=${VERSION:-$(node -p "require('./package.json').version")}
           echo "📦 Updating README badge to v$VERSION"
 
+          # Ensure we're on the latest main
+          git fetch origin main
+          git checkout origin/main -- README.md || git checkout main -- README.md
+
           # Update README
-          sed -i "s/Version-[0-9]*\.[0-9]*\.[0-9]*/Version-$VERSION/" README.md
+          sed -i "s/Version-[0-9]\+\.[0-9]\+\.[0-9]\+/Version-$VERSION/" README.md
 
-          # Check if there are changes
-          if git diff --quiet README.md; then
+          # Check if file actually changed
+          if ! git diff --quiet README.md; then
+            echo "✓ README needs update"
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add README.md
+
+            # Try to commit and push
+            if git commit -m "chore(release): update README version badge to v$VERSION [skip ci]"; then
+              if git push origin main; then
+                echo "✓ README pushed successfully"
+              else
+                echo "⚠️  Push failed, retrying..."
+                git push -u origin main || echo "❌ Failed to push"
+              fi
+            else
+              echo "⚠️  No changes to commit"
+            fi
+          else
             echo "✓ README already up to date"
-            exit 0
           fi
-
-          # Commit and push
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add README.md
-          git commit -m "chore: update version badge to v$VERSION [skip ci]"
-          git push origin main
 
   # Quand une release est publiée → rebuild Docker avec le tag de version
   docker-release:
