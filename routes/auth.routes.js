@@ -138,47 +138,47 @@ router.get("/auth-complete", async (req, res) => {
 
   logAuth.info(`Connexion: ${user.username} <${user.email}> (ID ${user.id})`);
 
-  // ── Vérification accès serveur (Plex) ─────────────────────────────────────────────
-  // On lance en parallèle ownerId (mis en cache dès le 1er login) et machineId
-  // (mis en cache dès le 1er login) pendant que le profil vient d'être récupéré.
-  // Après le 1er login : ownerId + machineId = instantané (cache mémoire).
-  // La liste des utilisateurs autorisés est le seul appel réseau restant.
-  let authorizedByPlex = true;
-  if (process.env.PLEX_URL && process.env.PLEX_TOKEN) {
+  // ── Vérification accès serveur (Plex) ET Wizarr EN PARALLÈLE ──────────────────────
+  // Lance les deux vérifications en même temps pour gagner du temps
+  const plexCheckPromise = (async () => {
+    if (!process.env.PLEX_URL || !process.env.PLEX_TOKEN) {
+      logAuth.warn("PLEX_URL ou PLEX_TOKEN manquant — vérification d'accès ignorée");
+      return { authorized: true };
+    }
+
     try {
       const userId = parseInt(user.id);
-
-      // 1) Récupérer (ou lire dans le cache) ownerId + machineId en parallèle
       const [ownerId, machineId] = await Promise.all([
         getServerOwnerId(process.env.PLEX_TOKEN),
         getServerMachineId(process.env.PLEX_URL, process.env.PLEX_TOKEN)
       ]);
 
       if (ownerId && ownerId === userId) {
-        // C'est l'admin — aucun appel réseau supplémentaire
         logAuth.info(`User ${userId} — propriétaire du serveur`);
-      } else {
-        // 2) Seul appel réseau restant : liste des utilisateurs autorisés
-        const authorizedUsers = await getAuthorizedServerUsers(process.env.PLEX_TOKEN, machineId);
-        if (!authorizedUsers.some(u => u.id === userId)) {
-          logAuth.warn(`Accès refusé — ${user.username} (${userId}) absent du serveur`);
-          authorizedByPlex = false;
-        }
+        return { authorized: true };
       }
-    } catch (authErr) {
-      logAuth.warn(`Vérification serveur impossible (${authErr.message}) — accès accordé par défaut`);
-    }
-  } else {
-    logAuth.warn("PLEX_URL ou PLEX_TOKEN manquant — vérification d'accès ignorée");
-  }
 
-  if (!authorizedByPlex) {
+      const authorizedUsers = await getAuthorizedServerUsers(process.env.PLEX_TOKEN, machineId);
+      if (!authorizedUsers.some(u => u.id === userId)) {
+        logAuth.warn(`Accès Plex refusé — ${user.username} (${userId}) absent du serveur`);
+        return { authorized: false, reason: 'Absent du serveur Plex' };
+      }
+      return { authorized: true };
+    } catch (authErr) {
+      logAuth.warn(`Vérification Plex impossible (${authErr.message}) — accès accordé par défaut`);
+      return { authorized: true };
+    }
+  })();
+
+  const wizarrCheckPromise = checkWizarrAccess(user, process.env.WIZARR_URL, process.env.WIZARR_API_KEY);
+
+  // Attendre les deux en parallèle
+  const [plexCheck, wizarrCheck] = await Promise.all([plexCheckPromise, wizarrCheckPromise]);
+
+  if (!plexCheck.authorized) {
     return res.redirect((req.basePath || "") + "/?error=unauthorized");
   }
 
-  // ── Vérification accès Wizarr ──────────────────────────────────────────────────────
-  // Vérifie que l'utilisateur a un abonnement actif chez Wizarr
-  const wizarrCheck = await checkWizarrAccess(user, process.env.WIZARR_URL, process.env.WIZARR_API_KEY);
   if (!wizarrCheck.authorized) {
     logAuth.warn(`Accès Wizarr refusé — ${user.username}: ${wizarrCheck.reason}`);
     return res.redirect((req.basePath || "") + "/?error=wizarr_access_denied");
