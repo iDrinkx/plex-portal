@@ -2,6 +2,16 @@
 
 Toutes les modifications notables de ce projet sont documentées dans ce fichier.
 
+## [1.13.0](https://github.com/iDrinkx/plex-portal/compare/v1.12.0...v1.13.0) (2026-02-22)
+
+### ✨ Nouvelles fonctionnalités
+
+* add API endpoint for changelog and update README version badge ([8ac464d](https://github.com/iDrinkx/plex-portal/commit/8ac464d3874f204cf8131965161547563f43eac1))
+
+### 📚 Documentation
+
+* update version display in README.md ([1aa91c3](https://github.com/iDrinkx/plex-portal/commit/1aa91c373932c7f59024ca9c244ee75a8b82f4bf))
+
 ## [1.12.0](https://github.com/iDrinkx/plex-portal/compare/v1.11.6...v1.12.0) (2026-02-22)
 
 ### ✨ Nouvelles fonctionnalités
