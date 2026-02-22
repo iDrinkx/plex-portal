@@ -2,6 +2,11 @@
 
 Toutes les modifications notables de ce projet sont documentées dans ce fichier.
 
+## <small>1.17.3 (2026-02-22)</small>
+
+* Merge branch 'main' of https://github.com/iDrinkx/plex-portal ([15025f1](https://github.com/iDrinkx/plex-portal/commit/15025f1))
+* refactor: remove version badge from footer display ([bd090da](https://github.com/iDrinkx/plex-portal/commit/bd090da))
+
 ## <small>1.17.2 (2026-02-22)</small>
 
 * Merge branch 'main' of https://github.com/iDrinkx/plex-portal ([a5d2fc2](https://github.com/iDrinkx/plex-portal/commit/a5d2fc2))
