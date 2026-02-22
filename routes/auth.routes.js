@@ -5,6 +5,7 @@ const log = require("../utils/logger");
 const logAuth = log.create('[Auth]');
 
 const { isUserAuthorized, getAuthorizedServerUsers, getServerOwnerId, getServerMachineId } = require("../utils/plex");
+const { checkWizarrAccess } = require("../utils/wizarr");
 
 /**
  * Grab le cookie connect.sid de Seerr via le token Plex.
@@ -137,46 +138,34 @@ router.get("/auth-complete", async (req, res) => {
 
   logAuth.info(`Connexion: ${user.username} <${user.email}> (ID ${user.id})`);
 
-  // ── Vérification accès serveur ─────────────────────────────────────────────
-  // On lance en parallèle ownerId (mis en cache dès le 1er login) et machineId
-  // (mis en cache dès le 1er login) pendant que le profil vient d'être récupéré.
-  // Après le 1er login : ownerId + machineId = instantané (cache mémoire).
-  // La liste des utilisateurs autorisés est le seul appel réseau restant.
-  let authorized = true;
+  // ── Vérification accès serveur (Plex) ──────────────────────────────────────────────
+  // Plex est BLOQUANT (obligatoire pour le login)
+  let authorizedByPlex = true;
   if (process.env.PLEX_URL && process.env.PLEX_TOKEN) {
     try {
       const userId = parseInt(user.id);
-
-      // 1) Récupérer (ou lire dans le cache) ownerId + machineId en parallèle
       const [ownerId, machineId] = await Promise.all([
         getServerOwnerId(process.env.PLEX_TOKEN),
         getServerMachineId(process.env.PLEX_URL, process.env.PLEX_TOKEN)
       ]);
 
       if (ownerId && ownerId === userId) {
-        // C'est l'admin — aucun appel réseau supplémentaire
         logAuth.info(`User ${userId} — propriétaire du serveur`);
       } else {
-        // 2) Seul appel réseau restant : liste des utilisateurs autorisés
         const authorizedUsers = await getAuthorizedServerUsers(process.env.PLEX_TOKEN, machineId);
         if (!authorizedUsers.some(u => u.id === userId)) {
-          logAuth.warn(`Accès refusé — ${user.username} (${userId}) absent du serveur`);
-          authorized = false;
+          logAuth.warn(`Accès Plex refusé — ${user.username} (${userId}) absent du serveur`);
+          authorizedByPlex = false;
         }
       }
     } catch (authErr) {
-      logAuth.warn(`Vérification serveur impossible (${authErr.message}) — accès accordé par défaut`);
+      logAuth.warn(`Vérification Plex impossible (${authErr.message}) — accès accordé par défaut`);
     }
-  } else {
-    logAuth.warn("PLEX_URL ou PLEX_TOKEN manquant — vérification d'accès ignorée");
   }
 
-  if (!authorized) {
+  if (!authorizedByPlex) {
     return res.redirect((req.basePath || "") + "/?error=unauthorized");
   }
-
-  // 2) Cookie SSO Seerr — seulement si autorisé
-  await grabSeerrCookie(authToken, res);
 
   logAuth.info(`✅ Connecté: ${user.username} (${user.id})`);
 
@@ -185,7 +174,24 @@ router.get("/auth-complete", async (req, res) => {
   req.session.plexToken = authToken;
   delete req.session.pinId;
 
+  // Set le cookie Seerr ET redirect (avant les vérifications en arrière-plan)
+  grabSeerrCookie(authToken, res).catch(err => {
+    logAuth.warn(`Seerr SSO — ${err.message}`);
+  });
+
   res.redirect(req.basePath + "/dashboard");
+
+  // ── Vérifications en ARRIÈRE-PLAN (ne bloquent pas le login) ────────────────────────
+  // Wizarr en arrière-plan - si elle échoue, on log juste un warning
+  checkWizarrAccess(user, process.env.WIZARR_URL, process.env.WIZARR_API_KEY)
+    .then(wizarrCheck => {
+      if (!wizarrCheck.authorized) {
+        logAuth.warn(`Accès Wizarr refusé — ${user.username}: ${wizarrCheck.reason}`);
+      }
+    })
+    .catch(err => {
+      logAuth.warn(`Vérification Wizarr échouée — ${err.message}`);
+    });
 });
 
 router.get("/logout", (req, res) => {
