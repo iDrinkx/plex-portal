@@ -969,4 +969,39 @@ router.get('/api/changelog', (_, res) => {
   }
 });
 
+router.get('/api/version-badge.svg', (_, res) => {
+  try {
+    const { version } = require('../package.json');
+
+    // SVG badge dynamique basé sur package.json
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="114" height="20" role="img" aria-label="Version: ${version}">
+      <title>Version: ${version}</title>
+      <linearGradient id="s" x2="0" y2="100%">
+        <stop offset="0" stop-color="#bbb"/>
+        <stop offset="1" stop-color="#999"/>
+      </linearGradient>
+      <clipPath id="r">
+        <rect width="114" height="20" rx="3" fill="#fff"/>
+      </clipPath>
+      <g clip-path="url(#r)">
+        <rect width="75" height="20" fill="#555"/>
+        <rect x="75" width="39" height="20" fill="#34d399"/>
+        <rect width="114" height="20" fill="url(#s)"/>
+      </g>
+      <g fill="#fff" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" text-rendering="geometricPrecision" font-size="110">
+        <text aria-hidden="true" x="385" y="150" fill="#010101" fill-opacity=".3" transform="scale(.1)" textLength="650">Version</text>
+        <text x="385" y="140" transform="scale(.1)" fill="#fff" textLength="650">Version</text>
+        <text aria-hidden="true" x="935" y="150" fill="#010101" fill-opacity=".3" transform="scale(.1)" textLength="290">${version}</text>
+        <text x="935" y="140" transform="scale(.1)" fill="#fff" textLength="290">${version}</text>
+      </g>
+    </svg>`;
+
+    res.setHeader('Content-Type', 'image/svg+xml; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.send(svg);
+  } catch (err) {
+    res.status(500).json({ error: 'Could not generate version badge' });
+  }
+});
+
 module.exports = router;

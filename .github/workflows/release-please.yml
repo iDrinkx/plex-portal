@@ -39,44 +39,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npx semantic-release
 
-      - name: Update README version badge via GitHub API
-        if: ${{ steps.semantic.outputs.new_release_published == 'true' }}
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VERSION: ${{ steps.semantic.outputs.new_release_version }}
-        run: |
-          # Get version
-          VERSION=${VERSION:-$(node -p "require('./package.json').version")}
-          echo "📦 Updating README badge to v$VERSION"
-
-          # Get current README content
-          CURRENT=$(gh api repos/${{ github.repository }}/contents/README.md --jq '.content' | base64 -d)
-
-          # Update version
-          UPDATED=$(echo "$CURRENT" | sed "s/Version-[0-9]\+\.[0-9]\+\.[0-9]\+/Version-$VERSION/")
-
-          # Check if changed
-          if [ "$CURRENT" != "$UPDATED" ]; then
-            echo "✓ README needs update"
-
-            # Get SHA for update
-            SHA=$(gh api repos/${{ github.repository }}/contents/README.md --jq '.sha')
-
-            # Update file via API
-            gh api repos/${{ github.repository }}/contents/README.md \
-              --input - \
-              -F message="chore(release): update README version badge to v$VERSION [skip ci]" \
-              -F content="$(echo "$UPDATED" | base64 -w0)" \
-              -F sha="$SHA" \
-              << EOF
-            {}
-            EOF
-
-            echo "✓ README updated via GitHub API"
-          else
-            echo "✓ README already up to date"
-          fi
-
   # Quand une release est publiée → rebuild Docker avec le tag de version
   docker-release:
     needs: release
