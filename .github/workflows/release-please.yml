@@ -86,9 +86,6 @@ jobs:
           ref: 'main'
           path: private-repo
 
-      - name: Fetch latest commits
-        run: git fetch origin main
-
       - name: Checkout public docs repo
         uses: actions/checkout@v4
         with:
