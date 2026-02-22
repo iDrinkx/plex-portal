@@ -1,7 +1,9 @@
 ﻿
 # Plex Portal
 
-**Version:** [See package.json](./package.json) • ![Version](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FiDrinkx%2Fplex-portal%2Fmain%2Fpackage.json&query=version&label=Version&color=34d399&style=flat-square)
+**Version:** Check [package.json](./package.json) for current version (auto-updated via semantic-release)
+
+The latest version is always displayed dynamically in the website footer.
 
 Application web pour gérer votre accès Plex, afficher abonnements, statistiques de visionnage, et accéder à Seerr via SSO intégré.
 
