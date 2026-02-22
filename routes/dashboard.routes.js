@@ -1005,6 +1005,67 @@ router.get('/api/version-badge.svg', (_, res) => {
 });
 
 /* ===============================
+   📌 PUBLIC VERSION PAGE
+=============================== */
+
+router.get('/version', (_, res) => {
+  try {
+    const { version } = require('../package.json');
+    res.send(`<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Plex Portal - Latest Version</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #0f172a 0%, #1a1f3a 100%);
+      color: #e2e8f0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .container {
+      text-align: center;
+      background: rgba(30, 41, 59, 0.8);
+      border-radius: 12px;
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      backdrop-filter: blur(10px);
+      padding: 3rem;
+      box-shadow: 0 20px 25px rgba(0, 0, 0, 0.4);
+    }
+    h1 { font-size: 1.5rem; margin-bottom: 2rem; color: #cbd5e1; }
+    .version-badge {
+      display: inline-block;
+      background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+      color: white;
+      padding: 1rem 2rem;
+      border-radius: 8px;
+      font-size: 2.5rem;
+      font-weight: 700;
+      box-shadow: 0 4px 12px rgba(52, 211, 153, 0.3);
+      min-width: 200px;
+    }
+    p { margin-top: 2rem; color: #94a3b8; font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Plex Portal</h1>
+    <div class="version-badge">v${version}</div>
+    <p>Latest version • Auto-updated on each release</p>
+  </div>
+</body>
+</html>`);
+  } catch (err) {
+    res.status(500).send('<h1>Error</h1>');
+  }
+});
+
+/* ===============================
    📖 PUBLIC CHANGELOG PAGE
 =============================== */
 

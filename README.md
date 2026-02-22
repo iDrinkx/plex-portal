@@ -1,31 +1,7 @@
 ﻿
 # Plex Portal
 
-## 📦 Version & Changelog
-
-**Current Version:** Check [package.json](./package.json) (auto-updated via semantic-release on every release)
-
-### 🌐 Website Version Display
-The latest version is **automatically displayed in the website footer** (bottom-right) with a changelog modal. The version updates instantly when you deploy a new release—no manual updates needed.
-
-### 📖 Public Changelog Page (Works for Private Repos!)
-Even if your repository is private, users can access a **public changelog page** at:
-```
-https://your-deployed-site.com/changelog
-```
-
-This page displays:
-- 📌 Current version number with a prominent badge
-- 📝 Full changelog with all releases
-- 🎨 Beautiful, responsive design (glassmorphism style)
-- ✅ No authentication required
-
-**Perfect for sharing with users!** They can see what's new without accessing the private repository.
-
-### 📝 Automatic Changelog
-Click the version badge in the footer to view the full changelog in a modal. The changelog is automatically generated from commit messages using [semantic-release](https://semantic-release.gitbook.io/).
-
-> **Why this works for private repos:** The `/changelog` page is generated server-side from your deployed site, so it's not dependent on GitHub access. Users see the exact version displayed on your website.
+**Latest Version:** Check [package.json](./package.json) for current version (auto-updated via semantic-release)
 
 Application web pour gérer votre accès Plex, afficher abonnements, statistiques de visionnage, et accéder à Seerr via SSO intégré.
 
