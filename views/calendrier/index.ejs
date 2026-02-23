@@ -313,6 +313,68 @@
       color: #2ECC71;
     }
 
+    /* ========== VUE MOIS MOBILE (PAR SEMAINE) ========== */
+    .cal-week-list {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .cal-week-block {
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01));
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 12px;
+    }
+
+    .cal-week-header {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--plex);
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .cal-week-day {
+      margin-bottom: 12px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .cal-week-day:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    .cal-week-day-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    .cal-week-day-events {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .cal-week-event {
+      font-size: 11px;
+      color: var(--text);
+      padding: 4px 6px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .cal-week-event.available {
+      color: #2ECC71;
+      border-left: 3px solid #2ECC71;
+      padding-left: 4px;
+    }
+
     /* ========== VUE JOUR ========== */
     .cal-day-detail {
       max-width: 600px;
@@ -827,6 +889,11 @@
   }
 
   function renderMois() {
+    const isMobile = window.innerWidth < 768;
+    return isMobile ? renderMoisMobile() : renderMoisDesktop();
+  }
+
+  function renderMoisDesktop() {
     const start = getMonthStart(currentDate);
     const end = getMonthEnd(currentDate);
     elTitle.textContent = monthFormat.format(currentDate).toUpperCase();
@@ -879,6 +946,71 @@
 
     html += '</div>';
     elView.innerHTML = html;
+  }
+
+  function renderMoisMobile() {
+    const start = getMonthStart(currentDate);
+    elTitle.textContent = monthFormat.format(currentDate).toUpperCase();
+
+    const daysInMonth = new Date(start.getFullYear(), start.getMonth() + 1, 0).getDate();
+    let html = '<div class="cal-week-list">';
+
+    let currentWeek = [];
+    let weekStart = null;
+
+    for (let day = 1; day <= daysInMonth; day++) {
+      const d = new Date(start.getFullYear(), start.getMonth(), day);
+      const dayOfWeek = d.getDay(); // 0=DIM, 1=LUN...
+      const iso = dateToISO(d);
+      const evts = eventsByDate[iso] || [];
+
+      if (currentWeek.length === 0) {
+        weekStart = new Date(d);
+      }
+
+      currentWeek.push({ date: d, iso, day, evts });
+
+      // Fin de semaine (DIM) ou dernier jour du mois
+      if (dayOfWeek === 0 || day === daysInMonth) {
+        html += renderWeekBlock(weekStart, currentWeek);
+        currentWeek = [];
+      }
+    }
+
+    html += '</div>';
+    elView.innerHTML = html;
+  }
+
+  function renderWeekBlock(weekStart, days) {
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekEnd.getDate() + 6);
+    const weekLabel = `${weekStart.getDate()} - ${weekEnd.getDate()} ${monthFormat.format(weekStart).split(' ')[0]}`;
+
+    let html = `<div class="cal-week-block">
+      <div class="cal-week-header">Semaine du ${weekLabel}</div>`;
+
+    days.forEach(({ date, iso, day, evts }) => {
+      const dayName = ['DIM', 'LUN', 'MAR', 'MER', 'JEU', 'VEN', 'SAM'][date.getDay()];
+      const isToday = iso === todayISO();
+
+      html += `<div class="cal-week-day ${isToday ? 'today' : ''}">
+        <div class="cal-week-day-label">${dayName} ${day}</div>
+        <div class="cal-week-day-events">`;
+
+      if (evts.length === 0) {
+        html += '<div style="font-size:10px; color:var(--muted);">-</div>';
+      } else {
+        evts.forEach(evt => {
+          const cls = evt.available ? 'available' : '';
+          html += `<div class="cal-week-event ${cls}">✓ ${evt.title}</div>`;
+        });
+      }
+
+      html += '</div></div>';
+    });
+
+    html += '</div>';
+    return html;
   }
 
   function renderJour() {

@@ -2,11 +2,16 @@ const fetch = require('node-fetch');
 
 /**
  * Génère une URL TMDB pour un poster (films Radarr)
- * @param {string|null} posterPath - Chemin du poster depuis TMDB (ex: /abc123def.jpg)
- * @returns {string|null} - URL TMDB complète ou null
+ * @param {string|null} posterPath - Chemin du poster depuis TMDB (ex: /abc123def.jpg ou URL TMDB complète)
+ * @returns {string|null} - URL TMDB complète optimisée ou null
  */
 function getTmdbPosterUrl(posterPath) {
   if (!posterPath) return null;
+  // Si c'est une URL TMDB complète, la redimensionner (original → w342 pour optimiser)
+  if (posterPath.includes('image.tmdb.org')) {
+    return posterPath.replace('/t/p/original/', '/t/p/w342/');
+  }
+  // Si c'est une autre URL externe, la retourner telle quelle
   if (posterPath.startsWith('http://') || posterPath.startsWith('https://')) return posterPath;
   // Construire l'URL TMDB (largeur 342px pour mobile/desktop)
   return `https://image.tmdb.org/t/p/w342${posterPath}`;
@@ -14,11 +19,12 @@ function getTmdbPosterUrl(posterPath) {
 
 /**
  * Génère une URL TVDB pour un poster (séries Sonarr)
- * @param {string|null} posterPath - Chemin du poster depuis TVDB (ex: /abc123def.jpg)
+ * @param {string|null} posterPath - Chemin du poster depuis TVDB (ex: /MediaCover/123/poster.jpg ou URL TVDB complète)
  * @returns {string|null} - URL TVDB complète ou null
  */
 function getTvdbPosterUrl(posterPath) {
   if (!posterPath) return null;
+  // Si c'est une URL externe, la retourner telle quelle
   if (posterPath.startsWith('http://') || posterPath.startsWith('https://')) return posterPath;
   // Construire l'URL TVDB (CDN artworks)
   return `https://artworks.thetvdb.com${posterPath}`;
@@ -57,7 +63,7 @@ async function getRadarrCalendar(radarrUrl, apiKey, start, end) {
         date: (m.digitalRelease || m.physicalRelease || m.inCinemas || '').slice(0, 10),
         runtime: m.runtime || 0,
         available: !!m.hasFile,
-        thumb: getTmdbPosterUrl(m.images?.find(img => img.coverType === 'poster')?.url),
+        thumb: getTmdbPosterUrl(m.images?.find(img => img.coverType === 'poster')?.remoteUrl),
         year: m.year || null,
         source: 'radarr'
       }))
