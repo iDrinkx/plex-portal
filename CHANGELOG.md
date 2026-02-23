@@ -2,6 +2,12 @@
 
 Toutes les modifications notables de ce projet sont documentées dans ce fichier.
 
+## <small>1.20.1 (2026-02-23)</small>
+
+* Merge pull request #5 from iDrinkx/develop ([b85316b](https://github.com/iDrinkx/plex-portal/commit/b85316b)), closes [#5](https://github.com/iDrinkx/plex-portal/issues/5)
+* fix: enhance user stats retrieval by adding user thumbnail and joined date from Tautulli ([c41d7ed](https://github.com/iDrinkx/plex-portal/commit/c41d7ed))
+* fix: update daysJoined calculation to use joinedAt from database and remove Tautulli dependency ([0fb1f65](https://github.com/iDrinkx/plex-portal/commit/0fb1f65))
+
 ## 1.20.0 (2026-02-23)
 
 * Merge pull request #4 from iDrinkx/develop ([3209766](https://github.com/iDrinkx/plex-portal/commit/3209766)), closes [#4](https://github.com/iDrinkx/plex-portal/issues/4)
