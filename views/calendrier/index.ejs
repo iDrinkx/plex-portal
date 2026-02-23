@@ -702,6 +702,199 @@
         font-size: 10px;
       }
     }
+
+    /* ========== MODAL DÉTAILS ========== */
+    .cal-modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(2px);
+      z-index: 1000;
+      animation: fadeIn 0.2s ease;
+    }
+
+    .cal-modal-overlay.active {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes slideUp {
+      from { transform: translateY(20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    .cal-modal {
+      background: var(--bg2);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      max-width: 500px;
+      width: 90%;
+      max-height: 80vh;
+      overflow-y: auto;
+      animation: slideUp 0.3s ease;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+    }
+
+    .cal-modal-header {
+      position: relative;
+      height: 200px;
+      background: linear-gradient(180deg, rgba(229, 160, 13, 0.1), rgba(229, 160, 13, 0.05));
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: flex-end;
+      padding: 20px;
+      gap: 16px;
+    }
+
+    .cal-modal-thumb {
+      width: 80px;
+      height: 120px;
+      border-radius: 10px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      object-fit: cover;
+      flex-shrink: 0;
+    }
+
+    .cal-modal-header-info {
+      flex: 1;
+    }
+
+    .cal-modal-header-info .title {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 4px;
+      line-height: 1.3;
+    }
+
+    .cal-modal-header-info .subtitle {
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .cal-modal-header-info .meta {
+      display: flex;
+      gap: 12px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .cal-modal-body {
+      padding: 20px;
+    }
+
+    .cal-modal-section {
+      margin-bottom: 16px;
+    }
+
+    .cal-modal-section-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: var(--plex);
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+    }
+
+    .cal-modal-section-content {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .cal-modal-badges {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+    }
+
+    .cal-modal-badge {
+      background: rgba(229, 160, 13, 0.15);
+      border: 1px solid rgba(229, 160, 13, 0.3);
+      color: var(--plex);
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .cal-modal-status {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .cal-modal-status.available {
+      background: rgba(46, 204, 113, 0.15);
+      color: #2ECC71;
+    }
+
+    .cal-modal-status.unavailable {
+      background: rgba(155, 155, 155, 0.15);
+      color: #9b9b9b;
+    }
+
+    .cal-modal-close {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background: rgba(255, 255, 255, 0.1);
+      border: none;
+      color: var(--text);
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+    }
+
+    .cal-modal-close:hover {
+      background: rgba(255, 255, 255, 0.15);
+    }
+
+    @media (max-width: 600px) {
+      .cal-modal {
+        width: 95%;
+        max-height: 90vh;
+      }
+
+      .cal-modal-header {
+        padding: 16px;
+        gap: 12px;
+      }
+
+      .cal-modal-thumb {
+        width: 60px;
+        height: 90px;
+      }
+
+      .cal-modal-header-info .title {
+        font-size: 14px;
+      }
+
+      .cal-modal-body {
+        padding: 16px;
+      }
+    }
   </style>
 </head>
 <body data-user-id="<%= user.id %>">
@@ -729,6 +922,42 @@
     </div>
   </div>
 </section>
+
+<!-- MODAL DÉTAILS -->
+<div id="calModalOverlay" class="cal-modal-overlay">
+  <div class="cal-modal">
+    <button class="cal-modal-close" id="calModalClose">×</button>
+    <div class="cal-modal-header">
+      <img id="calModalThumb" class="cal-modal-thumb" src="" alt="">
+      <div class="cal-modal-header-info">
+        <div class="title" id="calModalTitle"></div>
+        <div class="subtitle" id="calModalSubtitle"></div>
+        <div class="meta">
+          <span id="calModalYear"></span>
+          <span id="calModalRuntime"></span>
+          <span id="calModalStatus"></span>
+        </div>
+      </div>
+    </div>
+    <div class="cal-modal-body">
+      <div class="cal-modal-section">
+        <div class="cal-modal-section-title">Genres</div>
+        <div class="cal-modal-section-content" id="calModalGenres"></div>
+      </div>
+      <div class="cal-modal-section">
+        <div class="cal-modal-section-title">Synopsis</div>
+        <div class="cal-modal-section-content" id="calModalOverview"></div>
+      </div>
+      <div class="cal-modal-section">
+        <div class="cal-modal-section-title">Infos</div>
+        <div class="cal-modal-badges">
+          <span class="cal-modal-badge" id="calModalType"></span>
+          <span id="calModalAvailable"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
 <script>
   const basePath = '<%= basePath || "" %>';
@@ -886,6 +1115,7 @@
     }
     html += '</div>';
     elView.innerHTML = html;
+    attachEventListeners();
   }
 
   function renderMois() {
@@ -946,6 +1176,7 @@
 
     html += '</div>';
     elView.innerHTML = html;
+    attachEventListeners();
   }
 
   function renderMoisMobile() {
@@ -1044,6 +1275,7 @@
     });
     html += '</div>';
     elView.innerHTML = html;
+    attachEventListeners();
   }
 
   function renderListe() {
@@ -1080,10 +1312,11 @@
 
     html += '</tbody></table>';
     elView.innerHTML = html;
+    attachEventListeners();
   }
 
   function renderEventCard(evt) {
-    return `<div class="cal-event cal-event--${evt.type === 'movie' ? 'movie' : 'episode'}">
+    return `<div class="cal-event cal-event--${evt.type === 'movie' ? 'movie' : 'episode'}" data-event-id="${evt.id}">
       <span class="cal-event-time">${evt.type === 'movie' ? '🎬' : '📺'}</span>
       <div class="cal-event-title">${evt.title}</div>
       ${evt.subtitle ? `<div class="cal-event-sub">${evt.subtitle}</div>` : ''}
@@ -1135,6 +1368,72 @@
       loadCalendarData();
     });
   });
+
+  // ========== MODAL DETAILS ==========
+  const elModalOverlay = document.getElementById('calModalOverlay');
+  const elModalClose = document.getElementById('calModalClose');
+
+  function showEventDetails(event) {
+    const title = event.title || '';
+    const subtitle = event.subtitle || '';
+    const overview = event.overview || 'Pas de description';
+    const genres = event.genres || 'N/A';
+    const year = event.year ? `${event.year}` : '';
+    const runtime = event.runtime ? `${event.runtime} min` : '';
+    const available = event.available;
+    const type = event.type === 'movie' ? '🎬 Film' : '📺 Série';
+    const thumb = event.thumb || '';
+
+    // Remplir le modal
+    document.getElementById('calModalTitle').textContent = title;
+    document.getElementById('calModalSubtitle').textContent = subtitle;
+    document.getElementById('calModalYear').textContent = year;
+    document.getElementById('calModalRuntime').textContent = runtime;
+    document.getElementById('calModalGenres').textContent = genres;
+    document.getElementById('calModalOverview').textContent = overview;
+    document.getElementById('calModalType').textContent = type;
+
+    if (thumb) {
+      document.getElementById('calModalThumb').src = thumb;
+      document.getElementById('calModalThumb').style.display = 'block';
+    } else {
+      document.getElementById('calModalThumb').style.display = 'none';
+    }
+
+    const statusEl = document.getElementById('calModalStatus');
+    if (available) {
+      statusEl.textContent = '✓ Disponible';
+      statusEl.className = 'cal-modal-status available';
+    } else {
+      statusEl.textContent = '⏳ À venir';
+      statusEl.className = 'cal-modal-status unavailable';
+    }
+
+    document.getElementById('calModalAvailable').innerHTML = statusEl.outerHTML;
+
+    // Afficher le modal
+    elModalOverlay.classList.add('active');
+  }
+
+  function closeModal() {
+    elModalOverlay.classList.remove('active');
+  }
+
+  elModalClose.addEventListener('click', closeModal);
+  elModalOverlay.addEventListener('click', (e) => {
+    if (e.target === elModalOverlay) closeModal();
+  });
+
+  // Ajouter le événement de clic sur les cartes (sera attaché après le rendu)
+  function attachEventListeners() {
+    document.querySelectorAll('.cal-event').forEach(el => {
+      el.addEventListener('click', function() {
+        const eventId = this.dataset.eventId;
+        const event = allEvents.find(e => e.id === eventId);
+        if (event) showEventDetails(event);
+      });
+    });
+  }
 
   // ========== INIT ==========
   loadCalendarData();

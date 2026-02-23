@@ -67,7 +67,12 @@ async function getRadarrCalendar(radarrUrl, apiKey, start, end) {
         available: !!m.hasFile,
         thumb: getTmdbPosterUrl(m.images?.find(img => img.coverType === 'poster')?.remoteUrl),
         year: m.year || null,
-        source: 'radarr'
+        source: 'radarr',
+        // Infos détaillées pour la modal
+        overview: m.overview || 'Pas de description',
+        genres: (m.genres || []).join(', ') || 'N/A',
+        status: m.status || 'N/A',
+        imdbId: m.imdbId || null
       }))
       .filter(e => e.date);  // Filtrer les events sans date
   } catch (err) {
@@ -105,7 +110,10 @@ async function getSonarrCalendar(sonarrUrl, apiKey, start, end) {
       seriesMap[s.id] = {
         title: s.title,
         runtime: s.runtime || 0,
-        thumb: getTvdbPosterUrl(s.images?.find(img => img.coverType === 'poster')?.remoteUrl || s.images?.find(img => img.coverType === 'poster')?.url)
+        thumb: getTvdbPosterUrl(s.images?.find(img => img.coverType === 'poster')?.remoteUrl || s.images?.find(img => img.coverType === 'poster')?.url),
+        overview: s.overview || 'Pas de description',
+        genres: (s.genres || []).join(', ') || 'N/A',
+        status: s.status || 'N/A'
       };
     });
 
@@ -132,7 +140,12 @@ async function getSonarrCalendar(sonarrUrl, apiKey, start, end) {
         runtime: seriesMap[ep.seriesId]?.runtime || 0,
         available: !!ep.hasFile,
         thumb: seriesMap[ep.seriesId]?.thumb || null,
-        source: 'sonarr'
+        source: 'sonarr',
+        // Infos détaillées pour la modal
+        overview: ep.overview || seriesMap[ep.seriesId]?.overview || 'Pas de description',
+        genres: seriesMap[ep.seriesId]?.genres || 'N/A',
+        status: seriesMap[ep.seriesId]?.status || 'N/A',
+        episodeTitle: ep.title || 'TBA'
       }))
       .filter(e => e.date);  // Filtrer les events sans date
   } catch (err) {
