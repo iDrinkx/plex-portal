@@ -1031,49 +1031,6 @@
   let currentView = 'semaine';
   let allEvents = [];
   let eventsByDate = {};
-  const translationCache = {}; // Cache local pour les traductions
-  let lastTranslationTime = 0; // Throttling pour éviter rate limiting
-
-  // Fonction pour traduire du texte en français (lazy - uniquement quand demandé)
-  async function translateToFrench(text) {
-    if (!text || text.trim().length === 0) return text;
-
-    // Vérifier le cache
-    if (translationCache[text]) return translationCache[text];
-
-    try {
-      // Throttling: attendre au moins 1 seconde entre les requêtes
-      const now = Date.now();
-      if (now - lastTranslationTime < 1000) {
-        await new Promise(r => setTimeout(r, 1000 - (now - lastTranslationTime)));
-      }
-      lastTranslationTime = Date.now();
-
-      // Limiter la longueur du texte pour éviter les erreurs API
-      const textToTranslate = text.length > 500 ? text.substring(0, 497) + '...' : text;
-      const encoded = encodeURIComponent(textToTranslate);
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 8000);
-
-      const resp = await fetch(`https://api.mymemory.translated.net/get?q=${encoded}&langpair=en|fr`, {
-        signal: controller.signal
-      });
-
-      clearTimeout(timeout);
-
-      if (!resp.ok) return text;
-
-      const data = await resp.json();
-      if (data.responseStatus === 200 && data.responseData.translatedText) {
-        const translated = data.responseData.translatedText;
-        translationCache[text] = translated;
-        return translated;
-      }
-      return text;
-    } catch (err) {
-      return text;
-    }
-  }
 
   const elPrev = document.getElementById('calPrev');
   const elNext = document.getElementById('calNext');
@@ -1490,7 +1447,7 @@
     document.getElementById('calModalYear').textContent = year;
     document.getElementById('calModalRuntime').textContent = runtime;
     document.getElementById('calModalGenres').textContent = genres;
-    document.getElementById('calModalOverview').textContent = '⏳ Traduction en cours...'; // Placeholder
+    document.getElementById('calModalOverview').textContent = overview;
     document.getElementById('calModalType').textContent = type;
 
     if (thumb) {
@@ -1511,11 +1468,6 @@
 
     // Afficher le modal
     elModalOverlay.classList.add('active');
-
-    // Traduire la description en arrière-plan (lazy)
-    translateToFrench(overview).then(translatedOverview => {
-      document.getElementById('calModalOverview').textContent = translatedOverview;
-    });
   }
 
   function closeModal() {
