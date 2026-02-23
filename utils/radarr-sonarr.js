@@ -1,18 +1,27 @@
 const fetch = require('node-fetch');
 
 /**
- * Convertit une URL relative en URL absolue en utilisant le baseUrl public ou serveur
- * @param {string|null} url - URL relative ou absolue
- * @param {string} baseUrl - URL de base interne (ex: http://sonarr:8989)
- * @param {string|null} publicUrl - URL publique accessible au client (ex: https://sonarr.example.com)
- * @returns {string|null} - URL absolue ou null
+ * Génère une URL TMDB pour un poster (films Radarr)
+ * @param {string|null} posterPath - Chemin du poster depuis TMDB (ex: /abc123def.jpg)
+ * @returns {string|null} - URL TMDB complète ou null
  */
-function makeAbsoluteUrl(url, baseUrl, publicUrl) {
-  if (!url) return null;
-  if (url.startsWith('http://') || url.startsWith('https://')) return url;
-  // Utiliser l'URL publique si disponible, sinon l'URL du serveur
-  const targetUrl = publicUrl || baseUrl;
-  return `${targetUrl}${url}`;
+function getTmdbPosterUrl(posterPath) {
+  if (!posterPath) return null;
+  if (posterPath.startsWith('http://') || posterPath.startsWith('https://')) return posterPath;
+  // Construire l'URL TMDB (largeur 342px pour mobile/desktop)
+  return `https://image.tmdb.org/t/p/w342${posterPath}`;
+}
+
+/**
+ * Génère une URL TVDB pour un poster (séries Sonarr)
+ * @param {string|null} posterPath - Chemin du poster depuis TVDB (ex: /abc123def.jpg)
+ * @returns {string|null} - URL TVDB complète ou null
+ */
+function getTvdbPosterUrl(posterPath) {
+  if (!posterPath) return null;
+  if (posterPath.startsWith('http://') || posterPath.startsWith('https://')) return posterPath;
+  // Construire l'URL TVDB (CDN artworks)
+  return `https://artworks.thetvdb.com${posterPath}`;
 }
 
 /**
@@ -21,10 +30,9 @@ function makeAbsoluteUrl(url, baseUrl, publicUrl) {
  * @param {string} apiKey     - Clé API Radarr
  * @param {string} start      - Date de début ISO (YYYY-MM-DD)
  * @param {string} end        - Date de fin ISO (YYYY-MM-DD)
- * @param {string} publicUrl  - URL publique Radarr accessible au client (optionnel)
  * @returns {Promise<Array>}  - Liste d'events normalisés
  */
-async function getRadarrCalendar(radarrUrl, apiKey, start, end, publicUrl) {
+async function getRadarrCalendar(radarrUrl, apiKey, start, end) {
   if (!radarrUrl || !apiKey) return [];
 
   try {
@@ -49,7 +57,7 @@ async function getRadarrCalendar(radarrUrl, apiKey, start, end, publicUrl) {
         date: (m.digitalRelease || m.physicalRelease || m.inCinemas || '').slice(0, 10),
         runtime: m.runtime || 0,
         available: !!m.hasFile,
-        thumb: makeAbsoluteUrl(m.images?.find(img => img.coverType === 'poster')?.url, baseUrl, publicUrl),
+        thumb: getTmdbPosterUrl(m.images?.find(img => img.coverType === 'poster')?.url),
         year: m.year || null,
         source: 'radarr'
       }))
@@ -65,10 +73,9 @@ async function getRadarrCalendar(radarrUrl, apiKey, start, end, publicUrl) {
  * @param {string} apiKey     - Clé API Sonarr
  * @param {string} start      - Date de début ISO (YYYY-MM-DD)
  * @param {string} end        - Date de fin ISO (YYYY-MM-DD)
- * @param {string} publicUrl  - URL publique Sonarr accessible au client (optionnel)
  * @returns {Promise<Array>}  - Liste d'events normalisés
  */
-async function getSonarrCalendar(sonarrUrl, apiKey, start, end, publicUrl) {
+async function getSonarrCalendar(sonarrUrl, apiKey, start, end) {
   if (!sonarrUrl || !apiKey) return [];
 
   try {
@@ -90,7 +97,7 @@ async function getSonarrCalendar(sonarrUrl, apiKey, start, end, publicUrl) {
       seriesMap[s.id] = {
         title: s.title,
         runtime: s.runtime || 0,
-        thumb: makeAbsoluteUrl(s.images?.find(img => img.coverType === 'poster')?.url, baseUrl, publicUrl)
+        thumb: getTvdbPosterUrl(s.images?.find(img => img.coverType === 'poster')?.url)
       };
     });
 
