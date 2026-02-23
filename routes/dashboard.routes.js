@@ -943,7 +943,7 @@ router.get('/api/classement', requireAuth, async (req, res) => {
     const byLevel = [...users].sort((a, b) => b.level - a.level || b.totalXp - a.totalXp);
 
     const result = { byHours, byLevel };
-    cache.set(cacheKey, result, 5 * 60 * 1000); // 5 min
+    cache.set(cacheKey, result, 30 * 1000); // 30 secondes (synchro avec profil)
     logLB.debug(`Classement généré: ${users.length} users`);
     res.json(result);
   } catch (err) {
