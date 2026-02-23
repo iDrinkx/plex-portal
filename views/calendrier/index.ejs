@@ -1018,7 +1018,6 @@
         <div class="cal-modal-section-title">Infos</div>
         <div class="cal-modal-badges">
           <span class="cal-modal-badge" id="calModalType"></span>
-          <span id="calModalAvailable"></span>
         </div>
       </div>
     </div>
@@ -1469,8 +1468,6 @@
       statusEl.textContent = '⏳ À venir';
       statusEl.className = 'cal-modal-status unavailable';
     }
-
-    document.getElementById('calModalAvailable').innerHTML = statusEl.outerHTML;
 
     // Afficher le modal
     elModalOverlay.classList.add('active');
