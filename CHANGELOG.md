@@ -2,6 +2,11 @@
 
 Toutes les modifications notables de ce projet sont documentées dans ce fichier.
 
+## <small>1.20.2 (2026-02-23)</small>
+
+* Merge pull request #6 from iDrinkx/develop ([fcd794f](https://github.com/iDrinkx/plex-portal/commit/fcd794f)), closes [#6](https://github.com/iDrinkx/plex-portal/issues/6)
+* fix: add debug logging for XP calculations in API responses ([0c976a1](https://github.com/iDrinkx/plex-portal/commit/0c976a1))
+
 ## <small>1.20.1 (2026-02-23)</small>
 
 * Merge pull request #5 from iDrinkx/develop ([b85316b](https://github.com/iDrinkx/plex-portal/commit/b85316b)), closes [#5](https://github.com/iDrinkx/plex-portal/issues/5)
