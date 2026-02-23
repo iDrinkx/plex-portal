@@ -54,38 +54,51 @@ async function getSonarrCalendar(sonarrUrl, apiKey, start, end) {
   if (!sonarrUrl || !apiKey) return [];
 
   try {
-    const url = `${sonarrUrl.replace(/\/$/, '')}/api/v3/calendar?start=${start}&end=${end}&unmonitored=false`;
-    const resp = await fetch(url, {
+    const baseUrl = sonarrUrl.replace(/\/$/, '');
+
+    // 1️⃣ Récupérer TOUTES les séries une fois pour construire un map seriesId → seriesTitle
+    const seriesResp = await fetch(`${baseUrl}/api/v3/series`, {
       headers: {
         'X-Api-Key': apiKey,
         'Accept': 'application/json'
       }
     });
 
-    if (!resp.ok) throw new Error(`Sonarr calendar HTTP ${resp.status}`);
+    if (!seriesResp.ok) throw new Error(`Sonarr series HTTP ${seriesResp.status}`);
 
-    const episodes = await resp.json();
+    const allSeries = await seriesResp.json();
+    const seriesMap = {};
+    allSeries.forEach(s => {
+      seriesMap[s.id] = {
+        title: s.title,
+        runtime: s.runtime || 0,
+        thumb: s.images?.find(img => img.coverType === 'poster')?.url || null
+      };
+    });
 
-    // 📺 LOG TEMPORAIRE - À SUPPRIMER APRÈS CORRECTION
-    if (episodes.length > 0) {
-      console.log('\n🔍 [Sonarr] Structure du premier épisode:');
-      console.log(JSON.stringify(episodes[0], null, 2));
-      console.log('\n✓ Titre de série trouvé via:');
-      console.log('  - ep.series?.title:', episodes[0].series?.title);
-      console.log('  - ep.seriesTitle:', episodes[0].seriesTitle);
-      console.log('  - ep.series?.name:', episodes[0].series?.name);
-    }
+    // 2️⃣ Récupérer le calendrier avec les dates
+    const calendarResp = await fetch(`${baseUrl}/api/v3/calendar?start=${start}&end=${end}&unmonitored=false`, {
+      headers: {
+        'X-Api-Key': apiKey,
+        'Accept': 'application/json'
+      }
+    });
 
+    if (!calendarResp.ok) throw new Error(`Sonarr calendar HTTP ${calendarResp.status}`);
+
+    const episodes = await calendarResp.json();
+
+    // 3️⃣ Mapper les épisodes avec les infos de série
     return episodes
       .map(ep => ({
         id: `sonarr-${ep.id}`,
         type: 'episode',
-        title: ep.series?.title || ep.seriesTitle || ep.series?.name || 'Série inconnue',
+        title: seriesMap[ep.seriesId]?.title || 'Série inconnue',
         subtitle: `S${String(ep.seasonNumber).padStart(2, '0')}E${String(ep.episodeNumber).padStart(2, '0')} - ${ep.title || 'TBA'}`,
         date: (ep.airDate || '').slice(0, 10),
-        runtime: ep.series?.runtime || 0,
+        runtime: seriesMap[ep.seriesId]?.runtime || 0,
         available: !!ep.hasFile,
-        thumb: ep.series?.images?.find(img => img.coverType === 'poster')?.url || null,
+        thumb: seriesMap[ep.seriesId]?.thumb || null,
         source: 'sonarr'
       }))
       .filter(e => e.date);  // Filtrer les events sans date
