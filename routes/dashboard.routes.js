@@ -921,9 +921,16 @@ router.get('/api/classement', requireAuth, async (req, res) => {
         } catch (_) {}
       }
 
+      // 🔧 FIX: Calculer daysJoined de manière cohérente avec le profil
+      // Tautulli.users a un champ 'created_at' qui est la source de vérité
       let daysJoined = 0;
-      if (dbUser && dbUser.joinedAt) {
-        // joinedAt est un timestamp Unix en secondes (stocké via user.joinedAtTimestamp depuis Plex)
+      if (stats.joinedAt) {
+        // joinedAt vient de Tautulli (YYYY-MM-DD HH:MM:SS format ou timestamp)
+        const ts = Number(stats.joinedAt);
+        const ms = !isNaN(ts) && ts > 1e8 ? ts * 1000 : new Date(stats.joinedAt).getTime();
+        if (!isNaN(ms)) daysJoined = Math.max(0, Math.floor((now - ms) / 86400000));
+      } else if (dbUser && dbUser.joinedAt) {
+        // Fallback sur DB si Tautulli n'a pas la date
         const ts = Number(dbUser.joinedAt);
         const ms = !isNaN(ts) && ts > 1e8 ? ts * 1000 : new Date(dbUser.joinedAt).getTime();
         if (!isNaN(ms)) daysJoined = Math.max(0, Math.floor((now - ms) / 86400000));

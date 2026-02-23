@@ -177,9 +177,11 @@ function getAllUserStatsFromTautulli() {
   try {
     
     const stmt = tautulliDb.prepare(`
-      SELECT 
+      SELECT
         u.user_id,
         u.username,
+        u.user_thumb,
+        DATETIME(u.date_created, 'unixepoch') as joined_at,
         COUNT(*) as session_count,
         SUM(CAST((sh.stopped - sh.started) AS INTEGER)) as total_duration_seconds,
         MAX(sh.stopped) as last_session_timestamp,
@@ -206,6 +208,7 @@ function getAllUserStatsFromTautulli() {
       return {
         userId: stats.user_id,
         username: stats.username,
+        joinedAt: stats.joined_at || null,
         sessionCount: stats.session_count || 0,
         totalHours: totalHours,
         movieCount: stats.movie_count || 0,
