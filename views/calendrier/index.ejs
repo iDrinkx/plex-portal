@@ -272,41 +272,80 @@
     }
 
     .cal-month-cell {
-      background: linear-gradient(135deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01));
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.005));
       border: 1px solid var(--line);
-      border-radius: 8px;
-      padding: 6px;
-      min-height: 80px;
+      border-radius: 12px;
+      padding: 12px;
+      min-height: 100px;
       position: relative;
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+
+    .cal-month-cell:hover {
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02));
+      border-color: rgba(255, 255, 255, 0.25);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     }
 
     .cal-month-cell.other-month {
-      opacity: 0.5;
+      opacity: 0.3;
+      cursor: default;
+    }
+
+    .cal-month-cell.other-month:hover {
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.005));
+      border-color: var(--line);
+      transform: none;
+      box-shadow: none;
     }
 
     .cal-month-cell.today {
-      background: rgba(229, 160, 13, 0.08);
-      border-color: rgba(229, 160, 13, 0.3);
+      background: linear-gradient(135deg, rgba(229, 160, 13, 0.12), rgba(229, 160, 13, 0.04));
+      border-color: rgba(229, 160, 13, 0.4);
+      border-width: 2px;
+    }
+
+    .cal-month-cell.today:hover {
+      background: linear-gradient(135deg, rgba(229, 160, 13, 0.18), rgba(229, 160, 13, 0.08));
+      border-color: rgba(229, 160, 13, 0.6);
     }
 
     .cal-month-day {
-      font-size: 10px;
+      font-size: 13px;
       font-weight: 700;
       color: var(--text);
-      margin-bottom: 4px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .cal-month-cell.today .cal-month-day {
+      color: var(--plex);
     }
 
     .cal-month-events {
-      font-size: 9px;
-      line-height: 1.2;
+      font-size: 11px;
+      line-height: 1.4;
+      max-height: 60px;
+      overflow: hidden;
     }
 
     .cal-month-event-mini {
       color: var(--muted);
-      margin-bottom: 2px;
+      margin-bottom: 3px;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+      transition: color 0.2s ease;
+      padding: 2px 4px;
+      border-radius: 4px;
+    }
+
+    .cal-month-cell:hover .cal-month-event-mini {
+      color: var(--text);
     }
 
     .cal-month-event-mini.available {
@@ -1151,13 +1190,13 @@
       const isToday = iso === todayISO();
       const evts = eventsByDate[iso] || [];
 
-      html += `<div class="cal-month-cell ${isToday ? 'today' : ''}">
+      html += `<div class="cal-month-cell ${isToday ? 'today' : ''}" data-month-cell data-date="${iso}">
         <div class="cal-month-day">${day}</div>
         <div class="cal-month-events">`;
 
       evts.slice(0, 3).forEach(evt => {
         const cls = evt.available ? 'available' : '';
-        html += `<div class="cal-month-event-mini ${cls}" data-event-id="${evt.id}" style="cursor: pointer;">• ${evt.title}</div>`;
+        html += `<div class="cal-month-event-mini ${cls}" data-event-id="${evt.id}" style="cursor: pointer;" data-month-event>• ${evt.title}</div>`;
       });
 
       if (evts.length > 3) {
@@ -1427,11 +1466,32 @@
 
   // Ajouter le événement de clic sur les cartes (sera attaché après le rendu)
   function attachEventListeners() {
+    // Événements (clic → modal détails)
     document.querySelectorAll('[data-event-id]').forEach(el => {
-      el.addEventListener('click', function() {
+      el.addEventListener('click', function(e) {
+        e.stopPropagation(); // Empêcher la propagation au parent (cellule mois)
         const eventId = this.dataset.eventId;
         const event = allEvents.find(e => e.id === eventId);
         if (event) showEventDetails(event);
+      });
+    });
+
+    // Cellules mois (clic → vue JOUR)
+    document.querySelectorAll('[data-month-cell]').forEach(el => {
+      el.addEventListener('click', function() {
+        const dateStr = this.dataset.date;
+        if (dateStr) {
+          const [year, month, day] = dateStr.split('-');
+          currentDate = new Date(year, month - 1, day);
+          currentView = 'jour';
+
+          // Updater les boutons
+          document.querySelectorAll('.cal-view-btn').forEach(btn => btn.classList.remove('active'));
+          elBtnJour.classList.add('active');
+
+          // Charger et afficher
+          loadCalendarData();
+        }
       });
     });
   }
