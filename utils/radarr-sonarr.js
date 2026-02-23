@@ -65,11 +65,22 @@ async function getSonarrCalendar(sonarrUrl, apiKey, start, end) {
     if (!resp.ok) throw new Error(`Sonarr calendar HTTP ${resp.status}`);
 
     const episodes = await resp.json();
+
+    // 📺 LOG TEMPORAIRE - À SUPPRIMER APRÈS CORRECTION
+    if (episodes.length > 0) {
+      console.log('\n🔍 [Sonarr] Structure du premier épisode:');
+      console.log(JSON.stringify(episodes[0], null, 2));
+      console.log('\n✓ Titre de série trouvé via:');
+      console.log('  - ep.series?.title:', episodes[0].series?.title);
+      console.log('  - ep.seriesTitle:', episodes[0].seriesTitle);
+      console.log('  - ep.series?.name:', episodes[0].series?.name);
+    }
+
     return episodes
       .map(ep => ({
         id: `sonarr-${ep.id}`,
         type: 'episode',
-        title: ep.series?.title || 'Série inconnue',
+        title: ep.series?.title || ep.seriesTitle || ep.series?.name || 'Série inconnue',
         subtitle: `S${String(ep.seasonNumber).padStart(2, '0')}E${String(ep.episodeNumber).padStart(2, '0')} - ${ep.title || 'TBA'}`,
         date: (ep.airDate || '').slice(0, 10),
         runtime: ep.series?.runtime || 0,
