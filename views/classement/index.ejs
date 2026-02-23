@@ -348,13 +348,13 @@
       ? 'drop-shadow(0 0 16px ' + user.rank.color + 'ff) drop-shadow(0 0 32px ' + user.rank.color + '88) drop-shadow(0 0 48px ' + user.rank.color + '44)'
       : 'drop-shadow(0 0 9px ' + user.rank.color + 'cc) drop-shadow(0 0 22px ' + user.rank.color + '55)';
     var imgPart  = user.thumb
-      ? '<img src="' + user.thumb + '" class="lb-pod-img" alt="" loading="lazy" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'">'
+      ? '<img src="' + user.thumb + '" class="lb-pod-img" alt="" loading="lazy" style="filter:' + glow + '" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'">'
         + '<div class="lb-pod-placeholder" style="display:none">' + initials + '</div>'
       : '<div class="lb-pod-placeholder">' + initials + '</div>';
 
     return '<div class="lb-podium-card lb-podium-card--' + rank + '">'
       + '<span class="lb-podium-medal">' + medal + '</span>'
-      + '<div class="lb-pod-avatar-wrap" style="filter:' + glow + '">'
+      + '<div class="lb-pod-avatar-wrap">'
         + '<div class="lb-pod-ring" style="background:' + _grad(user.rank.color) + '"></div>'
         + imgPart
         + '<div class="lb-pod-level">' + user.level + '</div>'
@@ -387,13 +387,13 @@
       : '<div class="lb-row-stat"><div class="lb-row-level" style="background:' + user.rank.bgColor + ';color:' + user.rank.color + '">Nv.\u00a0' + user.level + '</div></div>';
 
     var imgPart = user.thumb
-      ? '<img src="' + user.thumb + '" class="lb-row-avatar" width="40" height="40" alt="" loading="lazy" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'">'
+      ? '<img src="' + user.thumb + '" class="lb-row-avatar" width="40" height="40" alt="" loading="lazy" style="filter:' + glow + '" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'">'
         + '<div class="lb-row-placeholder" style="display:none">' + initials + '</div>'
       : '<div class="lb-row-placeholder">' + initials + '</div>';
 
     return '<div class="lb-row' + (isMe ? ' lb-row--me' : '') + '">'
       + posHtml
-      + '<div class="lb-row-avatar-wrap" style="filter:' + glow + '">'
+      + '<div class="lb-row-avatar-wrap">'
         + '<div class="lb-row-ring" style="background:' + _grad(user.rank.color) + '"></div>'
         + imgPart
       + '</div>'
