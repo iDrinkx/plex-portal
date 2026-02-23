@@ -494,8 +494,13 @@ router.get("/api/xp-snapshot", requireAuth, async (req, res) => {
         const allAchievements = ACHIEVEMENTS.getAll();
         const achievementXpMap = Object.fromEntries(allAchievements.map(a => [a.id, a.xp || 0]));
         achievementsXp = Object.keys(unlockedMap).reduce((sum, id) => sum + (achievementXpMap[id] || 0), 0);
+
+        // 🔍 DEBUG: Vérifier ID et succès du profil
+        log.create('[XP-PROFILE-DEBUG]').info(`Profile: username=${user.username}, dbUser.id=${dbUser.id}, unlockedMap=${JSON.stringify(unlockedMap)}, achievementsXp=${achievementsXp}`);
       }
-    } catch (_) {}
+    } catch (err) {
+      log.create('[XP-PROFILE-ERROR]').error(`Error getting achievements: ${err.message}`);
+    }
 
     // Calcul XP (même formule que la page Profil) — v1.13: système ultra-optimisé
     const XP_MULTIPLIERS = { HOURS: 10, ANCIENNETE: 1.5 };
