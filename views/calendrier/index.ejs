@@ -758,9 +758,8 @@
 
     .cal-modal-overlay.active {
       display: flex;
-      align-items: flex-start;
-      justify-content: flex-start;
-      padding: 20px;
+      align-items: center;
+      justify-content: center;
     }
 
     @keyframes fadeIn {
@@ -997,6 +996,7 @@
     <div class="cal-modal-header">
       <img id="calModalThumb" class="cal-modal-thumb" src="" alt="">
       <div class="cal-modal-header-info">
+        <span class="cal-modal-badge" id="calModalType"></span>
         <div class="title" id="calModalTitle"></div>
         <div class="subtitle" id="calModalSubtitle"></div>
         <div class="meta">
@@ -1015,12 +1015,6 @@
         <div class="cal-modal-section-title">Synopsis</div>
         <div class="cal-modal-section-content" id="calModalOverview"></div>
       </div>
-      <div class="cal-modal-section">
-        <div class="cal-modal-section-title">Infos</div>
-        <div class="cal-modal-badges">
-          <span class="cal-modal-badge" id="calModalType"></span>
-        </div>
-      </div>
     </div>
   </div>
 </div>
@@ -1035,6 +1029,39 @@
   let currentView = 'semaine';
   let allEvents = [];
   let eventsByDate = {};
+  const translationCache = {}; // Cache local pour les traductions
+
+  // Fonction pour traduire du texte en français (lazy - uniquement quand demandé)
+  async function translateToFrench(text) {
+    if (!text || text.trim().length === 0) return text;
+
+    // Vérifier le cache
+    if (translationCache[text]) return translationCache[text];
+
+    try {
+      const encoded = encodeURIComponent(text);
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 5000);
+
+      const resp = await fetch(`https://api.mymemory.translated.net/get?q=${encoded}&langpair=en|fr`, {
+        signal: controller.signal
+      });
+
+      clearTimeout(timeout);
+
+      if (!resp.ok) return text;
+
+      const data = await resp.json();
+      if (data.responseStatus === 200 && data.responseData.translatedText) {
+        const translated = data.responseData.translatedText;
+        translationCache[text] = translated;
+        return translated;
+      }
+      return text;
+    } catch (err) {
+      return text;
+    }
+  }
 
   const elPrev = document.getElementById('calPrev');
   const elNext = document.getElementById('calNext');
@@ -1451,7 +1478,7 @@
     document.getElementById('calModalYear').textContent = year;
     document.getElementById('calModalRuntime').textContent = runtime;
     document.getElementById('calModalGenres').textContent = genres;
-    document.getElementById('calModalOverview').textContent = overview;
+    document.getElementById('calModalOverview').textContent = '⏳ Traduction en cours...'; // Placeholder
     document.getElementById('calModalType').textContent = type;
 
     if (thumb) {
@@ -1472,6 +1499,11 @@
 
     // Afficher le modal
     elModalOverlay.classList.add('active');
+
+    // Traduire la description en arrière-plan (lazy)
+    translateToFrench(overview).then(translatedOverview => {
+      document.getElementById('calModalOverview').textContent = translatedOverview;
+    });
   }
 
   function closeModal() {
@@ -1497,6 +1529,7 @@
 
   function closeDayOverlay() {
     elDayOverlay.classList.remove('active');
+    lastOpenedDayDate = null; // Réinitialiser pour ne pas réouvrir le day overlay après fermeture du modal
   }
 
   if (elDayOverlayClose) {

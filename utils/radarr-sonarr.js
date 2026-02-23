@@ -1,33 +1,6 @@
 const fetch = require('node-fetch');
 
 /**
- * Traduit un texte de l'anglais vers le français
- * @param {string} text - Texte à traduire
- * @returns {Promise<string>} - Texte traduit ou original si erreur
- */
-async function translateToFrench(text) {
-  if (!text || text.trim().length === 0) return text;
-
-  try {
-    const encoded = encodeURIComponent(text);
-    const resp = await fetch(`https://api.mymemory.translated.net/get?q=${encoded}&langpair=en|fr`, {
-      timeout: 5000
-    });
-
-    if (!resp.ok) return text;
-
-    const data = await resp.json();
-    if (data.responseStatus === 200 && data.responseData.translatedText) {
-      return data.responseData.translatedText;
-    }
-    return text;
-  } catch (err) {
-    // En cas d'erreur, retourner le texte original
-    return text;
-  }
-}
-
-/**
  * Génère une URL TMDB pour un poster (films Radarr)
  * @param {string|null} posterPath - Chemin du poster depuis TMDB (ex: /abc123def.jpg ou URL TMDB complète)
  * @returns {string|null} - URL TMDB complète optimisée ou null
@@ -133,19 +106,16 @@ async function getSonarrCalendar(sonarrUrl, apiKey, start, end) {
 
     const allSeries = await seriesResp.json();
     const seriesMap = {};
-
-    // Traduire les overviews des séries en parallèle
-    await Promise.all(allSeries.map(async s => {
-      const translatedOverview = s.overview ? await translateToFrench(s.overview) : 'Pas de description';
+    allSeries.forEach(s => {
       seriesMap[s.id] = {
         title: s.title,
         runtime: s.runtime || 0,
         thumb: getTvdbPosterUrl(s.images?.find(img => img.coverType === 'poster')?.remoteUrl || s.images?.find(img => img.coverType === 'poster')?.url),
-        overview: translatedOverview,
+        overview: s.overview || 'Pas de description',
         genres: (s.genres || []).join(', ') || 'N/A',
         status: s.status || 'N/A'
       };
-    }));
+    });
 
     // 2️⃣ Récupérer le calendrier avec les dates
     const calendarResp = await fetch(`${baseUrl}/api/v3/calendar?start=${start}&end=${end}&unmonitored=false`, {
@@ -159,12 +129,9 @@ async function getSonarrCalendar(sonarrUrl, apiKey, start, end) {
 
     const episodes = await calendarResp.json();
 
-    // 3️⃣ Mapper les épisodes avec les infos de série et traduire les overviews
-    const mappedEpisodes = await Promise.all(episodes.map(async ep => {
-      // Utiliser l'overview de l'épisode s'il existe, sinon celle de la série (déjà traduite)
-      const overview = ep.overview ? await translateToFrench(ep.overview) : (seriesMap[ep.seriesId]?.overview || 'Pas de description');
-
-      return {
+    // 3️⃣ Mapper les épisodes avec les infos de série
+    return episodes
+      .map(ep => ({
         id: `sonarr-${ep.id}`,
         type: 'episode',
         title: seriesMap[ep.seriesId]?.title || 'Série inconnue',
@@ -175,14 +142,12 @@ async function getSonarrCalendar(sonarrUrl, apiKey, start, end) {
         thumb: seriesMap[ep.seriesId]?.thumb || null,
         source: 'sonarr',
         // Infos détaillées pour la modal
-        overview: overview,
+        overview: ep.overview || seriesMap[ep.seriesId]?.overview || 'Pas de description',
         genres: seriesMap[ep.seriesId]?.genres || 'N/A',
         status: seriesMap[ep.seriesId]?.status || 'N/A',
         episodeTitle: ep.title || 'TBA'
-      };
-    }));
-
-    return mappedEpisodes.filter(e => e.date);  // Filtrer les events sans date
+      }))
+      .filter(e => e.date);  // Filtrer les events sans date
   } catch (err) {
     throw new Error(`getSonarrCalendar: ${err.message}`);
   }
