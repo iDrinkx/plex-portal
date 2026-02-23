@@ -2,6 +2,11 @@
 
 Toutes les modifications notables de ce projet sont documentées dans ce fichier.
 
+## <small>1.20.4 (2026-02-23)</small>
+
+* Merge pull request #8 from iDrinkx/develop ([5278b58](https://github.com/iDrinkx/plex-portal/commit/5278b58)), closes [#8](https://github.com/iDrinkx/plex-portal/issues/8)
+* fix: enhance debug logging for classement API to track user achievements and errors ([43aac49](https://github.com/iDrinkx/plex-portal/commit/43aac49))
+
 ## <small>1.20.3 (2026-02-23)</small>
 
 * Merge pull request #7 from iDrinkx/develop ([c893d76](https://github.com/iDrinkx/plex-portal/commit/c893d76)), closes [#7](https://github.com/iDrinkx/plex-portal/issues/7)
