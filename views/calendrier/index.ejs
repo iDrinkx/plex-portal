@@ -773,6 +773,7 @@
     }
 
     .cal-modal {
+      position: relative;
       background: var(--bg2);
       border: 1px solid var(--line);
       border-radius: 16px;
@@ -1163,7 +1164,7 @@
       });
 
       if (evts.length > 4) {
-        html += `<div class="cal-more">+${evts.length - 4} en plus</div>`;
+        html += `<div class="cal-more" data-date="${iso}" style="cursor: pointer;">+${evts.length - 4} en plus</div>`;
       }
 
       html += '</div>';
@@ -1505,6 +1506,16 @@
 
     // Cellules mois (clic → afficher jour en overlay dynamique)
     document.querySelectorAll('[data-month-cell]').forEach(el => {
+      el.addEventListener('click', function() {
+        const dateStr = this.dataset.date;
+        if (dateStr) {
+          showDayOverlay(dateStr);
+        }
+      });
+    });
+
+    // "+N en plus" en semaine (clic → afficher jour en overlay dynamique)
+    document.querySelectorAll('.cal-more').forEach(el => {
       el.addEventListener('click', function() {
         const dateStr = this.dataset.date;
         if (dateStr) {
