@@ -921,9 +921,11 @@ router.get('/api/classement', requireAuth, async (req, res) => {
         } catch (_) {}
       }
 
+      // 🔧 FIX: Calculer daysJoined de manière cohérente avec le profil
+      // Source: dbUser.joinedAt (stocké via user.joinedAt de Plex lors de la connexion)
       let daysJoined = 0;
       if (dbUser && dbUser.joinedAt) {
-        // joinedAt est un timestamp Unix en secondes (stocké via user.joinedAtTimestamp depuis Plex)
+        // joinedAt peut être un timestamp (en secondes) ou une ISO string
         const ts = Number(dbUser.joinedAt);
         const ms = !isNaN(ts) && ts > 1e8 ? ts * 1000 : new Date(dbUser.joinedAt).getTime();
         if (!isNaN(ms)) daysJoined = Math.max(0, Math.floor((now - ms) / 86400000));

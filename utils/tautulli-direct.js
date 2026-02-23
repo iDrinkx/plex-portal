@@ -177,7 +177,7 @@ function getAllUserStatsFromTautulli() {
   try {
     
     const stmt = tautulliDb.prepare(`
-      SELECT 
+      SELECT
         u.user_id,
         u.username,
         COUNT(*) as session_count,
