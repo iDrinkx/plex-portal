@@ -1421,6 +1421,7 @@
   // ========== MODAL DETAILS ==========
   const elModalOverlay = document.getElementById('calModalOverlay');
   const elModalClose = document.getElementById('calModalClose');
+  let lastOpenedDayDate = null; // Tracker le jour ouvert dans l'overlay
 
   function showEventDetails(event) {
     const title = event.title || '';
@@ -1466,6 +1467,10 @@
 
   function closeModal() {
     elModalOverlay.classList.remove('active');
+    // Si on vient de l'overlay jour, le rouvrir
+    if (lastOpenedDayDate) {
+      showDayOverlay(lastOpenedDayDate);
+    }
   }
 
   elModalClose.addEventListener('click', closeModal);
@@ -1511,6 +1516,7 @@
 
   // Afficher un jour spécifique dans l'overlay dynamique
   function showDayOverlay(dateStr) {
+    lastOpenedDayDate = dateStr; // Sauvegarder le jour pour revenir après la modal détails
     const evts = eventsByDate[dateStr] || [];
     const d = isoToDate(dateStr);
     const dayLabel = dayFormat.format(d);
@@ -1551,7 +1557,7 @@
         const eventId = this.dataset.eventId;
         const event = allEvents.find(e => e.id === eventId);
         if (event) {
-          document.getElementById('calDayOverlay').classList.remove('active');
+          // Garder l'overlay jour ouvert, afficher la modal détails par-dessus
           showEventDetails(event);
         }
       });
