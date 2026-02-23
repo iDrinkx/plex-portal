@@ -88,6 +88,8 @@
 .lb-pod-avatar-wrap {
   position: relative;
   flex-shrink: 0;
+  overflow: visible;
+  will-change: filter;
 }
 .lb-pod-ring {
   position: absolute;
@@ -177,6 +179,7 @@
   .lb-podium-card--1 { order: 1; }
   .lb-podium-card--2 { order: 2; }
   .lb-podium-card--3 { order: 3; }
+
 }
 
 .lb-ranking-block {
@@ -227,6 +230,8 @@
 
 .lb-row-avatar-wrap {
   position: relative; width: 40px; height: 40px; flex-shrink: 0;
+  overflow: visible;
+  will-change: filter;
 }
 .lb-row-ring {
   position: absolute; inset: -4px; border-radius: 50%;
@@ -337,15 +342,19 @@
     var medals   = ['<%= "" %>', '<%= "" %>', '<%= "" %>'];
     var medal    = rank === 1 ? '\uD83E\uDD47' : rank === 2 ? '\uD83E\uDD48' : '\uD83E\uDD49';
     var initials = (user.username || '?').charAt(0).toUpperCase();
-    var glow     = 'drop-shadow(0 0 9px ' + user.rank.color + 'cc) drop-shadow(0 0 22px ' + user.rank.color + '55)';
+    // Augmenter l'intensité du glow sur mobile
+    var isMobile = window.innerWidth <= 720;
+    var glow = isMobile
+      ? 'drop-shadow(0 0 16px ' + user.rank.color + 'ff) drop-shadow(0 0 32px ' + user.rank.color + '88) drop-shadow(0 0 48px ' + user.rank.color + '44)'
+      : 'drop-shadow(0 0 9px ' + user.rank.color + 'cc) drop-shadow(0 0 22px ' + user.rank.color + '55)';
     var imgPart  = user.thumb
-      ? '<img src="' + user.thumb + '" class="lb-pod-img" alt="" loading="lazy" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'">'
-        + '<div class="lb-pod-placeholder" style="display:none">' + initials + '</div>'
-      : '<div class="lb-pod-placeholder">' + initials + '</div>';
+      ? '<img src="' + user.thumb + '" class="lb-pod-img" alt="" loading="lazy" style="filter:' + glow + '" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'">'
+        + '<div class="lb-pod-placeholder" style="display:none;filter:' + glow + '">' + initials + '</div>'
+      : '<div class="lb-pod-placeholder" style="filter:' + glow + '">' + initials + '</div>';
 
     return '<div class="lb-podium-card lb-podium-card--' + rank + '">'
       + '<span class="lb-podium-medal">' + medal + '</span>'
-      + '<div class="lb-pod-avatar-wrap" style="filter:' + glow + '">'
+      + '<div class="lb-pod-avatar-wrap">'
         + '<div class="lb-pod-ring" style="background:' + _grad(user.rank.color) + '"></div>'
         + imgPart
         + '<div class="lb-pod-level">' + user.level + '</div>'
@@ -362,7 +371,11 @@
   function rankRow(user, pos, mode) {
     var isMe     = user.username === ME;
     var initials = (user.username || '?').charAt(0).toUpperCase();
-    var glow     = 'drop-shadow(0 0 8px ' + user.rank.color + 'cc) drop-shadow(0 0 18px ' + user.rank.color + '55)';
+    // Augmenter l'intensité du glow sur mobile
+    var isMobile = window.innerWidth <= 720;
+    var glow = isMobile
+      ? 'drop-shadow(0 0 14px ' + user.rank.color + 'ff) drop-shadow(0 0 28px ' + user.rank.color + '88) drop-shadow(0 0 40px ' + user.rank.color + '44)'
+      : 'drop-shadow(0 0 8px ' + user.rank.color + 'cc) drop-shadow(0 0 18px ' + user.rank.color + '55)';
     var posHtml;
     if      (pos === 0) posHtml = '<span class="lb-pos lb-pos-1">\uD83E\uDD47</span>';
     else if (pos === 1) posHtml = '<span class="lb-pos lb-pos-2">\uD83E\uDD48</span>';
@@ -374,13 +387,13 @@
       : '<div class="lb-row-stat"><div class="lb-row-level" style="background:' + user.rank.bgColor + ';color:' + user.rank.color + '">Nv.\u00a0' + user.level + '</div></div>';
 
     var imgPart = user.thumb
-      ? '<img src="' + user.thumb + '" class="lb-row-avatar" width="40" height="40" alt="" loading="lazy" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'">'
-        + '<div class="lb-row-placeholder" style="display:none">' + initials + '</div>'
-      : '<div class="lb-row-placeholder">' + initials + '</div>';
+      ? '<img src="' + user.thumb + '" class="lb-row-avatar" width="40" height="40" alt="" loading="lazy" style="filter:' + glow + '" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'">'
+        + '<div class="lb-row-placeholder" style="display:none;filter:' + glow + '">' + initials + '</div>'
+      : '<div class="lb-row-placeholder" style="filter:' + glow + '">' + initials + '</div>';
 
     return '<div class="lb-row' + (isMe ? ' lb-row--me' : '') + '">'
       + posHtml
-      + '<div class="lb-row-avatar-wrap" style="filter:' + glow + '">'
+      + '<div class="lb-row-avatar-wrap">'
         + '<div class="lb-row-ring" style="background:' + _grad(user.rank.color) + '"></div>'
         + imgPart
       + '</div>'

@@ -504,6 +504,31 @@ body {
   font-size: 28px;
 }
 
+/* 📅 CALENDRIER CARD */
+.hero-card-calendrier {
+  background: linear-gradient(135deg, #1f1113 0%, #2a1515 100%);
+  border-color: rgba(239, 68, 68, 0.2);
+}
+
+.hero-card-calendrier::before {
+  background: linear-gradient(180deg, #ef4444, #f87171);
+}
+
+.hero-card-calendrier:hover {
+  transform: translateY(-5px);
+  border-color: rgba(239, 68, 68, 0.55);
+  box-shadow: 0 20px 60px rgba(239, 68, 68, 0.14);
+}
+
+.hero-card-calendrier .hero-card-label {
+  color: rgba(239, 68, 68, 0.85);
+}
+
+.hero-card-calendrier:hover .hero-card-arrow {
+  color: #f87171;
+  transform: translateX(5px);
+}
+
 /* Logo Seerr dans la navbar */
 .nav-seerr-logo {
   width: 16px;
@@ -582,6 +607,17 @@ body {
 }
 .nav-link-stats::after {
   background: #10b981;
+}
+
+/* nav link accent for calendrier */
+.nav-link-calendrier {
+  color: rgba(239, 68, 68, 0.9);
+}
+.nav-link-calendrier:hover {
+  color: #f87171;
+}
+.nav-link-calendrier::after {
+  background: #ef4444;
 }
 
 /* =========================
