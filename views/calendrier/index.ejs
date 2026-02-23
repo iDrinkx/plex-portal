@@ -962,6 +962,22 @@
   </div>
 </section>
 
+<!-- OVERLAY JOUR DYNAMIQUE (depuis MOIS) -->
+<div id="calDayOverlay" class="cal-modal-overlay">
+  <div class="cal-modal" style="max-width: 600px;">
+    <button class="cal-modal-close" id="calDayOverlayClose">×</button>
+    <div class="cal-modal-header" style="background: linear-gradient(180deg, rgba(229, 160, 13, 0.15), rgba(229, 160, 13, 0.08)); padding: 20px;">
+      <div class="cal-modal-header-info" style="flex: 1;">
+        <div class="title" id="calDayOverlayTitle" style="font-size: 20px; margin-bottom: 8px;"></div>
+        <div class="subtitle" id="calDayOverlaySubtitle" style="font-size: 13px; color: var(--muted);"></div>
+      </div>
+    </div>
+    <div class="cal-modal-body" id="calDayOverlayContent" style="max-height: 400px; overflow-y: auto;">
+      <!-- Contenu dynamique -->
+    </div>
+  </div>
+</div>
+
 <!-- MODAL DÉTAILS -->
 <div id="calModalOverlay" class="cal-modal-overlay">
   <div class="cal-modal">
@@ -1196,7 +1212,7 @@
 
       evts.slice(0, 3).forEach(evt => {
         const cls = evt.available ? 'available' : '';
-        html += `<div class="cal-month-event-mini ${cls}" data-event-id="${evt.id}" style="cursor: pointer;" data-month-event>• ${evt.title}</div>`;
+        html += `<div class="cal-month-event-mini ${cls}">• ${evt.title}</div>`;
       });
 
       if (evts.length > 3) {
@@ -1204,13 +1220,6 @@
       }
 
       html += '</div></div>';
-    }
-
-    // Cellules vides après le dernier jour
-    const totalCells = 42;
-    const filledCells = (firstDay - 1) + daysInMonth;
-    for (let i = filledCells; i < totalCells; i++) {
-      html += '<div class="cal-month-cell other-month"></div>';
     }
 
     html += '</div>';
@@ -1464,6 +1473,19 @@
     if (e.target === elModalOverlay) closeModal();
   });
 
+  // Gestion overlay jour dynamique
+  const elDayOverlay = document.getElementById('calDayOverlay');
+  const elDayOverlayClose = document.getElementById('calDayOverlayClose');
+
+  function closeDayOverlay() {
+    elDayOverlay.classList.remove('active');
+  }
+
+  elDayOverlayClose.addEventListener('click', closeDayOverlay);
+  elDayOverlay.addEventListener('click', (e) => {
+    if (e.target === elDayOverlay) closeDayOverlay();
+  });
+
   // Ajouter le événement de clic sur les cartes (sera attaché après le rendu)
   function attachEventListeners() {
     // Événements (clic → modal détails)
@@ -1476,21 +1498,61 @@
       });
     });
 
-    // Cellules mois (clic → vue JOUR)
+    // Cellules mois (clic → afficher jour en overlay dynamique)
     document.querySelectorAll('[data-month-cell]').forEach(el => {
       el.addEventListener('click', function() {
         const dateStr = this.dataset.date;
         if (dateStr) {
-          const [year, month, day] = dateStr.split('-');
-          currentDate = new Date(year, month - 1, day);
-          currentView = 'jour';
+          showDayOverlay(dateStr);
+        }
+      });
+    });
+  }
 
-          // Updater les boutons
-          document.querySelectorAll('.cal-view-btn').forEach(btn => btn.classList.remove('active'));
-          elBtnJour.classList.add('active');
+  // Afficher un jour spécifique dans l'overlay dynamique
+  function showDayOverlay(dateStr) {
+    const evts = eventsByDate[dateStr] || [];
+    const d = isoToDate(dateStr);
+    const dayLabel = dayFormat.format(d);
 
-          // Charger et afficher
-          loadCalendarData();
+    document.getElementById('calDayOverlayTitle').textContent = dayLabel.toUpperCase();
+    document.getElementById('calDayOverlaySubtitle').textContent = `${evts.length} événement${evts.length > 1 ? 's' : ''}`;
+
+    let content = '';
+    if (evts.length === 0) {
+      content = '<div style="padding: 20px; text-align: center; color: var(--muted);">Aucun événement ce jour-là</div>';
+    } else {
+      evts.forEach(evt => {
+        content += `<div class="cal-event-card" data-event-id="${evt.id}" style="cursor: pointer; margin-bottom: 12px;">
+          ${evt.thumb ? `<div class="cal-event-card-thumb"><img src="${evt.thumb}" alt="${evt.title}"></div>` : ''}
+          <div class="cal-event-card-content">
+            <div class="cal-event-card-title">${evt.title}</div>
+            ${evt.subtitle ? `<div class="cal-event-card-sub">${evt.subtitle}</div>` : ''}
+            <div class="cal-event-card-meta">
+              ${evt.runtime ? `${evt.runtime} min` : ''} • ${evt.source === 'radarr' ? '🎬 Film' : '📺 Série'}
+            </div>
+            <div class="cal-event-card-footer">
+              <span class="cal-badge ${evt.available ? 'cal-badge--available' : 'cal-badge--unreleased'}">
+                ${evt.available ? '✓ Disponible' : '○ Non dispo'}
+              </span>
+            </div>
+          </div>
+        </div>`;
+      });
+    }
+
+    document.getElementById('calDayOverlayContent').innerHTML = content;
+    document.getElementById('calDayOverlay').classList.add('active');
+
+    // Re-attacher les event listeners pour les events dans l'overlay
+    document.querySelectorAll('#calDayOverlayContent [data-event-id]').forEach(el => {
+      el.addEventListener('click', function(e) {
+        e.stopPropagation();
+        const eventId = this.dataset.eventId;
+        const event = allEvents.find(e => e.id === eventId);
+        if (event) {
+          document.getElementById('calDayOverlay').classList.remove('active');
+          showEventDetails(event);
         }
       });
     });
