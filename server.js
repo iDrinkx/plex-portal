@@ -259,5 +259,6 @@ app.listen(PORT, async () => {
   startDatabaseMaintenanceJob();
 
   // 🏆 Démarrer le job de refresh du classement (toutes les 5 minutes)
-  startClassementRefreshJob();
+  // 🔄 ATTENDU pour s'assurer que le cache est rempli au démarrage
+  await startClassementRefreshJob();
 });

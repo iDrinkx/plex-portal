@@ -23,15 +23,9 @@ let corruptionCount = 0;    // Compteur de corruptions détectées
 function validateCacheData(users, stats) {
   const issues = [];
 
-  // Vérifier 1: Trop d'utilisateurs avec joinedAt manquant (daysJoined = 0)
-  const zeroJoinedCount = stats.filter(s => {
-    const dbUser = UserQueries.getByUsername(s.username);
-    return !dbUser || !dbUser.joinedAt;
-  }).length;
-
-  if (zeroJoinedCount > users.length * 0.3) {
-    issues.push(`⚠️ ${zeroJoinedCount}/${users.length} users sans joinedAt (${Math.round(zeroJoinedCount/users.length*100)}%)`);
-  }
+  // ⚠️ NOTE: joinedAt manquant est OK grâce au fallback intelligent (30/60/120 jours)
+  // Donc on ne le compte PAS comme un problème
+  // On ne vérifie que si les données CALCULÉES sont cohérentes
 
   // Vérifier 2: Trop d'utilisateurs sans photos Plex
   const noPhotoCount = users.filter(u => !u.thumb).length;
@@ -86,6 +80,22 @@ async function refreshClassementCache() {
       return;
     }
 
+    // 🔑 FILTRE IMPORTANT: Uniquement les users Wizarr
+    // Récupérer les users autorisés depuis la DB locale (Wizarr)
+    const wizarrUsers = UserQueries.getAll() || [];
+    const wizarrUsernames = new Set(wizarrUsers.map(u => u.username));
+
+    // Filtrer les stats Tautulli pour ne garder que les users Wizarr
+    const filteredStats = tautulliStats.filter(stat => wizarrUsernames.has(stat.username));
+
+    if (filteredStats.length === 0) {
+      logCR.warn('⚠️ Aucun user Tautulli trouvé dans Wizarr');
+      return;
+    }
+
+    logCR.debug(`✅ Filtrage: ${tautulliStats.length} users Tautulli → ${filteredStats.length} users Wizarr`);
+    const statsToUse = filteredStats;
+
     // Récupérer les thumbs Plex
     const plexToken = process.env.PLEX_TOKEN || '';
     const thumbMap = {};
@@ -130,7 +140,7 @@ async function refreshClassementCache() {
     const allAchievements = ACHIEVEMENTS.getAll();
     const achievementXpMap = Object.fromEntries(allAchievements.map(a => [a.id, a.xp || 0]));
 
-    const users = tautulliStats.map(stats => {
+    const users = statsToUse.map(stats => {
       const key = (stats.username || '').toLowerCase();
       const dbUser = UserQueries.getByUsername(stats.username) || null;
 
@@ -180,7 +190,7 @@ async function refreshClassementCache() {
     const byLevel = [...users].sort((a, b) => b.level - a.level || b.totalXp - a.totalXp);
 
     // 🔍 Valider les données avant de les mettre en cache
-    const issues = validateCacheData(users, tautulliStats);
+    const issues = validateCacheData(users, statsToUse);
 
     if (issues.length > 0) {
       logCR.warn('⚠️ Problèmes détectés dans les données calculées:');
@@ -188,8 +198,8 @@ async function refreshClassementCache() {
       corruptionCount++;
 
       // ⚠️ Stratégie agressive: si problèmes critiques, rejeter les données
+      // NOTE: 'sans joinedAt' n'est PAS critique grâce au fallback intelligent
       const hasCriticalIssue = issues.some(i =>
-        i.includes('sans joinedAt') ||
         i.includes('incohérent') ||
         i.includes('inaccessible')
       );
@@ -317,12 +327,12 @@ function healthCheckAndRepair() {
 /**
  * Démarre le cron job de refresh (toutes les 5 minutes)
  */
-function startClassementRefreshJob() {
+async function startClassementRefreshJob() {
   // Vérifier intégrité au démarrage
   healthCheckAndRepair();
 
-  // Refresh immédiat au démarrage
-  refreshClassementCache();
+  // Refresh immédiat au démarrage (SYNCHRONE pour éviter une réponse vide)
+  await refreshClassementCache();
 
   // Cron: toutes les 5 minutes
   cron.schedule('*/5 * * * *', () => {
