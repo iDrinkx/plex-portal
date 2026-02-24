@@ -2,6 +2,43 @@
 
 Toutes les modifications notables de ce projet sont documentées dans ce fichier.
 
+## 1.21.0 (2026-02-24)
+
+* Merge pull request #11 from iDrinkx/develop ([62c34d6](https://github.com/iDrinkx/plex-portal/commit/62c34d6)), closes [#11](https://github.com/iDrinkx/plex-portal/issues/11)
+* fix: adjust header styles and remove unused refresh timer in statistics page ([b6db4e5](https://github.com/iDrinkx/plex-portal/commit/b6db4e5))
+* fix: correct icons for "Platine" and "Diamant" ranks in XP system ([2437bdc](https://github.com/iDrinkx/plex-portal/commit/2437bdc))
+* fix: correct icons for ranks in XP system ([ced5725](https://github.com/iDrinkx/plex-portal/commit/ced5725))
+* fix: enhance logging for thumbnail debugging in classement API ([3e0ef12](https://github.com/iDrinkx/plex-portal/commit/3e0ef12))
+* fix: enhance logging for thumbnail fetching in classement API and handle errors ([2d090e7](https://github.com/iDrinkx/plex-portal/commit/2d090e7))
+* fix: ensure classement cache is populated at startup with await ([23d06db](https://github.com/iDrinkx/plex-portal/commit/23d06db))
+* fix: ensure consistent XP/level calculation between profile and classement ([0493984](https://github.com/iDrinkx/plex-portal/commit/0493984))
+* fix: extract pathname from full URL for thumbnail path in classement API ([cad4e84](https://github.com/iDrinkx/plex-portal/commit/cad4e84))
+* fix: improve joinedAt retrieval to handle DB deletion scenario ([acf36fa](https://github.com/iDrinkx/plex-portal/commit/acf36fa))
+* fix: reduce XP cache TTL to 5 minutes for synchronization with classement refresh ([0f50900](https://github.com/iDrinkx/plex-portal/commit/0f50900))
+* fix: remove caching for classement API to ensure fresh data and update thumbnail handling ([2b7bade](https://github.com/iDrinkx/plex-portal/commit/2b7bade))
+* fix: restructure header layout for improved alignment of statistics page ([56d2d50](https://github.com/iDrinkx/plex-portal/commit/56d2d50))
+* fix: save recalculated stats to database for consistency between ranking and profile ([912792b](https://github.com/iDrinkx/plex-portal/commit/912792b))
+* fix: send Plex URLs directly to frontend for thumbnail loading in classement API ([e710b26](https://github.com/iDrinkx/plex-portal/commit/e710b26))
+* fix: update classement API to cache user stats while ensuring fresh Plex thumbnails ([e9ae6d0](https://github.com/iDrinkx/plex-portal/commit/e9ae6d0))
+* fix: update refresh timer styles for profile and statistics pages for better alignment ([b8910b9](https://github.com/iDrinkx/plex-portal/commit/b8910b9))
+* fix: update SSRF validation for plex thumbnail path to include user avatars ([7981c55](https://github.com/iDrinkx/plex-portal/commit/7981c55))
+* fix: update user stats retrieval to use correct function and improve handling of inactive users ([3bb4d57](https://github.com/iDrinkx/plex-portal/commit/3bb4d57))
+* feat: add badge count to XP snapshot and update related display logic ([105bcae](https://github.com/iDrinkx/plex-portal/commit/105bcae))
+* feat: add global stats endpoint and update UI for switching between personal and global statistics ([58b0104](https://github.com/iDrinkx/plex-portal/commit/58b0104))
+* feat: add immediate session scan and classement refresh on cron job startup ([a2e5e56](https://github.com/iDrinkx/plex-portal/commit/a2e5e56))
+* feat: add refresh timer for profile and statistics pages to display last update time ([684d8ba](https://github.com/iDrinkx/plex-portal/commit/684d8ba))
+* feat: add XP multipliers hint to profile view for enhanced user guidance ([cdfac61](https://github.com/iDrinkx/plex-portal/commit/cdfac61))
+* feat: enhance user retrieval from Wizarr API with improved endpoint handling and pagination ([d01adb8](https://github.com/iDrinkx/plex-portal/commit/d01adb8))
+* feat: enhance XP calculation and classement refresh by adding precomputed hours and deduplication lo ([e9f10f2](https://github.com/iDrinkx/plex-portal/commit/e9f10f2))
+* feat: enhance XP calculation by incorporating precomputed stats for improved accuracy ([6bad6b2](https://github.com/iDrinkx/plex-portal/commit/6bad6b2))
+* feat: implement automatic cache validation and repair mechanism for classement ([18195f2](https://github.com/iDrinkx/plex-portal/commit/18195f2))
+* feat: implement automatic user import from Wizarr on startup and enhance classement refresh logic ([3845a78](https://github.com/iDrinkx/plex-portal/commit/3845a78))
+* feat: implement classement data caching and refresh mechanism ([e3c39db](https://github.com/iDrinkx/plex-portal/commit/e3c39db))
+* feat: implement XP snapshot loading from API for enhanced profile updates ([84033c6](https://github.com/iDrinkx/plex-portal/commit/84033c6))
+* feat: update cron jobs to run every 60 minutes and refresh classement after session updates ([f166041](https://github.com/iDrinkx/plex-portal/commit/f166041))
+* feat: update XP breakdown calculations to handle fresh snapshots and improve display formatting ([ff5990d](https://github.com/iDrinkx/plex-portal/commit/ff5990d))
+* refactor: centralize XP calculation to guarantee profile/classement consistency ([96c4d1c](https://github.com/iDrinkx/plex-portal/commit/96c4d1c))
+
 ## <small>1.20.6 (2026-02-23)</small>
 
 * Merge pull request #10 from iDrinkx/develop ([0259f7f](https://github.com/iDrinkx/plex-portal/commit/0259f7f)), closes [#10](https://github.com/iDrinkx/plex-portal/issues/10)
