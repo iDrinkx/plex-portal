@@ -277,6 +277,10 @@
             <span id="xpAnciennetePercent">0%</span>
           </div>
         </div>
+
+        <div class="xp-multipliers" id="xpMultipliersHint">
+          Multiplicateurs: Heures = x10 XP/h • Ancienneté = x1.5 XP/jour
+        </div>
       </div>
 
       <!-- DÉTAILS PAR CATÉGORIE -->
@@ -975,6 +979,16 @@
     color: #a0a0a0;
   }
 
+  .xp-multipliers {
+    margin-top: 8px;
+    padding: 10px 12px;
+    border: 1px dashed rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    font-size: 11px;
+    color: #b7bfd6;
+    background: rgba(255, 255, 255, 0.02);
+  }
+
   /* DÉTAILS PAR CATÉGORIE */
   .xp-details h4 {
     font-size: 14px;
@@ -1357,6 +1371,11 @@
   const PAGE_UNLOCKED_BADGES = <%= unlockedBadgesCount || 0 %>;
   const PAGE_TOTAL_BADGES    = <%= totalBadgesCount    || 0 %>;
   const PAGE_ACHIEVEMENTS_XP = <%= totalAchievementsXp || 0 %>;
+  const multipliersHintEl = document.getElementById("xpMultipliersHint");
+  if (multipliersHintEl) {
+    multipliersHintEl.textContent =
+      `Multiplicateurs: Heures = x${XP_MULTIPLIERS.HOURS} XP/h • Ancienneté = x${XP_MULTIPLIERS.ANCIENNETE} XP/jour`;
+  }
   let LIVE_UNLOCKED_BADGES = PAGE_UNLOCKED_BADGES;
 
   function setUnlockedBadgesCount(count) {
