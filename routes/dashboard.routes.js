@@ -495,6 +495,7 @@ router.get("/api/xp-snapshot", requireAuth, async (req, res) => {
       rank: { color: xpData.rank.color, name: xpData.rank.name, icon: xpData.rank.icon, bgColor: xpData.rank.bgColor, borderColor: xpData.rank.borderColor },
       level: xpData.level,
       totalXp: xpData.totalXp,
+      badgeCount: xpData.badgeCount,
       progressPercent: xpData.progressPercent,
       xpNeeded: xpData.xpNeeded
     });
