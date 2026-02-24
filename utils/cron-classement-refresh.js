@@ -428,8 +428,8 @@ async function startClassementRefreshJob() {
   // Refresh immédiat au démarrage (SYNCHRONE pour éviter une réponse vide)
   await refreshClassementCache();
 
-  // Cron: toutes les 5 minutes
-  cron.schedule('*/5 * * * *', () => {
+  // Cron: toutes les 60 minutes
+  cron.schedule('0 * * * *', () => {
     refreshClassementCache();
   });
 
@@ -439,7 +439,7 @@ async function startClassementRefreshJob() {
     corruptionCount = 0;
   });
 
-  logCR.info('✅ Cron job classement démarré (toutes les 5 minutes)');
+  logCR.info('✅ Cron job classement démarré (toutes les 60 minutes)');
 }
 
 module.exports = {
