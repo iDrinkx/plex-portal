@@ -893,10 +893,16 @@ router.get('/api/classement', requireAuth, async (req, res) => {
           attrRe.lastIndex = 0;
           while ((am = attrRe.exec(openTag[1])) !== null) attrs[am[1]] = am[2];
           const name = (attrs.title || attrs.username || '').toLowerCase();
-          if (name && attrs.thumb) thumbMap[name] = attrs.thumb;
+          if (name && attrs.thumb) {
+            thumbMap[name] = attrs.thumb;
+            logLB.debug(`[THUMB] ${name} => ${attrs.thumb}`);
+          }
         }
+        logLB.debug(`[THUMBS-FETCHED] Total thumbs: ${Object.keys(thumbMap).length}`);
       }
-    } catch (_) {}
+    } catch (_) {
+      logLB.error(`Error fetching thumbs from Plex: ${_}`);
+    }
 
     // Si on a un cache valide, l'utiliser pour les données XP/badges mais appliquer les thumbs frais
     if (cached) {
@@ -941,6 +947,8 @@ router.get('/api/classement', requireAuth, async (req, res) => {
       const level      = XP_SYSTEM.getLevel(totalXp);
       const rank       = XP_SYSTEM.getRankByLevel(level);
       const thumb      = thumbMap[key] || null;
+
+      logLB.debug(`[USER-CALC] ${stats.username}: dbUser.id=${dbUser?.id}, achievementsXp=${achievementsXp}, daysJoined=${daysJoined}, totalXp=${totalXp}, level=${level}, thumb=${thumb ? 'YES' : 'NO'}`);
 
       return { username: stats.username, thumb, totalHours, totalXp, level,
                rank: { name: rank.name, icon: rank.icon, color: rank.color, bgColor: rank.bgColor, borderColor: rank.borderColor },
