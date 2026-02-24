@@ -167,19 +167,29 @@ async function getAllWizarrUsers(wizarrUrl, apiKey) {
   }
 
   // Essayer d'abord /api/users (endpoint confirmé opérationnel dans cette installation)
-  try {
-    const resp = await fetch(`${wizarrUrl}/api/users`, {
-      headers: { Accept: 'application/json', 'X-API-Key': apiKey },
-      timeout: 8000
-    });
-    if (resp.ok) {
-      const payload = await resp.json();
-      const list = normalizeList(payload);
-      if (list.length > 0) {
-        return list.map(mapUser).filter(u => u.username);
+  // On essaie avec un grand limit pour éviter une pagination par défaut restrictive
+  const apiUsersEndpoints = [
+    `${wizarrUrl}/api/users?limit=1000`,
+    `${wizarrUrl}/api/users`,
+  ];
+
+  for (const url of apiUsersEndpoints) {
+    try {
+      const resp = await fetch(url, {
+        headers: { Accept: 'application/json', 'X-API-Key': apiKey },
+        timeout: 8000
+      });
+      if (resp.ok) {
+        const payload = await resp.json();
+        const list = normalizeList(payload);
+        if (list.length > 0) {
+          const filtered = list.map(mapUser).filter(u => u.username);
+          // Si on a moins de résultats filtrés que bruts, c'est que certains n'ont pas de username (invitation en attente)
+          return filtered;
+        }
       }
-    }
-  } catch (_) {}
+    } catch (_) {}
+  }
 
   // Fallback: /api/v1/user avec pagination (Wizarr v4+)
   const users = [];

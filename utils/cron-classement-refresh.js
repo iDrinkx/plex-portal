@@ -75,17 +75,80 @@ async function refreshClassementCache() {
       return;
     }
 
-    // 🔑 SOURCE PRINCIPALE: Récupérer TOUS les users directement depuis Wizarr API
-    // Cela garantit un classement complet même avec une DB vide (après reset)
+    // ══════════════════════════════════════════════════════════════════
+    // ÉTAPE 1: Plex XML en premier — construit les 3 maps de référence
+    //   thumbMap         : username → avatar URL
+    //   plexJoinedAtMap  : username → joined_at (secondes Unix)
+    //   emailToUsername  : email    → plex username  ← pont Wizarr→Tautulli
+    // ══════════════════════════════════════════════════════════════════
+    const plexToken = process.env.PLEX_TOKEN || '';
+    const thumbMap        = {};
+    const plexJoinedAtMap = {};
+    const emailToUsername = {};  // 🔗 Corrélation email → plex username (fiable)
+    let thumbsFetched = 0;
+
+    // API v2 : owner uniquement
+    try {
+      const ownerResp = await fetch('https://plex.tv/api/v2/user', {
+        headers: { 'X-Plex-Token': plexToken, 'Accept': 'application/json' },
+        timeout: 8000
+      });
+      if (ownerResp.ok) {
+        const od = await ownerResp.json();
+        if (od.username) {
+          const ownerKey = od.username.toLowerCase();
+          if (od.thumb) { thumbMap[ownerKey] = od.thumb; thumbsFetched++; }
+          const ownerTs = Number(od.joinedAt || od.joined_at || 0);
+          if (ownerTs > 0) plexJoinedAtMap[ownerKey] = ownerTs;
+          if (od.email) emailToUsername[od.email.toLowerCase()] = od.username;
+        }
+      }
+    } catch (err) {
+      logCR.debug(`⚠️  Plex API v2 failed: ${err.message}`);
+    }
+
+    // API XML : tous les users partagés (thumb + joined_at + email)
+    try {
+      const xmlResp = await fetch('https://plex.tv/api/users', {
+        headers: { 'X-Plex-Token': plexToken, 'Accept': 'application/xml' },
+        timeout: 10000
+      });
+      if (xmlResp.ok) {
+        const xml = await xmlResp.text();
+        const userMatches = xml.match(/<User[^>]*>/g) || [];
+
+        userMatches.forEach(tag => {
+          const usernameMatch = tag.match(/username="([^"]*)"/i) || tag.match(/title="([^"]*)"/i);
+          const thumbMatch    = tag.match(/thumb="([^"]*)"/i)    || tag.match(/avatar="([^"]*)"/i);
+          const joinedAtMatch = tag.match(/joined_at="([^"]*)"/i);
+          const emailMatch    = tag.match(/\bemail="([^"]*)"/i);
+
+          if (usernameMatch?.[1]) {
+            const name = usernameMatch[1].toLowerCase();
+            if (thumbMatch?.[1])    { thumbMap[name] = thumbMatch[1]; thumbsFetched++; }
+            if (joinedAtMatch?.[1]) { const ts = Number(joinedAtMatch[1]); if (ts > 0) plexJoinedAtMap[name] = ts; }
+            if (emailMatch?.[1])    { emailToUsername[emailMatch[1].toLowerCase()] = usernameMatch[1]; }
+          }
+        });
+      }
+    } catch (err) {
+      logCR.debug(`⚠️  Plex API XML failed: ${err.message}`);
+    }
+
+    logCR.debug(`📸 Plex: ${thumbsFetched} avatars, ${Object.keys(plexJoinedAtMap).length} joined_at, ${Object.keys(emailToUsername).length} emails→username`);
+
+    // ══════════════════════════════════════════════════════════════════
+    // ÉTAPE 2: Récupérer les users Wizarr, puis persister en DB
+    // ══════════════════════════════════════════════════════════════════
     let wizarrUsers = await getAllWizarrUsers(process.env.WIZARR_URL, process.env.WIZARR_API_KEY);
 
     if (wizarrUsers.length > 0) {
-      logCR.debug(`📋 ${wizarrUsers.length} users récupérés depuis Wizarr API`);
-
-      // Persister en DB pour garder email + joinedAt (utilisé par le profil)
+      logCR.debug(`📋 ${wizarrUsers.length} users Wizarr récupérés`);
       for (const wUser of wizarrUsers) {
         try {
-          UserQueries.upsert(wUser.username, wUser.plexUserId, wUser.email, wUser.joinedAtTimestamp);
+          // Résoudre le vrai username Plex via email avant de persister
+          const plexName = (wUser.email && emailToUsername[wUser.email.toLowerCase()]) || wUser.username;
+          UserQueries.upsert(plexName, wUser.plexUserId, wUser.email, wUser.joinedAtTimestamp);
         } catch (_) {}
       }
     } else {
@@ -105,13 +168,26 @@ async function refreshClassementCache() {
       return;
     }
 
-    logCR.debug(`📋 Classement pour ${wizarrUsers.length} users (avec ou sans stats Tautulli)`);
-
-    // Pour chaque user Wizarr, récupérer ses stats Tautulli (0 s'il n'a jamais regardé)
+    // ══════════════════════════════════════════════════════════════════
+    // ÉTAPE 3: Corrélation email→username pour Tautulli
+    //   Wizarr email → emailToUsername → plexUsername → Tautulli stats
+    //   Si email inconnu du Plex XML → fallback sur wUser.username
+    // ══════════════════════════════════════════════════════════════════
     const statsToUse = wizarrUsers.map(wUser => {
-      const tautulliStats = getUserStatsFromTautulli(wUser.username);
-      return tautulliStats || {
-        username: wUser.username,
+      // 🔗 Corrélation fiable: email Wizarr → username Plex (même identifiant que Tautulli)
+      const plexUsername = (wUser.email && emailToUsername[wUser.email.toLowerCase()])
+        || wUser.username;
+
+      if (plexUsername !== wUser.username) {
+        logCR.debug(`🔗 Corrélation email: ${wUser.username} → ${plexUsername} (via ${wUser.email})`);
+      }
+
+      const tautulliStats = getUserStatsFromTautulli(plexUsername);
+      if (tautulliStats) {
+        return { ...tautulliStats, username: plexUsername, _joinedAtTimestamp: wUser.joinedAtTimestamp };
+      }
+      return {
+        username: plexUsername,
         session_count: 0,
         total_duration_seconds: 0,
         last_session_timestamp: null,
@@ -122,62 +198,11 @@ async function refreshClassementCache() {
         music_count: 0,
         music_duration_seconds: 0,
         totalHours: 0,
-        _joinedAtTimestamp: wUser.joinedAtTimestamp  // porté depuis Wizarr
+        _joinedAtTimestamp: wUser.joinedAtTimestamp
       };
     });
 
-    // 📸 Récupérer les thumbs Plex (photos de profil)
-    const plexToken = process.env.PLEX_TOKEN || '';
-    const thumbMap = {};
-    let thumbsFetched = 0;
-
-    // Stratégie 1: API v2 (pour le owner uniquement)
-    try {
-      const ownerResp = await fetch('https://plex.tv/api/v2/user', {
-        headers: { 'X-Plex-Token': plexToken, 'Accept': 'application/json' },
-        timeout: 8000
-      });
-      if (ownerResp.ok) {
-        const od = await ownerResp.json();
-        if (od.username && od.thumb) {
-          thumbMap[od.username.toLowerCase()] = od.thumb;
-          thumbsFetched++;
-        }
-      }
-    } catch (err) {
-      logCR.debug(`⚠️  Plex API v2 failed: ${err.message}`);
-    }
-
-    // Stratégie 2: API XML (pour tous les users partagés)
-    try {
-      const xmlResp = await fetch('https://plex.tv/api/users', {
-        headers: { 'X-Plex-Token': plexToken, 'Accept': 'application/xml' },
-        timeout: 10000  // Augmenté pour éviter timeout
-      });
-      if (xmlResp.ok) {
-        const xml = await xmlResp.text();
-        // Parser amélioré pour les éléments User du XML Plex
-        const userMatches = xml.match(/<User[^>]*>/g) || [];
-
-        userMatches.forEach(tag => {
-          // Extraire username et thumb
-          const usernameMatch = tag.match(/username="([^"]*)"/i) || tag.match(/title="([^"]*)"/i);
-          const thumbMatch = tag.match(/thumb="([^"]*)"/i) || tag.match(/avatar="([^"]*)"/i);
-
-          if (usernameMatch && usernameMatch[1]) {
-            const name = usernameMatch[1].toLowerCase();
-            if (thumbMatch && thumbMatch[1]) {
-              thumbMap[name] = thumbMatch[1];
-              thumbsFetched++;
-            }
-          }
-        });
-      }
-    } catch (err) {
-      logCR.debug(`⚠️  Plex API XML failed: ${err.message}`);
-    }
-
-    logCR.debug(`📸 Fetched ${thumbsFetched} avatars from Plex`);
+    logCR.debug(`📋 Classement: ${statsToUse.length} users (${statsToUse.filter(s => s.totalHours > 0).length} avec stats Tautulli)`);
 
     // 🎯 Pré-calculer les données XP pour TOUS les utilisateurs
     // Utilise la MÊME fonction centralisée que le profil pour garantir la cohérence 100%
@@ -185,8 +210,8 @@ async function refreshClassementCache() {
       const key = (stats.username || '').toLowerCase();
       const thumb = thumbMap[key] || null;
 
-      // Priorité joinedAt: champ porté depuis Wizarr > DB locale
-      let joinedAtTs = stats._joinedAtTimestamp || null;
+      // Priorité joinedAt: Plex XML (= même source que profil) > Wizarr > DB > calculateUserXp fallback
+      let joinedAtTs = plexJoinedAtMap[key] || stats._joinedAtTimestamp || null;
       if (!joinedAtTs) {
         const dbUser = UserQueries.getByUsername(stats.username);
         if (dbUser && dbUser.joinedAt) {
@@ -197,7 +222,7 @@ async function refreshClassementCache() {
         }
       }
 
-      logCR.debug(`🎯 Calcul XP ${stats.username}: joinedAtTs=${joinedAtTs}`);
+      logCR.debug(`🎯 XP ${stats.username}: joinedAtTs=${joinedAtTs} src=${plexJoinedAtMap[key]?'plex':stats._joinedAtTimestamp?'wizarr':'fallback'}`);
 
       try {
         // 🎯 Appeler la fonction centralisée (identique au profil)
