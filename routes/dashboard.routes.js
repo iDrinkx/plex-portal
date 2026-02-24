@@ -854,19 +854,17 @@ const logLB = log.create('[Classement]');
 router.get('/api/classement', requireAuth, async (req, res) => {
   try {
     const cacheKey = 'classement_data';
-    // 🔍 DEBUG: Forcer le recalcul (ignorer le cache)
+    // Cache seulement les stats Tautulli/XP, pas les thumbs (pour que les images soient toujours fraîches)
     const cached   = req.query.skipCache ? null : cache.get(cacheKey);
-    if (cached) return res.json(cached);
 
     const { getAllUserStatsFromTautulli, isTautulliReady } = require('../utils/tautulli-direct');
     const tautulliStats = isTautulliReady() ? getAllUserStatsFromTautulli() : [];
 
-    // Thumbs Plex via XML plex.tv/api/users (admin token)
+    // 🔄 TOUJOURS récupérer les thumbs Plex frais (NOT CACHED) pour que les images se mettent à jour immédiatement
     const plexToken = process.env.PLEX_TOKEN || '';
     const thumbMap  = {}; // username.lower → thumb URL
 
     try {
-      // owner thumb
       const ownerResp = await fetch('https://plex.tv/api/v2/user', {
         headers: { 'X-Plex-Token': plexToken, 'Accept': 'application/json' },
         timeout: 6000
@@ -900,6 +898,16 @@ router.get('/api/classement', requireAuth, async (req, res) => {
       }
     } catch (_) {}
 
+    // Si on a un cache valide, l'utiliser pour les données XP/badges mais appliquer les thumbs frais
+    if (cached) {
+      const result = {
+        byHours: cached.byHours.map(u => ({ ...u, thumb: thumbMap[(u.username || '').toLowerCase()] || null })),
+        byLevel: cached.byLevel.map(u => ({ ...u, thumb: thumbMap[(u.username || '').toLowerCase()] || null }))
+      };
+      logLB.debug(`Classement (cached avec thumbs frais): ${cached.byLevel.length} users`);
+      return res.json(result);
+    }
+
     const XP_M = { HOURS: 10, ANCIENNETE: 1.5 }; // v1.13: système ultra-optimisé
     const now  = Date.now();
     const allAchievements = ACHIEVEMENTS.getAll();
@@ -907,7 +915,6 @@ router.get('/api/classement', requireAuth, async (req, res) => {
 
     const users = tautulliStats.map(stats => {
       const key    = (stats.username || '').toLowerCase();
-      // FIX: Use UserQueries.getByUsername() instead of dbMap to ensure consistency with profile route
       const dbUser = UserQueries.getByUsername(stats.username) || null;
 
       let badgeCount = 0;
@@ -922,11 +929,8 @@ router.get('/api/classement', requireAuth, async (req, res) => {
         }
       }
 
-      // 🔧 FIX: Calculer daysJoined de manière cohérente avec le profil
-      // Source: dbUser.joinedAt (stocké via user.joinedAt de Plex lors de la connexion)
       let daysJoined = 0;
       if (dbUser && dbUser.joinedAt) {
-        // joinedAt peut être un timestamp (en secondes) ou une ISO string
         const ts = Number(dbUser.joinedAt);
         const ms = !isNaN(ts) && ts > 1e8 ? ts * 1000 : new Date(dbUser.joinedAt).getTime();
         if (!isNaN(ms)) daysJoined = Math.max(0, Math.floor((now - ms) / 86400000));
@@ -946,8 +950,14 @@ router.get('/api/classement', requireAuth, async (req, res) => {
     const byHours = [...users].sort((a, b) => b.totalHours - a.totalHours);
     const byLevel = [...users].sort((a, b) => b.level - a.level || b.totalXp - a.totalXp);
 
+    // ⚠️ Cache les données sans les thumbs pour permettre la mise à jour des images
+    const resultToCache = {
+      byHours: byHours.map(u => ({ ...u, thumb: null })),
+      byLevel: byLevel.map(u => ({ ...u, thumb: null }))
+    };
+    cache.set(cacheKey, resultToCache, 30 * 1000); // 30 secondes
+
     const result = { byHours, byLevel };
-    cache.set(cacheKey, result, 30 * 1000); // 30 secondes (synchro avec profil)
     logLB.debug(`Classement généré: ${users.length} users`);
     res.json(result);
   } catch (err) {
