@@ -61,15 +61,16 @@ async function calculateUserXp(username, joinedAtTimestamp = null) {
       logXP.debug(`⚠️  Achievements pour ${username}: ${err.message}`);
     }
 
-    // 3️⃣ Calculer daysJoined
+    // 3️⃣ Calculer daysJoined avec stratégie multi-sources
     let daysJoined = 0;
 
-    // Essayer d'abord joinedAtTimestamp passé en paramètre (depuis Plex)
+    // Stratégie 1: joinedAtTimestamp passé en paramètre (depuis Plex - le plus fiable)
     if (joinedAtTimestamp) {
       const ms = joinedAtTimestamp < 1e13 ? joinedAtTimestamp * 1000 : joinedAtTimestamp;
       daysJoined = Math.max(0, Math.floor((now - ms) / 86400000));
+      logXP.debug(`  ✅ ${username} daysJoined=${daysJoined} (depuis Plex timestamp)`);
     } else {
-      // Sinon, essayer depuis la DB
+      // Stratégie 2: joinedAt depuis la DB
       const dbUser = UserQueries.getByUsername(username);
       if (dbUser && dbUser.joinedAt) {
         try {
@@ -77,16 +78,50 @@ async function calculateUserXp(username, joinedAtTimestamp = null) {
           const ms = !isNaN(ts) && ts > 1e8 ? (ts < 1e13 ? ts * 1000 : ts) : new Date(dbUser.joinedAt).getTime();
           if (!isNaN(ms)) {
             daysJoined = Math.max(0, Math.floor((now - ms) / 86400000));
+            logXP.debug(`  ✅ ${username} daysJoined=${daysJoined} (depuis DB)`);
           }
         } catch (_) {}
+      }
+
+      // Stratégie 3: Si toujours 0, utiliser Tautulli stats qui contient joinedAt
+      if (daysJoined === 0) {
+        try {
+          // getTautulliStats retourne joinedAt si disponible
+          const stats = await Promise.race([
+            getTautulliStats(
+              username,
+              process.env.TAUTULLI_URL,
+              process.env.TAUTULLI_API_KEY,
+              null,
+              process.env.PLEX_URL,
+              process.env.PLEX_TOKEN,
+              null  // Pas de joinedAtTimestamp au départ
+            ),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), 3000))
+          ]);
+
+          // Si getTautulliStats retourne joinedAt, l'utiliser
+          if (stats?.joinedAt) {
+            try {
+              const joinedDate = new Date(stats.joinedAt).getTime();
+              if (!isNaN(joinedDate)) {
+                daysJoined = Math.max(0, Math.floor((now - joinedDate) / 86400000));
+                logXP.debug(`  ✅ ${username} daysJoined=${daysJoined} (depuis Tautulli stats.joinedAt)`);
+              }
+            } catch (_) {}
+          }
+        } catch (_) {
+          logXP.debug(`  ⚠️  ${username} Tautulli joinedAt unavailable`);
+        }
       }
     }
 
     // Fallback intelligent si toujours 0
     if (daysJoined === 0) {
-      daysJoined = 30;  // minimum
+      daysJoined = 30;  // minimum conservatif
       if (totalHours > 100) daysJoined = 60;
       if (totalHours > 500) daysJoined = 120;
+      logXP.debug(`  ℹ️  ${username} daysJoined=${daysJoined} (fallback basé sur heures)`);
     }
 
     // 4️⃣ Calculer le XP total
