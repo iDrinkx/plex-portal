@@ -853,14 +853,11 @@ const logLB = log.create('[Classement]');
 
 router.get('/api/classement', requireAuth, async (req, res) => {
   try {
-    const cacheKey = 'classement_data';
-    // Cache seulement les stats Tautulli/XP, pas les thumbs (pour que les images soient toujours fraîches)
-    const cached   = req.query.skipCache ? null : cache.get(cacheKey);
-
+    // 🔄 NO CACHE - récupérer les données fraîches à chaque fois (images et XP à jour)
     const { getAllUserStatsFromTautulli, isTautulliReady } = require('../utils/tautulli-direct');
     const tautulliStats = isTautulliReady() ? getAllUserStatsFromTautulli() : [];
 
-    // 🔄 TOUJOURS récupérer les thumbs Plex frais (NOT CACHED) pour que les images se mettent à jour immédiatement
+    // 🔄 TOUJOURS récupérer les thumbs Plex frais
     const plexToken = process.env.PLEX_TOKEN || '';
     const thumbMap  = {}; // username.lower → thumb URL
 
@@ -893,25 +890,12 @@ router.get('/api/classement', requireAuth, async (req, res) => {
           attrRe.lastIndex = 0;
           while ((am = attrRe.exec(openTag[1])) !== null) attrs[am[1]] = am[2];
           const name = (attrs.title || attrs.username || '').toLowerCase();
-          if (name && attrs.thumb) {
-            thumbMap[name] = attrs.thumb;
-            logLB.debug(`[THUMB] ${name} => ${attrs.thumb}`);
-          }
+          if (name && attrs.thumb) thumbMap[name] = attrs.thumb;
         }
-        logLB.debug(`[THUMBS-FETCHED] Total thumbs: ${Object.keys(thumbMap).length}`);
+        logLB.debug(`[THUMBS] Chargé ${Object.keys(thumbMap).length} images de Plex`);
       }
     } catch (_) {
-      logLB.error(`Error fetching thumbs from Plex: ${_}`);
-    }
-
-    // Si on a un cache valide, l'utiliser pour les données XP/badges mais appliquer les thumbs frais
-    if (cached) {
-      const result = {
-        byHours: cached.byHours.map(u => ({ ...u, thumb: thumbMap[(u.username || '').toLowerCase()] || null })),
-        byLevel: cached.byLevel.map(u => ({ ...u, thumb: thumbMap[(u.username || '').toLowerCase()] || null }))
-      };
-      logLB.debug(`Classement (cached avec thumbs frais): ${cached.byLevel.length} users`);
-      return res.json(result);
+      logLB.error(`[THUMBS-ERROR] Impossible de récupérer les images: ${_}`);
     }
 
     const XP_M = { HOURS: 10, ANCIENNETE: 1.5 }; // v1.13: système ultra-optimisé
@@ -946,9 +930,13 @@ router.get('/api/classement', requireAuth, async (req, res) => {
       const totalXp    = Math.round(totalHours * XP_M.HOURS) + achievementsXp + Math.round(daysJoined * XP_M.ANCIENNETE);
       const level      = XP_SYSTEM.getLevel(totalXp);
       const rank       = XP_SYSTEM.getRankByLevel(level);
-      const thumb      = thumbMap[key] || null;
 
-      logLB.debug(`[USER-CALC] ${stats.username}: dbUser.id=${dbUser?.id}, achievementsXp=${achievementsXp}, daysJoined=${daysJoined}, totalXp=${totalXp}, level=${level}, thumb=${thumb ? 'YES' : 'NO'}`);
+      // ✅ FIX: Utiliser le proxy /api/plex-thumb (comme le dashboard et profil) pour charger les images
+      let thumb = null;
+      const thumbPath = thumbMap[key];
+      if (thumbPath) {
+        thumb = '/api/plex-thumb?path=' + encodeURIComponent(thumbPath);
+      }
 
       return { username: stats.username, thumb, totalHours, totalXp, level,
                rank: { name: rank.name, icon: rank.icon, color: rank.color, bgColor: rank.bgColor, borderColor: rank.borderColor },
@@ -958,16 +946,7 @@ router.get('/api/classement', requireAuth, async (req, res) => {
     const byHours = [...users].sort((a, b) => b.totalHours - a.totalHours);
     const byLevel = [...users].sort((a, b) => b.level - a.level || b.totalXp - a.totalXp);
 
-    // ⚠️ Cache les données sans les thumbs pour permettre la mise à jour des images
-    const resultToCache = {
-      byHours: byHours.map(u => ({ ...u, thumb: null })),
-      byLevel: byLevel.map(u => ({ ...u, thumb: null }))
-    };
-    cache.set(cacheKey, resultToCache, 30 * 1000); // 30 secondes
-
-    const result = { byHours, byLevel };
-    logLB.debug(`Classement généré: ${users.length} users`);
-    res.json(result);
+    res.json({ byHours, byLevel });
   } catch (err) {
     logLB.error('API classement:', err.message);
     res.status(500).json({ error: 'classement failed' });
