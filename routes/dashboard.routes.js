@@ -935,7 +935,9 @@ router.get('/api/classement', requireAuth, async (req, res) => {
       let thumb = null;
       const thumbPath = thumbMap[key];
       if (thumbPath) {
-        thumb = '/api/plex-thumb?path=' + encodeURIComponent(thumbPath);
+        // Extraire le chemin de l'URL complète (ex: /users/12075180ec198680/avatar?c=1771920165)
+        const pathname = thumbPath.replace(/^https?:\/\/[^\/]+/, '');
+        thumb = '/api/plex-thumb?path=' + encodeURIComponent(pathname);
       }
 
       return { username: stats.username, thumb, totalHours, totalXp, level,
