@@ -832,6 +832,28 @@ router.get('/api/mes-stats', requireAuth, async (req, res) => {
   }
 });
 
+router.get('/api/mes-stats-global', requireAuth, async (req, res) => {
+  try {
+    const cacheKey = 'mes_stats_global';
+    const cached   = cache.get(cacheKey);
+    if (cached) return res.json(cached);
+
+    const { getGlobalDetailedStats, isTautulliReady } = require('../utils/tautulli-direct');
+    if (!isTautulliReady()) return res.json({ available: false, reason: 'tautulli_not_ready' });
+
+    const data = getGlobalDetailedStats();
+    if (!data) return res.json({ available: false, reason: 'no_data' });
+
+    const result = { available: true, ...data };
+    cache.set(cacheKey, result, 10 * 60 * 1000); // 10 min
+    logStats.debug('Stats globales générées');
+    res.json(result);
+  } catch (err) {
+    logStats.error('API mes-stats-global:', err.message);
+    res.status(500).json({ error: 'mes-stats-global failed' });
+  }
+});
+
 /* ===============================
    🏆 CLASSEMENT (Leaderboard)
 =============================== */
