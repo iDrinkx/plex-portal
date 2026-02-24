@@ -96,43 +96,58 @@ async function refreshClassementCache() {
     logCR.debug(`✅ Filtrage: ${tautulliStats.length} users Tautulli → ${filteredStats.length} users Wizarr`);
     const statsToUse = filteredStats;
 
-    // Récupérer les thumbs Plex
+    // 📸 Récupérer les thumbs Plex (photos de profil)
     const plexToken = process.env.PLEX_TOKEN || '';
     const thumbMap = {};
+    let thumbsFetched = 0;
 
+    // Stratégie 1: API v2 (pour le owner uniquement)
     try {
       const ownerResp = await fetch('https://plex.tv/api/v2/user', {
         headers: { 'X-Plex-Token': plexToken, 'Accept': 'application/json' },
-        timeout: 6000
+        timeout: 8000
       });
       if (ownerResp.ok) {
         const od = await ownerResp.json();
-        if (od.username && od.thumb) thumbMap[od.username.toLowerCase()] = od.thumb;
+        if (od.username && od.thumb) {
+          thumbMap[od.username.toLowerCase()] = od.thumb;
+          thumbsFetched++;
+        }
       }
-    } catch (_) {}
+    } catch (err) {
+      logCR.debug(`⚠️  Plex API v2 failed: ${err.message}`);
+    }
 
+    // Stratégie 2: API XML (pour tous les users partagés)
     try {
       const xmlResp = await fetch('https://plex.tv/api/users', {
         headers: { 'X-Plex-Token': plexToken, 'Accept': 'application/xml' },
-        timeout: 6000
+        timeout: 10000  // Augmenté pour éviter timeout
       });
       if (xmlResp.ok) {
         const xml = await xmlResp.text();
-        const blockRe = /<User\s[\s\S]*?(?:\/>|<\/User>)/g;
-        const attrRe = /(\w+)="([^"]*)"/g;
-        let bm;
-        while ((bm = blockRe.exec(xml)) !== null) {
-          const openTag = bm[0].match(/<User\s([^>]+)/);
-          if (!openTag) continue;
-          const attrs = {};
-          let am;
-          attrRe.lastIndex = 0;
-          while ((am = attrRe.exec(openTag[1])) !== null) attrs[am[1]] = am[2];
-          const name = (attrs.title || attrs.username || '').toLowerCase();
-          if (name && attrs.thumb) thumbMap[name] = attrs.thumb;
-        }
+        // Parser amélioré pour les éléments User du XML Plex
+        const userMatches = xml.match(/<User[^>]*>/g) || [];
+
+        userMatches.forEach(tag => {
+          // Extraire username et thumb
+          const usernameMatch = tag.match(/username="([^"]*)"/i) || tag.match(/title="([^"]*)"/i);
+          const thumbMatch = tag.match(/thumb="([^"]*)"/i) || tag.match(/avatar="([^"]*)"/i);
+
+          if (usernameMatch && usernameMatch[1]) {
+            const name = usernameMatch[1].toLowerCase();
+            if (thumbMatch && thumbMatch[1]) {
+              thumbMap[name] = thumbMatch[1];
+              thumbsFetched++;
+            }
+          }
+        });
       }
-    } catch (_) {}
+    } catch (err) {
+      logCR.debug(`⚠️  Plex API XML failed: ${err.message}`);
+    }
+
+    logCR.debug(`📸 Fetched ${thumbsFetched} avatars from Plex`);
 
     // Pré-calculer les données XP pour tous les utilisateurs
     const XP_M = { HOURS: 10, ANCIENNETE: 1.5 };
@@ -156,17 +171,28 @@ async function refreshClassementCache() {
         }
       }
 
+      // 🔍 Calcul COHÉRENT de daysJoined (identique au profil pour consistance)
       let daysJoined = 0;
+
+      // Essayer d'abord joinedAt de la DB (format timestamp ou date)
       if (dbUser && dbUser.joinedAt) {
-        const ts = Number(dbUser.joinedAt);
-        const ms = !isNaN(ts) && ts > 1e8 ? ts * 1000 : new Date(dbUser.joinedAt).getTime();
-        if (!isNaN(ms)) daysJoined = Math.max(0, Math.floor((now - ms) / 86400000));
-      } else if (dbUser) {
-        // ⚠️ Si joinedAt est NULL, utiliser un fallback conservatif
-        // Cela évite les données XP incorrectes (daysJoined = 0)
-        daysJoined = 30; // Assumer 30 jours minimum si data manquante
-        if (stats.totalHours > 100) daysJoined = 60; // Si beaucoup d'heures, assumer plus ancien
-        if (stats.totalHours > 500) daysJoined = 120;
+        try {
+          const ts = Number(dbUser.joinedAt);
+          // Si c'est un timestamp Unix en secondes (< 1e13) ou millisecondes (> 1e13)
+          const ms = !isNaN(ts) && ts > 1e8 ? (ts < 1e13 ? ts * 1000 : ts) : new Date(dbUser.joinedAt).getTime();
+          if (!isNaN(ms)) {
+            daysJoined = Math.max(0, Math.floor((now - ms) / 86400000));
+          }
+        } catch (_) {}
+      }
+
+      // ⚠️ Fallback intelligent si daysJoined est toujours 0 (joinedAt manquant ou invalide)
+      if (daysJoined === 0) {
+        // Assumer que l'utilisateur a rejoint récemment, basé sur son activité
+        // Cette formule est une approximation conservative
+        daysJoined = 30; // Minimum: 30 jours
+        if (stats.totalHours > 100) daysJoined = 60;   // Si actif, probable qu'il est plus ancien
+        if (stats.totalHours > 500) daysJoined = 120;  // Si très actif, bien plus ancien
       }
 
       const totalHours = stats.totalHours || 0;
