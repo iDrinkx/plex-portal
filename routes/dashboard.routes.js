@@ -931,14 +931,9 @@ router.get('/api/classement', requireAuth, async (req, res) => {
       const level      = XP_SYSTEM.getLevel(totalXp);
       const rank       = XP_SYSTEM.getRankByLevel(level);
 
-      // ✅ FIX: Utiliser le proxy /api/plex-thumb (comme le dashboard et profil) pour charger les images
-      let thumb = null;
-      const thumbPath = thumbMap[key];
-      if (thumbPath) {
-        // Extraire le chemin de l'URL complète (ex: /users/12075180ec198680/avatar?c=1771920165)
-        const pathname = thumbPath.replace(/^https?:\/\/[^\/]+/, '');
-        thumb = '/api/plex-thumb?path=' + encodeURIComponent(pathname);
-      }
+      // ✅ FIX: Envoyer les URLs Plex directement au frontend pour que le navigateur les charge
+      // (Le proxy ne peut pas accéder aux URLs publiques plex.tv depuis le serveur)
+      const thumb = thumbMap[key] || null;
 
       return { username: stats.username, thumb, totalHours, totalXp, level,
                rank: { name: rank.name, icon: rank.icon, color: rank.color, bgColor: rank.bgColor, borderColor: rank.borderColor },
