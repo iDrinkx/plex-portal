@@ -3,7 +3,7 @@ const fetch = require('node-fetch');
 const log = require('./logger');
 const { UserQueries } = require('./database');
 const { XP_SYSTEM } = require('./xp-system');
-const { getAllUserStatsFromTautulli, isTautulliReady } = require('./tautulli-direct');
+const { getUserStatsFromTautulli, isTautulliReady } = require('./tautulli-direct');
 const { calculateUserXp } = require('./xp-calculator');  // 🎯 Fonction centralisée XP
 
 const logCR = log.create('[Classement-Refresh]');
@@ -74,27 +74,36 @@ async function refreshClassementCache() {
       return;
     }
 
-    const tautulliStats = getAllUserStatsFromTautulli();
-    if (!tautulliStats || tautulliStats.length === 0) {
-      logCR.warn('Aucune stats Tautulli trouvées');
-      return;
-    }
-
-    // 🔑 FILTRE IMPORTANT: Uniquement les users Wizarr
-    // Récupérer les users autorisés depuis la DB locale (Wizarr)
+    // 🔑 SOURCE PRINCIPALE: Récupérer TOUS les users Wizarr (liste complète)
     const wizarrUsers = UserQueries.getAll() || [];
-    const wizarrUsernames = new Set(wizarrUsers.map(u => u.username));
 
-    // Filtrer les stats Tautulli pour ne garder que les users Wizarr
-    const filteredStats = tautulliStats.filter(stat => wizarrUsernames.has(stat.username));
-
-    if (filteredStats.length === 0) {
-      logCR.warn('⚠️ Aucun user Tautulli trouvé dans Wizarr');
+    if (wizarrUsers.length === 0) {
+      logCR.warn('⚠️ Aucun user Wizarr trouvé');
       return;
     }
 
-    logCR.debug(`✅ Filtrage: ${tautulliStats.length} users Tautulli → ${filteredStats.length} users Wizarr`);
-    const statsToUse = filteredStats;
+    logCR.debug(`📋 Classement pour ${wizarrUsers.length} users Wizarr (avec ou sans stats Tautulli)`);
+
+    // Pour chaque user Wizarr, récupérer ses stats Tautulli (0 s'il n'a jamais joué)
+    // Cela crée des "entrées" pour TOUS les users Wizarr, même inactifs
+    const statsToUse = wizarrUsers.map(dbUser => {
+      const tautulliStats = getUserStatsFromTautulli(dbUser.username);
+
+      // Si user n'a jamais eu de session, retourner stats vides mais identifié
+      return tautulliStats || {
+        username: dbUser.username,
+        session_count: 0,
+        total_duration_seconds: 0,
+        last_session_timestamp: null,
+        movie_count: 0,
+        movie_duration_seconds: 0,
+        episode_count: 0,
+        episode_duration_seconds: 0,
+        music_count: 0,
+        music_duration_seconds: 0,
+        totalHours: 0
+      };
+    });
 
     // 📸 Récupérer les thumbs Plex (photos de profil)
     const plexToken = process.env.PLEX_TOKEN || '';
