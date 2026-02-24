@@ -1,4 +1,5 @@
 <div class="profil-container">
+  <div class="profil-refresh-timer" id="profilRefreshTimer"></div>
   <!-- HEADER AVEC AVATAR ET XP -->
   <div class="profil-header">
     <% 
@@ -83,8 +84,6 @@
     </div>
 
   </div>
-
-  <div class="profil-refresh-timer" id="profilRefreshTimer"></div>
 
   <!-- GRID DE CARTES -->
   <div class="profil-grid">
@@ -701,12 +700,13 @@
   }
 
   .profil-refresh-timer {
-    display: flex;
-    justify-content: flex-end;
+    width: 100%;
+    display: block;
+    text-align: right;
     font-size: 11px;
     color: #666;
     font-style: italic;
-    margin: 4px 2px 14px;
+    margin: 0 2px 14px;
     min-height: 14px;
   }
 
