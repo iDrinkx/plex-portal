@@ -332,6 +332,74 @@
 @keyframes lb-spin { to { transform: rotate(360deg); } }
 .lb-error { text-align: center; padding: 80px 20px; color: #555; }
 .lb-error-icon { font-size: 36px; margin-bottom: 10px; }
+
+/*  Apercu profil (sans infos perso)  */
+.lb-preview {
+  margin-top: 22px;
+  background: #111318;
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 16px;
+  padding: 16px;
+}
+.lb-preview-title {
+  margin: 0 0 4px;
+  font-size: 14px;
+  color: #fff;
+  font-weight: 800;
+}
+.lb-preview-sub {
+  margin: 0 0 12px;
+  font-size: 11px;
+  color: #555;
+}
+.lb-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px;
+}
+.lb-preview-card {
+  background: #0e1014;
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 12px;
+  padding: 10px;
+  min-height: 72px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+}
+.lb-preview-label {
+  font-size: 10px;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+.lb-preview-value {
+  font-size: 13px;
+  font-weight: 800;
+  color: #fff;
+}
+.lb-preview-value--muted {
+  color: #777;
+  font-weight: 600;
+}
+.lb-preview-name {
+  filter: blur(7px);
+  user-select: none;
+}
+.lb-preview-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid rgba(255,255,255,0.12);
+}
+@media (max-width: 960px) {
+  .lb-preview-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 560px) {
+  .lb-preview-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 </style>
 
 <div class="lb-page">
@@ -365,6 +433,37 @@
       <div id="rankHoursList"></div>
     </div>
 
+    <div class="lb-preview" id="lbPreview">
+      <h3 class="lb-preview-title">Apercu du profil</h3>
+      <p class="lb-preview-sub">Clique sur un utilisateur du classement pour voir ses cartes publiques.</p>
+      <div class="lb-preview-grid">
+        <div class="lb-preview-card">
+          <span class="lb-preview-label">Image</span>
+          <span class="lb-preview-value lb-preview-value--muted">Aucune selection</span>
+        </div>
+        <div class="lb-preview-card">
+          <span class="lb-preview-label">Pseudo</span>
+          <span class="lb-preview-value lb-preview-value--muted">Aucune selection</span>
+        </div>
+        <div class="lb-preview-card">
+          <span class="lb-preview-label">Niveau</span>
+          <span class="lb-preview-value lb-preview-value--muted">-</span>
+        </div>
+        <div class="lb-preview-card">
+          <span class="lb-preview-label">Total XP</span>
+          <span class="lb-preview-value lb-preview-value--muted">-</span>
+        </div>
+        <div class="lb-preview-card">
+          <span class="lb-preview-label">Badge</span>
+          <span class="lb-preview-value lb-preview-value--muted">-</span>
+        </div>
+        <div class="lb-preview-card">
+          <span class="lb-preview-label">Succes</span>
+          <span class="lb-preview-value lb-preview-value--muted">-</span>
+        </div>
+      </div>
+    </div>
+
   </div>
 
   <div class="lb-error" id="lbError" style="display:none">
@@ -378,6 +477,16 @@
 (function () {
   const ME = '<%= user.username %>';
   const ME_THUMB = <%- JSON.stringify((user && user.thumb) ? user.thumb : '') %>;
+  var usersByName = {};
+
+  function escHtml(v) {
+    return String(v == null ? '' : v)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
 
   function _grad(c) {
     return 'conic-gradient(from -90deg, ' + c + '2e 0deg, ' + c + ' 90deg, ' + c + 'cc 180deg, ' + c + ' 270deg, ' + c + '2e 360deg)';
@@ -400,14 +509,14 @@
         + '<div class="lb-pod-placeholder" style="display:none;filter:' + glow + '">' + initials + '</div>'
       : '<div class="lb-pod-placeholder" style="filter:' + glow + '">' + initials + '</div>';
 
-    return '<div class="lb-podium-card lb-podium-card--' + rank + '">'
+    return '<div class="lb-podium-card lb-podium-card--' + rank + '" data-lb-user="' + escHtml(user.username) + '">'
       + '<span class="lb-podium-medal">' + medal + '</span>'
       + '<div class="lb-pod-avatar-wrap">'
         + '<div class="lb-pod-ring" style="background:' + _grad(user.rank.color) + '"></div>'
         + imgPart
         + '<div class="lb-pod-level">' + user.level + '</div>'
       + '</div>'
-      + '<div class="lb-pod-username' + (isMe ? ' lb-pod-username--me' : '') + '">' + user.username + '</div>'
+      + '<div class="lb-pod-username' + (isMe ? ' lb-pod-username--me' : '') + '">' + escHtml(user.username) + '</div>'
       + '<span class="lb-pod-rank-badge" style="background:' + user.rank.bgColor + ';color:' + user.rank.color + ';border:1px solid ' + user.rank.borderColor + '40">'
         + user.rank.icon + ' ' + user.rank.name
       + '</span>'
@@ -440,15 +549,15 @@
         + '<div class="lb-row-placeholder" style="display:none;filter:' + glow + '">' + initials + '</div>'
       : '<div class="lb-row-placeholder" style="filter:' + glow + '">' + initials + '</div>';
 
-    return '<div class="lb-row' + (isMe ? ' lb-row--me' : '') + '">'
+    return '<div class="lb-row' + (isMe ? ' lb-row--me' : '') + '" data-lb-user="' + escHtml(user.username) + '">'
       + posHtml
       + '<div class="lb-row-avatar-wrap">'
         + '<div class="lb-row-ring" style="background:' + _grad(user.rank.color) + '"></div>'
         + imgPart
       + '</div>'
       + '<div class="lb-row-info">'
-        + '<div class="lb-row-name">' + user.username + '</div>'
-        + '<div class="lb-row-meta" style="color:' + user.rank.color + ';font-weight:700">' + user.rank.icon + ' ' + user.rank.name + '</div>'
+        + '<div class="lb-row-name">' + escHtml(user.username) + '</div>'
+        + '<div class="lb-row-meta" style="color:' + user.rank.color + ';font-weight:700">' + escHtml(user.rank.icon + ' ' + user.rank.name) + '</div>'
       + '</div>'
       + statHtml
     + '</div>';
@@ -478,6 +587,36 @@
     }
     document.getElementById('lbPodium').innerHTML = html;
   }
+
+  function renderPreview(user) {
+    var wrap = document.getElementById('lbPreview');
+    if (!wrap || !user) return;
+
+    var effectiveThumb = user.thumb || (user.username === ME ? ME_THUMB : '');
+    var avatarHtml = effectiveThumb
+      ? '<img class="lb-preview-avatar" src="' + effectiveThumb + '" alt="" loading="lazy" onerror="this.remove()">'
+      : '<span class="lb-preview-value lb-preview-value--muted">Sans image</span>';
+
+    wrap.innerHTML =
+      '<h3 class="lb-preview-title">Apercu du profil</h3>'
+      + '<p class="lb-preview-sub">Version courte, sans infos personnelles.</p>'
+      + '<div class="lb-preview-grid">'
+        + '<div class="lb-preview-card"><span class="lb-preview-label">Image</span><span class="lb-preview-value">' + avatarHtml + '</span></div>'
+        + '<div class="lb-preview-card"><span class="lb-preview-label">Pseudo</span><span class="lb-preview-value lb-preview-name">' + escHtml(user.username) + '</span></div>'
+        + '<div class="lb-preview-card"><span class="lb-preview-label">Niveau</span><span class="lb-preview-value">Nv. ' + (user.level || 1) + '</span></div>'
+        + '<div class="lb-preview-card"><span class="lb-preview-label">Total XP</span><span class="lb-preview-value">' + (user.totalXp || 0) + ' XP</span></div>'
+        + '<div class="lb-preview-card"><span class="lb-preview-label">Badge</span><span class="lb-preview-value" style="color:' + user.rank.color + '">' + escHtml(user.rank.icon + ' ' + user.rank.name) + '</span></div>'
+        + '<div class="lb-preview-card"><span class="lb-preview-label">Succes</span><span class="lb-preview-value">' + (user.badgeCount || 0) + '</span></div>'
+      + '</div>';
+  }
+
+  document.addEventListener('click', function (e) {
+    var target = e.target.closest('[data-lb-user]');
+    if (!target) return;
+    var username = target.getAttribute('data-lb-user');
+    if (!username || !usersByName[username]) return;
+    renderPreview(usersByName[username]);
+  });
 
   // Gestion des onglets
   var tabLevel = document.getElementById('tabLevel');
@@ -520,6 +659,8 @@
   fetch(bp + '/api/classement')
     .then(function(r) { return r.ok ? r.json() : Promise.reject(r.status); })
     .then(function(data) {
+      usersByName = {};
+      (data.byLevel || []).forEach(function(u) { usersByName[u.username] = u; });
       if (data.lastRefresh) {
         lastRefreshTime = new Date(data.lastRefresh).getTime();
         updateTimer();
