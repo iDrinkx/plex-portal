@@ -48,7 +48,7 @@ const ACHIEVEMENTS = {
       }),
       unlockedDate: null,
       category: "temporels",
-      xp: 2000
+      xp: 1500
     }
   ],
 
@@ -68,7 +68,7 @@ const ACHIEVEMENTS = {
       }),
       unlockedDate: null,
       category: "activites",
-      xp: 200
+      xp: 150
     },
     {
       id: "regular",
@@ -495,7 +495,7 @@ const ACHIEVEMENTS = {
       unlockedDate: null,
       category: "secrets",
       isSecret: false,
-      xp: 500
+      xp: 1200
     },
     {
       id: "countdown-pajama",
@@ -508,7 +508,7 @@ const ACHIEVEMENTS = {
       unlockedDate: null,
       category: "secrets",
       isSecret: false,
-      xp: 400
+      xp: 700
     },
     {
       id: "midnight-watcher",
@@ -521,7 +521,7 @@ const ACHIEVEMENTS = {
       unlockedDate: null,
       category: "secrets",
       isSecret: false,
-      xp: 400
+      xp: 900
     }
   ],
 
