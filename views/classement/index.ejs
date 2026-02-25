@@ -399,34 +399,7 @@
   font-weight: 800;
   letter-spacing: 0.2px;
 }
-.lb-preview-sub {
-  margin: 0 0 14px;
-  font-size: 12px;
-  color: #8d97ac;
-}
-
-.lb-preview-hero {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  background: linear-gradient(135deg, rgba(59,130,246,0.12), rgba(16,185,129,0.07));
-  border: 1px solid rgba(255,255,255,0.10);
-  border-radius: 14px;
-  padding: 12px;
-  margin-bottom: 12px;
-}
-.lb-preview-avatar-wrap {
-  width: 66px;
-  height: 66px;
-  border-radius: 50%;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 2px solid rgba(255,255,255,0.12);
-  background: #0a0f18;
-  overflow: hidden;
-  flex-shrink: 0;
-}
+.lb-preview-body { display: block; }
 .lb-preview-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -451,7 +424,7 @@
   letter-spacing: 1.1px;
 }
 .lb-preview-value {
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 800;
   color: #f5f8ff;
   line-height: 1.1;
@@ -463,37 +436,14 @@
 .lb-preview-name {
   filter: blur(7px);
   user-select: none;
-  font-size: 17px;
+  font-size: 16px;
 }
 .lb-preview-avatar {
-  width: 100%;
-  height: 100%;
+  width: 62px;
+  height: 62px;
   border-radius: 50%;
   object-fit: cover;
-}
-.lb-preview-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 10px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 700;
-  border: 1px solid rgba(255,255,255,0.15);
-}
-.lb-preview-meta {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-.lb-preview-meta-pill {
-  font-size: 11px;
-  font-weight: 700;
-  color: #c3cde2;
-  background: rgba(255,255,255,0.08);
-  border: 1px solid rgba(255,255,255,0.12);
-  padding: 4px 8px;
-  border-radius: 9px;
+  border: 2px solid rgba(255,255,255,0.14);
 }
 @media (max-width: 960px) {
   .lb-preview-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -502,8 +452,8 @@
   .lb-preview { padding: 14px; }
   .lb-preview-grid { grid-template-columns: 1fr; }
   .lb-preview-title { font-size: 16px; }
-  .lb-preview-value { font-size: 20px; }
-  .lb-preview-avatar-wrap { width: 58px; height: 58px; }
+  .lb-preview-value { font-size: 18px; }
+  .lb-preview-avatar { width: 54px; height: 54px; }
 }
 </style>
 
@@ -553,8 +503,7 @@
       <h3 class="lb-preview-title">Apercu du profil</h3>
       <button class="lb-preview-close" id="lbPreviewClose" type="button" aria-label="Fermer">×</button>
     </div>
-    <p class="lb-preview-sub">Version courte, sans infos personnelles.</p>
-    <div class="lb-preview-grid" id="lbPreviewBody"></div>
+    <div class="lb-preview-body" id="lbPreviewBody"></div>
   </div>
 </div>
 
@@ -689,20 +638,8 @@
       : '<span class="lb-preview-value lb-preview-value--muted">' + escHtml((user.username || '?').charAt(0).toUpperCase()) + '</span>';
 
     previewBody.innerHTML =
-      '<div class="lb-preview-hero">'
-        + '<div class="lb-preview-avatar-wrap">' + avatarHtml + '</div>'
-        + '<div style="min-width:0;flex:1">'
-          + '<div class="lb-preview-label">Pseudo</div>'
-          + '<div class="lb-preview-value lb-preview-name" style="font-size:20px">' + escHtml(user.username) + '</div>'
-          + '<div class="lb-preview-meta">'
-            + '<span class="lb-preview-badge" style="color:' + escHtml(rank.color || '#fff') + ';background:' + escHtml((rank.bgColor || 'rgba(255,255,255,0.08)')) + ';border-color:' + escHtml((rank.borderColor || '#fff')) + '66">' + escHtml((rank.icon || '🏅') + ' ' + (rank.name || 'Rang')) + '</span>'
-            + '<span class="lb-preview-meta-pill">Niveau ' + level + '</span>'
-            + '<span class="lb-preview-meta-pill">' + totalXp + ' XP</span>'
-          + '</div>'
-        + '</div>'
-      + '</div>'
-      + '<div class="lb-preview-grid">'
-        + '<div class="lb-preview-card"><span class="lb-preview-label">Image</span><span class="lb-preview-value">' + (effectiveThumb ? 'Disponible' : 'Aucune') + '</span></div>'
+      '<div class="lb-preview-grid">'
+        + '<div class="lb-preview-card"><span class="lb-preview-label">Image</span><span class="lb-preview-value">' + avatarHtml + '</span></div>'
         + '<div class="lb-preview-card"><span class="lb-preview-label">Pseudo</span><span class="lb-preview-value lb-preview-name">' + escHtml(user.username) + '</span></div>'
         + '<div class="lb-preview-card"><span class="lb-preview-label">Niveau</span><span class="lb-preview-value">Nv. ' + level + '</span></div>'
         + '<div class="lb-preview-card"><span class="lb-preview-label">Total XP</span><span class="lb-preview-value">' + totalXp + '<span style="font-size:12px;font-weight:700;color:#9ca8c0"> XP</span></span></div>'
