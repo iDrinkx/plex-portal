@@ -452,17 +452,33 @@
   color: #d9e2f3;
   font-size: 14px;
   font-weight: 700;
+  line-height: 1;
+  min-height: 34px;
+  box-sizing: border-box;
 }
-.lb-preview-chip--xp {
-  background: transparent;
-  border: none;
-  padding: 0 2px;
-  color: #e9f0ff;
+.lb-preview-chip--level {
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(255,255,255,0.18);
+  color: #e2e8f0;
+}
+.lb-preview-chip--badge {
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(255,255,255,0.18);
+}
+.lb-preview-chip--hours {
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(255,255,255,0.20);
+  color: #f5f8ff;
 }
 .lb-preview-chip--succes {
-  background: rgba(16,185,129,0.12);
-  border-color: rgba(16,185,129,0.35);
-  color: #6ee7b7;
+  background: rgba(218,165,32,0.12);
+  border-color: rgba(218,165,32,0.35);
+  color: #DAA520;
+}
+.lb-preview-chip--xp {
+  background: rgba(187,187,187,0.08);
+  border-color: rgba(187,187,187,0.25);
+  color: #bbb;
 }
 .lb-preview-value--muted {
   color: #95a0b7;
@@ -479,7 +495,7 @@
   .lb-preview-title { font-size: 16px; }
   .lb-preview-profile-card { padding: 12px; gap: 12px; }
   .lb-preview-avatar-col { width: 66px; height: 66px; }
-  .lb-preview-chip { font-size: 13px; padding: 6px 10px; }
+  .lb-preview-chip { font-size: 13px; padding: 6px 10px; min-height: 32px; }
 }
 </style>
 
@@ -670,9 +686,9 @@
         + '<div class="lb-preview-avatar-col">' + avatarHtml + '</div>'
         + '<div class="lb-preview-main">'
           + '<div class="lb-preview-meta-row">'
-            + '<span class="lb-preview-chip">Nv. ' + level + '</span>'
-            + '<span class="lb-preview-chip" style="color:' + escHtml(rank.color || '#fff') + '">' + escHtml((rank.icon || '🏅') + ' ' + (rank.name || 'Rang')) + '</span>'
-            + '<span class="lb-preview-chip">Heures: ' + totalHours + '</span>'
+            + '<span class="lb-preview-chip lb-preview-chip--level" style="color:' + escHtml(rank.color || '#fff') + ';border-color:' + escHtml((rank.borderColor || '#fff')) + '66;background:' + escHtml((rank.bgColor || 'rgba(255,255,255,0.08)')) + '">Nv. ' + level + '</span>'
+            + '<span class="lb-preview-chip lb-preview-chip--badge" style="color:' + escHtml(rank.color || '#fff') + ';border-color:' + escHtml((rank.borderColor || '#fff')) + '66;background:' + escHtml((rank.bgColor || 'rgba(255,255,255,0.08)')) + '">' + escHtml((rank.icon || '🏅') + ' ' + (rank.name || 'Rang')) + '</span>'
+            + '<span class="lb-preview-chip lb-preview-chip--hours">Heures: ' + totalHours + '</span>'
             + '<span class="lb-preview-chip lb-preview-chip--succes">Succès: ' + badgeCount + '</span>'
             + '<span class="lb-preview-chip lb-preview-chip--xp">' + totalXp + ' XP</span>'
           + '</div>'
