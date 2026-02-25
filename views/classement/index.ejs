@@ -351,7 +351,7 @@
   display: flex;
 }
 .lb-preview {
-  width: min(940px, calc(100vw - 24px));
+  width: min(720px, calc(100vw - 24px));
   max-height: calc(100vh - 30px);
   overflow: auto;
   background: linear-gradient(180deg, #111826, #0d1320 58%, #0b101a);
@@ -399,7 +399,10 @@
   font-weight: 800;
   letter-spacing: 0.2px;
 }
-.lb-preview-body { display: block; }
+.lb-preview-body {
+  display: flex;
+  justify-content: flex-start;
+}
 .lb-preview-profile-card {
   background: linear-gradient(115deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
   border: 1px solid rgba(255,255,255,0.12);
@@ -408,6 +411,8 @@
   display: flex;
   align-items: center;
   gap: 16px;
+  width: fit-content;
+  max-width: 100%;
 }
 .lb-preview-avatar-col {
   width: 84px;
@@ -424,7 +429,7 @@
 }
 .lb-preview-main {
   min-width: 0;
-  flex: 1;
+  flex: 0 1 auto;
   display: flex;
   flex-direction: column;
   gap: 0;
@@ -666,9 +671,9 @@
           + '<div class="lb-preview-meta-row">'
             + '<span class="lb-preview-chip">Nv. ' + level + '</span>'
             + '<span class="lb-preview-chip" style="color:' + escHtml(rank.color || '#fff') + '">' + escHtml((rank.icon || '🏅') + ' ' + (rank.name || 'Rang')) + '</span>'
-            + '<span class="lb-preview-chip lb-preview-chip--xp">' + totalXp + ' XP</span>'
             + '<span class="lb-preview-chip">Heures: ' + totalHours + '</span>'
             + '<span class="lb-preview-chip lb-preview-chip--succes">Succès: ' + badgeCount + '</span>'
+            + '<span class="lb-preview-chip lb-preview-chip--xp">' + totalXp + ' XP</span>'
           + '</div>'
         + '</div>'
       + '</div>';
