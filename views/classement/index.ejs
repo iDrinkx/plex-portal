@@ -333,16 +333,53 @@
 .lb-error { text-align: center; padding: 80px 20px; color: #555; }
 .lb-error-icon { font-size: 36px; margin-bottom: 10px; }
 
-/*  Apercu profil (sans infos perso)  */
+/*  Modal apercu profil (sans infos perso)  */
+.lb-preview-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  background: rgba(6, 8, 12, 0.72);
+  backdrop-filter: blur(4px);
+}
+.lb-preview-modal--open {
+  display: flex;
+}
 .lb-preview {
-  margin-top: 22px;
+  width: min(920px, calc(100vw - 24px));
+  max-height: calc(100vh - 24px);
+  overflow: auto;
   background: #111318;
   border: 1px solid rgba(255,255,255,0.07);
   border-radius: 16px;
   padding: 16px;
 }
+.lb-preview-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+.lb-preview-close {
+  border: none;
+  background: rgba(255,255,255,0.08);
+  color: #c8c8c8;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+}
+.lb-preview-close:hover {
+  background: rgba(255,255,255,0.14);
+}
 .lb-preview-title {
-  margin: 0 0 4px;
+  margin: 0;
   font-size: 14px;
   color: #fff;
   font-weight: 800;
@@ -433,37 +470,6 @@
       <div id="rankHoursList"></div>
     </div>
 
-    <div class="lb-preview" id="lbPreview">
-      <h3 class="lb-preview-title">Apercu du profil</h3>
-      <p class="lb-preview-sub">Clique sur un utilisateur du classement pour voir ses cartes publiques.</p>
-      <div class="lb-preview-grid">
-        <div class="lb-preview-card">
-          <span class="lb-preview-label">Image</span>
-          <span class="lb-preview-value lb-preview-value--muted">Aucune selection</span>
-        </div>
-        <div class="lb-preview-card">
-          <span class="lb-preview-label">Pseudo</span>
-          <span class="lb-preview-value lb-preview-value--muted">Aucune selection</span>
-        </div>
-        <div class="lb-preview-card">
-          <span class="lb-preview-label">Niveau</span>
-          <span class="lb-preview-value lb-preview-value--muted">-</span>
-        </div>
-        <div class="lb-preview-card">
-          <span class="lb-preview-label">Total XP</span>
-          <span class="lb-preview-value lb-preview-value--muted">-</span>
-        </div>
-        <div class="lb-preview-card">
-          <span class="lb-preview-label">Badge</span>
-          <span class="lb-preview-value lb-preview-value--muted">-</span>
-        </div>
-        <div class="lb-preview-card">
-          <span class="lb-preview-label">Succes</span>
-          <span class="lb-preview-value lb-preview-value--muted">-</span>
-        </div>
-      </div>
-    </div>
-
   </div>
 
   <div class="lb-error" id="lbError" style="display:none">
@@ -473,11 +479,25 @@
 
 </div>
 
+<div class="lb-preview-modal" id="lbPreviewModal" aria-hidden="true">
+  <div class="lb-preview" role="dialog" aria-modal="true" aria-label="Apercu profil utilisateur">
+    <div class="lb-preview-head">
+      <h3 class="lb-preview-title">Apercu du profil</h3>
+      <button class="lb-preview-close" id="lbPreviewClose" type="button" aria-label="Fermer">×</button>
+    </div>
+    <p class="lb-preview-sub">Version courte, sans infos personnelles.</p>
+    <div class="lb-preview-grid" id="lbPreviewBody"></div>
+  </div>
+</div>
+
 <script>
 (function () {
   const ME = '<%= user.username %>';
   const ME_THUMB = <%- JSON.stringify((user && user.thumb) ? user.thumb : '') %>;
   var usersByName = {};
+  var previewModal = document.getElementById('lbPreviewModal');
+  var previewBody = document.getElementById('lbPreviewBody');
+  var previewCloseBtn = document.getElementById('lbPreviewClose');
 
   function escHtml(v) {
     return String(v == null ? '' : v)
@@ -589,26 +609,40 @@
   }
 
   function renderPreview(user) {
-    var wrap = document.getElementById('lbPreview');
-    if (!wrap || !user) return;
+    if (!previewModal || !previewBody || !user) return;
 
     var effectiveThumb = user.thumb || (user.username === ME ? ME_THUMB : '');
     var avatarHtml = effectiveThumb
       ? '<img class="lb-preview-avatar" src="' + effectiveThumb + '" alt="" loading="lazy" onerror="this.remove()">'
       : '<span class="lb-preview-value lb-preview-value--muted">Sans image</span>';
 
-    wrap.innerHTML =
-      '<h3 class="lb-preview-title">Apercu du profil</h3>'
-      + '<p class="lb-preview-sub">Version courte, sans infos personnelles.</p>'
-      + '<div class="lb-preview-grid">'
-        + '<div class="lb-preview-card"><span class="lb-preview-label">Image</span><span class="lb-preview-value">' + avatarHtml + '</span></div>'
-        + '<div class="lb-preview-card"><span class="lb-preview-label">Pseudo</span><span class="lb-preview-value lb-preview-name">' + escHtml(user.username) + '</span></div>'
-        + '<div class="lb-preview-card"><span class="lb-preview-label">Niveau</span><span class="lb-preview-value">Nv. ' + (user.level || 1) + '</span></div>'
-        + '<div class="lb-preview-card"><span class="lb-preview-label">Total XP</span><span class="lb-preview-value">' + (user.totalXp || 0) + ' XP</span></div>'
-        + '<div class="lb-preview-card"><span class="lb-preview-label">Badge</span><span class="lb-preview-value" style="color:' + user.rank.color + '">' + escHtml(user.rank.icon + ' ' + user.rank.name) + '</span></div>'
-        + '<div class="lb-preview-card"><span class="lb-preview-label">Succes</span><span class="lb-preview-value">' + (user.badgeCount || 0) + '</span></div>'
-      + '</div>';
+    previewBody.innerHTML =
+      '<div class="lb-preview-card"><span class="lb-preview-label">Image</span><span class="lb-preview-value">' + avatarHtml + '</span></div>'
+      + '<div class="lb-preview-card"><span class="lb-preview-label">Pseudo</span><span class="lb-preview-value lb-preview-name">' + escHtml(user.username) + '</span></div>'
+      + '<div class="lb-preview-card"><span class="lb-preview-label">Niveau</span><span class="lb-preview-value">Nv. ' + (user.level || 1) + '</span></div>'
+      + '<div class="lb-preview-card"><span class="lb-preview-label">Total XP</span><span class="lb-preview-value">' + (user.totalXp || 0) + ' XP</span></div>'
+      + '<div class="lb-preview-card"><span class="lb-preview-label">Badge</span><span class="lb-preview-value" style="color:' + user.rank.color + '">' + escHtml(user.rank.icon + ' ' + user.rank.name) + '</span></div>'
+      + '<div class="lb-preview-card"><span class="lb-preview-label">Succes</span><span class="lb-preview-value">' + (user.badgeCount || 0) + '</span></div>';
+
+    previewModal.classList.add('lb-preview-modal--open');
+    previewModal.setAttribute('aria-hidden', 'false');
   }
+
+  function closePreview() {
+    if (!previewModal) return;
+    previewModal.classList.remove('lb-preview-modal--open');
+    previewModal.setAttribute('aria-hidden', 'true');
+  }
+
+  if (previewCloseBtn) previewCloseBtn.addEventListener('click', closePreview);
+  if (previewModal) {
+    previewModal.addEventListener('click', function (e) {
+      if (e.target === previewModal) closePreview();
+    });
+  }
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') closePreview();
+  });
 
   document.addEventListener('click', function (e) {
     var target = e.target.closest('[data-lb-user]');
