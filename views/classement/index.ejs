@@ -332,6 +332,179 @@
 @keyframes lb-spin { to { transform: rotate(360deg); } }
 .lb-error { text-align: center; padding: 80px 20px; color: #555; }
 .lb-error-icon { font-size: 36px; margin-bottom: 10px; }
+
+/*  Modal apercu profil (sans infos perso)  */
+.lb-preview-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  background:
+    radial-gradient(900px 420px at 50% 50%, rgba(59,130,246,0.14), transparent 65%),
+    rgba(6, 8, 12, 0.76);
+  backdrop-filter: blur(8px);
+}
+.lb-preview-modal--open {
+  display: flex;
+}
+.lb-preview {
+  width: min(720px, calc(100vw - 24px));
+  max-height: calc(100vh - 30px);
+  overflow: auto;
+  background: linear-gradient(180deg, #111826, #0d1320 58%, #0b101a);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 20px;
+  padding: 18px 18px 16px;
+  box-shadow:
+    0 26px 80px rgba(0,0,0,0.62),
+    0 0 0 1px rgba(59,130,246,0.16) inset;
+  transform: translateY(8px) scale(0.98);
+  opacity: 0;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+.lb-preview-modal--open .lb-preview {
+  transform: translateY(0) scale(1);
+  opacity: 1;
+}
+.lb-preview-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+.lb-preview-close {
+  border: none;
+  background: rgba(255,255,255,0.10);
+  color: #d8deea;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 20px;
+  line-height: 1;
+  transition: background 0.16s ease, transform 0.16s ease;
+}
+.lb-preview-close:hover {
+  background: rgba(255,255,255,0.2);
+  transform: translateY(-1px);
+}
+.lb-preview-title {
+  margin: 0;
+  font-size: 18px;
+  color: #f6f8ff;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+}
+.lb-preview-body {
+  display: flex;
+  justify-content: flex-start;
+}
+.lb-preview-profile-card {
+  background: linear-gradient(115deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: fit-content;
+  max-width: 100%;
+}
+.lb-preview-avatar-col {
+  width: 84px;
+  height: 84px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0f1626;
+  border: 2px solid rgba(255,255,255,0.14);
+  box-shadow: 0 0 0 6px rgba(255,255,255,0.04);
+  overflow: hidden;
+}
+.lb-preview-main {
+  min-width: 0;
+  flex: 0 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  justify-content: center;
+}
+.lb-preview-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.lb-preview-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.18);
+  color: #d9e2f3;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+  min-height: 34px;
+  box-sizing: border-box;
+}
+.lb-preview-chip--level {
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(255,255,255,0.18);
+  color: #e2e8f0;
+}
+.lb-preview-chip--badge {
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(255,255,255,0.18);
+}
+.lb-preview-chip--rank {
+  gap: 7px;
+}
+.lb-preview-rank-sep {
+  opacity: 0.45;
+  font-size: 11px;
+  padding: 0 1px;
+}
+.lb-preview-chip--hours {
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(255,255,255,0.20);
+  color: #f5f8ff;
+}
+.lb-preview-chip--succes {
+  background: rgba(218,165,32,0.12);
+  border-color: rgba(218,165,32,0.35);
+  color: #DAA520;
+}
+.lb-preview-chip--xp {
+  background: rgba(0,217,255,0.10);
+  border-color: rgba(0,217,255,0.34);
+  color: #00d9ff;
+}
+.lb-preview-value--muted {
+  color: #95a0b7;
+  font-weight: 600;
+}
+.lb-preview-avatar {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+@media (max-width: 560px) {
+  .lb-preview { padding: 14px; }
+  .lb-preview-title { font-size: 16px; }
+  .lb-preview-profile-card { padding: 12px; gap: 12px; }
+  .lb-preview-avatar-col { width: 66px; height: 66px; }
+  .lb-preview-chip { font-size: 13px; padding: 6px 10px; min-height: 32px; }
+}
 </style>
 
 <div class="lb-page">
@@ -374,15 +547,38 @@
 
 </div>
 
+<div class="lb-preview-modal" id="lbPreviewModal" aria-hidden="true">
+  <div class="lb-preview" role="dialog" aria-modal="true" aria-label="Apercu profil utilisateur">
+    <div class="lb-preview-head">
+      <h3 class="lb-preview-title">Apercu du profil</h3>
+      <button class="lb-preview-close" id="lbPreviewClose" type="button" aria-label="Fermer">×</button>
+    </div>
+    <div class="lb-preview-body" id="lbPreviewBody"></div>
+  </div>
+</div>
+
 <script>
 (function () {
   const ME = '<%= user.username %>';
   const ME_THUMB = <%- JSON.stringify((user && user.thumb) ? user.thumb : '') %>;
+  var usersByName = {};
+  var previewModal = document.getElementById('lbPreviewModal');
+  var previewBody = document.getElementById('lbPreviewBody');
+  var previewCloseBtn = document.getElementById('lbPreviewClose');
+
+  function escHtml(v) {
+    return String(v == null ? '' : v)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
 
   function _grad(c) {
     return 'conic-gradient(from -90deg, ' + c + '2e 0deg, ' + c + ' 90deg, ' + c + 'cc 180deg, ' + c + ' 270deg, ' + c + '2e 360deg)';
   }
-  function hrs(h) { return Math.round(h) + 'h'; }
+  function hrs(h) { return Math.round(h); }
 
   function podiumCard(user, rank) {
     var isMe     = user.username === ME;
@@ -400,14 +596,14 @@
         + '<div class="lb-pod-placeholder" style="display:none;filter:' + glow + '">' + initials + '</div>'
       : '<div class="lb-pod-placeholder" style="filter:' + glow + '">' + initials + '</div>';
 
-    return '<div class="lb-podium-card lb-podium-card--' + rank + '">'
+    return '<div class="lb-podium-card lb-podium-card--' + rank + '" data-lb-user="' + escHtml(user.username) + '">'
       + '<span class="lb-podium-medal">' + medal + '</span>'
       + '<div class="lb-pod-avatar-wrap">'
         + '<div class="lb-pod-ring" style="background:' + _grad(user.rank.color) + '"></div>'
         + imgPart
         + '<div class="lb-pod-level">' + user.level + '</div>'
       + '</div>'
-      + '<div class="lb-pod-username' + (isMe ? ' lb-pod-username--me' : '') + '">' + user.username + '</div>'
+      + '<div class="lb-pod-username' + (isMe ? ' lb-pod-username--me' : '') + '">' + escHtml(user.username) + '</div>'
       + '<span class="lb-pod-rank-badge" style="background:' + user.rank.bgColor + ';color:' + user.rank.color + ';border:1px solid ' + user.rank.borderColor + '40">'
         + user.rank.icon + ' ' + user.rank.name
       + '</span>'
@@ -440,15 +636,15 @@
         + '<div class="lb-row-placeholder" style="display:none;filter:' + glow + '">' + initials + '</div>'
       : '<div class="lb-row-placeholder" style="filter:' + glow + '">' + initials + '</div>';
 
-    return '<div class="lb-row' + (isMe ? ' lb-row--me' : '') + '">'
+    return '<div class="lb-row' + (isMe ? ' lb-row--me' : '') + '" data-lb-user="' + escHtml(user.username) + '">'
       + posHtml
       + '<div class="lb-row-avatar-wrap">'
         + '<div class="lb-row-ring" style="background:' + _grad(user.rank.color) + '"></div>'
         + imgPart
       + '</div>'
       + '<div class="lb-row-info">'
-        + '<div class="lb-row-name">' + user.username + '</div>'
-        + '<div class="lb-row-meta" style="color:' + user.rank.color + ';font-weight:700">' + user.rank.icon + ' ' + user.rank.name + '</div>'
+        + '<div class="lb-row-name">' + escHtml(user.username) + '</div>'
+        + '<div class="lb-row-meta" style="color:' + user.rank.color + ';font-weight:700">' + escHtml(user.rank.icon + ' ' + user.rank.name) + '</div>'
       + '</div>'
       + statHtml
     + '</div>';
@@ -456,11 +652,12 @@
 
   function renderTable(list, containerId, mode, startFrom) {
     startFrom = startFrom || 0;
-    var slice = list.slice(startFrom, startFrom + 10);
+    var pageSize = 15;
+    var slice = list.slice(startFrom, startFrom + pageSize);
     var myPos = list.findIndex(function(u) { return u.username === ME; });
     var html  = slice.map(function(u, i) { return rankRow(u, i + startFrom, mode); }).join('');
     // Afficher la position de l'user s'il est en dessous du tableau visible
-    if (myPos >= startFrom + 10) {
+    if (myPos >= startFrom + pageSize) {
       html += '<div class="lb-row-sep"><span class="lb-row-sep-label">Votre position</span><span class="lb-row-sep-dots">\u00b7 \u00b7 \u00b7</span></div>';
       html += rankRow(list[myPos], myPos, mode);
     }
@@ -478,6 +675,60 @@
     }
     document.getElementById('lbPodium').innerHTML = html;
   }
+
+  function renderPreview(user) {
+    if (!previewModal || !previewBody || !user) return;
+
+    var rank = user.rank || {};
+    var level = user.level || 1;
+    var totalXp = Number(user.totalXp || 0).toLocaleString('fr-FR');
+    var badgeCount = Number(user.badgeCount || 0).toLocaleString('fr-FR');
+    var totalHours = Math.round(user.totalHours || 0).toLocaleString('fr-FR');
+    var effectiveThumb = user.thumb || (user.username === ME ? ME_THUMB : '');
+    var avatarHtml = effectiveThumb
+      ? '<img class="lb-preview-avatar" src="' + effectiveThumb + '" alt="" loading="lazy" onerror="this.parentElement.innerHTML=\'<span class=&quot;lb-preview-value lb-preview-value--muted&quot;>?</span>\'">'
+      : '<span class="lb-preview-value lb-preview-value--muted" style="font-size:36px">' + escHtml((user.username || '?').charAt(0).toUpperCase()) + '</span>';
+
+    previewBody.innerHTML =
+      '<div class="lb-preview-profile-card">'
+        + '<div class="lb-preview-avatar-col">' + avatarHtml + '</div>'
+        + '<div class="lb-preview-main">'
+          + '<div class="lb-preview-meta-row">'
+            + '<span class="lb-preview-chip lb-preview-chip--rank" style="color:' + escHtml(rank.color || '#fff') + ';border-color:' + escHtml((rank.borderColor || '#fff')) + '66;background:' + escHtml((rank.bgColor || 'rgba(255,255,255,0.08)')) + '"><span>Niv. ' + level + '</span><span class="lb-preview-rank-sep">•</span><span>' + escHtml((rank.icon || '🏅') + ' ' + (rank.name || 'Rang')) + '</span></span>'
+            + '<span class="lb-preview-chip lb-preview-chip--hours">' + totalHours + ' H</span>'
+            + '<span class="lb-preview-chip lb-preview-chip--succes">🏆 ' + badgeCount + '</span>'
+            + '<span class="lb-preview-chip lb-preview-chip--xp">' + totalXp + ' XP</span>'
+          + '</div>'
+        + '</div>'
+      + '</div>';
+
+    previewModal.classList.add('lb-preview-modal--open');
+    previewModal.setAttribute('aria-hidden', 'false');
+  }
+
+  function closePreview() {
+    if (!previewModal) return;
+    previewModal.classList.remove('lb-preview-modal--open');
+    previewModal.setAttribute('aria-hidden', 'true');
+  }
+
+  if (previewCloseBtn) previewCloseBtn.addEventListener('click', closePreview);
+  if (previewModal) {
+    previewModal.addEventListener('click', function (e) {
+      if (e.target === previewModal) closePreview();
+    });
+  }
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') closePreview();
+  });
+
+  document.addEventListener('click', function (e) {
+    var target = e.target.closest('[data-lb-user]');
+    if (!target) return;
+    var username = target.getAttribute('data-lb-user');
+    if (!username || !usersByName[username]) return;
+    renderPreview(usersByName[username]);
+  });
 
   // Gestion des onglets
   var tabLevel = document.getElementById('tabLevel');
@@ -520,6 +771,8 @@
   fetch(bp + '/api/classement')
     .then(function(r) { return r.ok ? r.json() : Promise.reject(r.status); })
     .then(function(data) {
+      usersByName = {};
+      (data.byLevel || []).forEach(function(u) { usersByName[u.username] = u; });
       if (data.lastRefresh) {
         lastRefreshTime = new Date(data.lastRefresh).getTime();
         updateTimer();
