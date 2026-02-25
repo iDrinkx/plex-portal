@@ -402,7 +402,8 @@ const ACHIEVEMENTS = {
       category: "collections",
       isSecret: false,
       revocable: true,
-      xp: 400
+      // Barème équilibré collections: 250 XP/film, cap à 7500 XP
+      xp: 7500
     },
     {
       id: "black-knight",
@@ -416,7 +417,8 @@ const ACHIEVEMENTS = {
       category: "collections",
       isSecret: false,
       revocable: true,
-      xp: 400
+      // Barème équilibré collections: 250 XP/film
+      xp: 1750
     },
     {
       id: "jurassic-survivor",
@@ -430,7 +432,8 @@ const ACHIEVEMENTS = {
       category: "collections",
       isSecret: false,
       revocable: true,
-      xp: 400
+      // Barème équilibré collections: 250 XP/film
+      xp: 1750
     },
     {
       id: "potter-head",
@@ -444,7 +447,8 @@ const ACHIEVEMENTS = {
       category: "collections",
       isSecret: false,
       revocable: true,
-      xp: 400
+      // Barème équilibré collections: 250 XP/film
+      xp: 2750
     },
     {
       id: "tolkiendil",
@@ -458,7 +462,8 @@ const ACHIEVEMENTS = {
       category: "collections",
       isSecret: false,
       revocable: true,
-      xp: 400
+      // Barème équilibré collections: 250 XP/film
+      xp: 1500
     },
     {
       id: "evolutionist",
@@ -472,7 +477,8 @@ const ACHIEVEMENTS = {
       category: "collections",
       isSecret: false,
       revocable: true,
-      xp: 400
+      // Barème équilibré collections: 250 XP/film
+      xp: 750
     }
   ],
 
