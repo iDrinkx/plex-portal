@@ -48,7 +48,7 @@ const ACHIEVEMENTS = {
       }),
       unlockedDate: null,
       category: "temporels",
-      xp: 2000
+      xp: 1500
     }
   ],
 
@@ -68,7 +68,7 @@ const ACHIEVEMENTS = {
       }),
       unlockedDate: null,
       category: "activites",
-      xp: 200
+      xp: 150
     },
     {
       id: "regular",
@@ -397,12 +397,13 @@ const ACHIEVEMENTS = {
       description: "A regardé toute la collection Marvel Cinematic Universe",
       condition: (data) => false,
       conditionText: "A regardé toute la collection Marvel Cinematic Universe",
-      getProgress: (data) => ({ current: 0, total: 1, percent: 0 }),
+      getProgress: (data) => ({ current: 0, total: 44, percent: 0 }),
       unlockedDate: null,
       category: "collections",
       isSecret: false,
       revocable: true,
-      xp: 400
+      // Barème équilibré collections: 250 XP/film, cap à 7500 XP
+      xp: 7500
     },
     {
       id: "black-knight",
@@ -411,12 +412,13 @@ const ACHIEVEMENTS = {
       description: "A regardé au moins 7 films de la saga Star Wars",
       condition: (data) => false,
       conditionText: "A regardé au moins 7 films de la saga Star Wars",
-      getProgress: (data) => ({ current: 0, total: 1, percent: 0 }),
+      getProgress: (data) => ({ current: 0, total: 7, percent: 0 }),
       unlockedDate: null,
       category: "collections",
       isSecret: false,
       revocable: true,
-      xp: 400
+      // Barème équilibré collections: 250 XP/film
+      xp: 1750
     },
     {
       id: "jurassic-survivor",
@@ -425,12 +427,13 @@ const ACHIEVEMENTS = {
       description: "A survécu à tous les parcs — les 7 films Jurassic",
       condition: (data) => false,
       conditionText: "A survécu à tous les parcs — les 7 films Jurassic",
-      getProgress: (data) => ({ current: 0, total: 1, percent: 0 }),
+      getProgress: (data) => ({ current: 0, total: 7, percent: 0 }),
       unlockedDate: null,
       category: "collections",
       isSecret: false,
       revocable: true,
-      xp: 400
+      // Barème équilibré collections: 250 XP/film
+      xp: 1750
     },
     {
       id: "potter-head",
@@ -439,12 +442,13 @@ const ACHIEVEMENTS = {
       description: "A regardé toute la collection Wizarding World",
       condition: (data) => false,
       conditionText: "A regardé toute la collection Wizarding World",
-      getProgress: (data) => ({ current: 0, total: 1, percent: 0 }),
+      getProgress: (data) => ({ current: 0, total: 11, percent: 0 }),
       unlockedDate: null,
       category: "collections",
       isSecret: false,
       revocable: true,
-      xp: 400
+      // Barème équilibré collections: 250 XP/film
+      xp: 2750
     },
     {
       id: "tolkiendil",
@@ -453,12 +457,13 @@ const ACHIEVEMENTS = {
       description: "A regardé toute la collection Middle Earth",
       condition: (data) => false,
       conditionText: "A regardé toute la collection Middle Earth",
-      getProgress: (data) => ({ current: 0, total: 1, percent: 0 }),
+      getProgress: (data) => ({ current: 0, total: 6, percent: 0 }),
       unlockedDate: null,
       category: "collections",
       isSecret: false,
       revocable: true,
-      xp: 400
+      // Barème équilibré collections: 250 XP/film
+      xp: 1500
     },
     {
       id: "evolutionist",
@@ -467,12 +472,29 @@ const ACHIEVEMENTS = {
       description: "Fan de l'univers de la Planète des Singes",
       condition: (data) => false,
       conditionText: "Fan de l'univers de la Planète des Singes",
-      getProgress: (data) => ({ current: 0, total: 1, percent: 0 }),
+      getProgress: (data) => ({ current: 0, total: 4, percent: 0 }),
       unlockedDate: null,
       category: "collections",
       isSecret: false,
       revocable: true,
-      xp: 400
+      // Barème équilibré collections: 250 XP/film
+      xp: 1000
+    },
+    {
+      id: "monsterverse",
+      name: "MonsterVerse",
+      icon: "🦖",
+      description: "A regardé les films et séries de la collection MonsterVerse",
+      condition: (data) => false,
+      conditionText: "A regardé les films et séries de la collection MonsterVerse",
+      // Fallback UI: 5 films + 2 séries = 7 éléments au total
+      getProgress: (data) => ({ current: 0, total: 7, percent: 0 }),
+      unlockedDate: null,
+      category: "collections",
+      isSecret: false,
+      revocable: true,
+      // Barème équilibré collections: valeur mixte films+séries
+      xp: 2000
     }
   ],
 
@@ -489,7 +511,7 @@ const ACHIEVEMENTS = {
       unlockedDate: null,
       category: "secrets",
       isSecret: false,
-      xp: 500
+      xp: 1200
     },
     {
       id: "countdown-pajama",
@@ -502,7 +524,7 @@ const ACHIEVEMENTS = {
       unlockedDate: null,
       category: "secrets",
       isSecret: false,
-      xp: 400
+      xp: 700
     },
     {
       id: "midnight-watcher",
@@ -515,7 +537,7 @@ const ACHIEVEMENTS = {
       unlockedDate: null,
       category: "secrets",
       isSecret: false,
-      xp: 400
+      xp: 900
     }
   ],
 
