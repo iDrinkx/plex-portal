@@ -400,34 +400,69 @@
   letter-spacing: 0.2px;
 }
 .lb-preview-body { display: block; }
-.lb-preview-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
+.lb-preview-profile-card {
+  background: linear-gradient(115deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
 }
-.lb-preview-card {
-  background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
-  border: 1px solid rgba(255,255,255,0.10);
-  border-radius: 13px;
-  padding: 11px;
-  min-height: 76px;
+.lb-preview-avatar-col {
+  width: 84px;
+  height: 84px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0f1626;
+  border: 2px solid rgba(255,255,255,0.14);
+  box-shadow: 0 0 0 6px rgba(255,255,255,0.04);
+  overflow: hidden;
+}
+.lb-preview-main {
+  min-width: 0;
+  flex: 1;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  gap: 6px;
-  box-shadow: 0 6px 20px rgba(0,0,0,0.24);
+  gap: 8px;
 }
-.lb-preview-label {
-  font-size: 10px;
-  color: #8e97a9;
-  text-transform: uppercase;
-  letter-spacing: 1.1px;
-}
-.lb-preview-value {
-  font-size: 20px;
+.lb-preview-username {
+  font-size: 36px;
   font-weight: 800;
   color: #f5f8ff;
-  line-height: 1.1;
+  line-height: 1;
+}
+.lb-preview-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.lb-preview-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.18);
+  color: #d9e2f3;
+  font-size: 14px;
+  font-weight: 700;
+}
+.lb-preview-chip--xp {
+  background: transparent;
+  border: none;
+  padding: 0 2px;
+  color: #e9f0ff;
+}
+.lb-preview-chip--succes {
+  background: rgba(16,185,129,0.12);
+  border-color: rgba(16,185,129,0.35);
+  color: #6ee7b7;
 }
 .lb-preview-value--muted {
   color: #95a0b7;
@@ -436,24 +471,20 @@
 .lb-preview-name {
   filter: blur(7px);
   user-select: none;
-  font-size: 16px;
 }
 .lb-preview-avatar {
-  width: 62px;
-  height: 62px;
+  width: 100%;
+  height: 100%;
   border-radius: 50%;
   object-fit: cover;
-  border: 2px solid rgba(255,255,255,0.14);
-}
-@media (max-width: 960px) {
-  .lb-preview-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 560px) {
   .lb-preview { padding: 14px; }
-  .lb-preview-grid { grid-template-columns: 1fr; }
   .lb-preview-title { font-size: 16px; }
-  .lb-preview-value { font-size: 18px; }
-  .lb-preview-avatar { width: 54px; height: 54px; }
+  .lb-preview-profile-card { padding: 12px; gap: 12px; }
+  .lb-preview-avatar-col { width: 66px; height: 66px; }
+  .lb-preview-username { font-size: 28px; }
+  .lb-preview-chip { font-size: 13px; padding: 6px 10px; }
 }
 </style>
 
@@ -635,16 +666,20 @@
     var effectiveThumb = user.thumb || (user.username === ME ? ME_THUMB : '');
     var avatarHtml = effectiveThumb
       ? '<img class="lb-preview-avatar" src="' + effectiveThumb + '" alt="" loading="lazy" onerror="this.parentElement.innerHTML=\'<span class=&quot;lb-preview-value lb-preview-value--muted&quot;>?</span>\'">'
-      : '<span class="lb-preview-value lb-preview-value--muted">' + escHtml((user.username || '?').charAt(0).toUpperCase()) + '</span>';
+      : '<span class="lb-preview-value lb-preview-value--muted" style="font-size:36px">' + escHtml((user.username || '?').charAt(0).toUpperCase()) + '</span>';
 
     previewBody.innerHTML =
-      '<div class="lb-preview-grid">'
-        + '<div class="lb-preview-card"><span class="lb-preview-label">Image</span><span class="lb-preview-value">' + avatarHtml + '</span></div>'
-        + '<div class="lb-preview-card"><span class="lb-preview-label">Pseudo</span><span class="lb-preview-value lb-preview-name">' + escHtml(user.username) + '</span></div>'
-        + '<div class="lb-preview-card"><span class="lb-preview-label">Niveau</span><span class="lb-preview-value">Nv. ' + level + '</span></div>'
-        + '<div class="lb-preview-card"><span class="lb-preview-label">Total XP</span><span class="lb-preview-value">' + totalXp + '<span style="font-size:12px;font-weight:700;color:#9ca8c0"> XP</span></span></div>'
-        + '<div class="lb-preview-card"><span class="lb-preview-label">Badge</span><span class="lb-preview-value" style="font-size:18px;color:' + escHtml(rank.color || '#fff') + '">' + escHtml((rank.icon || '🏅') + ' ' + (rank.name || 'Rang')) + '</span></div>'
-        + '<div class="lb-preview-card"><span class="lb-preview-label">Succes</span><span class="lb-preview-value">' + badgeCount + '</span></div>'
+      '<div class="lb-preview-profile-card">'
+        + '<div class="lb-preview-avatar-col">' + avatarHtml + '</div>'
+        + '<div class="lb-preview-main">'
+          + '<div class="lb-preview-username lb-preview-name">' + escHtml(user.username) + '</div>'
+          + '<div class="lb-preview-meta-row">'
+            + '<span class="lb-preview-chip">Nv. ' + level + '</span>'
+            + '<span class="lb-preview-chip" style="color:' + escHtml(rank.color || '#fff') + '">' + escHtml((rank.icon || '🏅') + ' ' + (rank.name || 'Rang')) + '</span>'
+            + '<span class="lb-preview-chip lb-preview-chip--xp">' + totalXp + ' XP</span>'
+            + '<span class="lb-preview-chip lb-preview-chip--succes">Succès: ' + badgeCount + '</span>'
+          + '</div>'
+        + '</div>'
       + '</div>';
 
     previewModal.classList.add('lb-preview-modal--open');
