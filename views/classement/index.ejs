@@ -628,11 +628,12 @@
 
   function renderTable(list, containerId, mode, startFrom) {
     startFrom = startFrom || 0;
-    var slice = list.slice(startFrom, startFrom + 10);
+    var pageSize = 15;
+    var slice = list.slice(startFrom, startFrom + pageSize);
     var myPos = list.findIndex(function(u) { return u.username === ME; });
     var html  = slice.map(function(u, i) { return rankRow(u, i + startFrom, mode); }).join('');
     // Afficher la position de l'user s'il est en dessous du tableau visible
-    if (myPos >= startFrom + 10) {
+    if (myPos >= startFrom + pageSize) {
       html += '<div class="lb-row-sep"><span class="lb-row-sep-label">Votre position</span><span class="lb-row-sep-dots">\u00b7 \u00b7 \u00b7</span></div>';
       html += rankRow(list[myPos], myPos, mode);
     }
