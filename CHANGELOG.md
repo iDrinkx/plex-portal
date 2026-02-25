@@ -2,6 +2,24 @@
 
 Toutes les modifications notables de ce projet sont documentées dans ce fichier.
 
+## 1.22.0 (2026-02-25)
+
+* Merge pull request #15 from iDrinkx/develop ([6cf9b01](https://github.com/iDrinkx/plex-portal/commit/6cf9b01)), closes [#15](https://github.com/iDrinkx/plex-portal/issues/15)
+* feat: add user profile preview section with responsive design ([d26d3eb](https://github.com/iDrinkx/plex-portal/commit/d26d3eb))
+* feat: adjust user profile preview layout and styling for improved responsiveness ([9576156](https://github.com/iDrinkx/plex-portal/commit/9576156))
+* feat: enhance ranking display with new preview chip styles and layout adjustments ([83f8e2c](https://github.com/iDrinkx/plex-portal/commit/83f8e2c))
+* feat: enhance user profile preview chips with new styles and improved layout ([2297b76](https://github.com/iDrinkx/plex-portal/commit/2297b76))
+* feat: enhance user profile preview modal with improved styling and layout ([a1a522e](https://github.com/iDrinkx/plex-portal/commit/a1a522e))
+* feat: increase pagination size in rankings table from 10 to 15 ([fa5cef5](https://github.com/iDrinkx/plex-portal/commit/fa5cef5))
+* feat: update display text for total hours, movies, episodes, and music in profile stats ([b0bee89](https://github.com/iDrinkx/plex-portal/commit/b0bee89))
+* feat: update preview chip and XP amount colors for improved visibility ([92bec6e](https://github.com/iDrinkx/plex-portal/commit/92bec6e))
+* feat: update preview chip styles for hours and success display in rankings ([83409e2](https://github.com/iDrinkx/plex-portal/commit/83409e2))
+* feat: update total hours display format in podium card ([3bef026](https://github.com/iDrinkx/plex-portal/commit/3bef026))
+* feat: update user profile preview with enhanced layout and styling ([a5de06b](https://github.com/iDrinkx/plex-portal/commit/a5de06b))
+* feat: update user profile preview with total hours display and layout adjustments ([9d8f152](https://github.com/iDrinkx/plex-portal/commit/9d8f152))
+* refactor: simplify user profile preview styles and structure ([5b00ffd](https://github.com/iDrinkx/plex-portal/commit/5b00ffd))
+* fix: implement user profile preview modal with improved styling and functionality ([e9e07fb](https://github.com/iDrinkx/plex-portal/commit/e9e07fb))
+
 ## <small>1.21.3 (2026-02-25)</small>
 
 * Merge pull request #14 from iDrinkx/develop ([408d5bc](https://github.com/iDrinkx/plex-portal/commit/408d5bc)), closes [#14](https://github.com/iDrinkx/plex-portal/issues/14)
