@@ -369,7 +369,7 @@ body {
   z-index: 0;
   pointer-events: none;
   background:
-    linear-gradient(150deg, rgba(255,255,255,0.14), rgba(255,255,255,0.02) 28%, rgba(255,255,255,0.00) 64%);
+    linear-gradient(150deg, rgba(255,255,255,0.06), rgba(255,255,255,0.012) 28%, rgba(255,255,255,0.00) 64%);
 }
 
 .login-card::after {
@@ -379,7 +379,7 @@ body {
   z-index: 0;
   pointer-events: none;
   background:
-    radial-gradient(circle at 18% 12%, rgba(255,255,255,0.18), rgba(255,255,255,0.03) 24%, rgba(255,255,255,0) 50%),
+    radial-gradient(circle at 18% 12%, rgba(255,255,255,0.08), rgba(255,255,255,0.014) 24%, rgba(255,255,255,0) 50%),
     radial-gradient(circle at 82% 78%, rgba(86, 186, 255, 0.05), rgba(86, 186, 255, 0) 48%);
   filter: blur(3px);
   transform: rotate(-8deg);
@@ -1321,42 +1321,56 @@ body {
 
 /* Carte de statistique */
 .stat-card {
-  background: linear-gradient(135deg, var(--panel2) 0%, var(--panel) 100%);
-  border: 1px solid #2a2a2a;
-  border-radius: 12px;
+  background: rgba(14, 22, 34, 0.012);
+  border: 1px solid rgba(226, 246, 255, 0.42);
+  border-radius: 20px;
   padding: 20px 16px;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   overflow: hidden;
+  isolation: isolate;
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
+  box-shadow:
+    0 14px 34px rgba(0,0,0,.18),
+    0 0 0 1px rgba(232, 248, 255, 0.20) inset,
+    0 4px 10px rgba(98, 178, 255, 0.04);
+  backdrop-filter: blur(3px) saturate(112%) contrast(1.01) brightness(1.02);
+  -webkit-backdrop-filter: blur(3px) saturate(112%) contrast(1.01) brightness(1.02);
 }
 
-/* Effet de fond animé au hover */
 .stat-card::before {
   content: '';
   position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background: radial-gradient(circle, rgba(245, 166, 35, 0.1) 0%, rgba(245, 166, 35, 0) 70%);
-  opacity: 0;
-  transition: opacity 0.4s ease;
+  inset: 0;
+  background:
+    linear-gradient(150deg, rgba(255,255,255,0.06), rgba(255,255,255,0.012) 28%, rgba(255,255,255,0.00) 64%);
   pointer-events: none;
+  z-index: 0;
 }
 
-.stat-card:hover::before {
-  opacity: 1;
+.stat-card::after {
+  content: '';
+  position: absolute;
+  inset: -35%;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 18% 12%, rgba(255,255,255,0.08), rgba(255,255,255,0.014) 24%, rgba(255,255,255,0) 50%),
+    radial-gradient(circle at 82% 78%, rgba(86, 186, 255, 0.05), rgba(86, 186, 255, 0) 48%);
+  filter: blur(3px);
+  transform: rotate(-8deg);
+  z-index: 0;
 }
 
 .stat-card:hover {
-  border-color: var(--plex);
-  box-shadow: 0 8px 32px rgba(245, 166, 35, 0.15),
-              inset 0 1px 0 rgba(255, 255, 255, 0.1);
-  transform: translateY(-4px);
+  border-color: rgba(236, 250, 255, 0.56);
+  box-shadow:
+    0 18px 40px rgba(0,0,0,.22),
+    0 0 0 1px rgba(236, 250, 255, 0.24) inset,
+    0 6px 14px rgba(98, 178, 255, 0.06);
+  transform: translateY(-2px);
 }
 
 /* Icône */
@@ -1368,7 +1382,7 @@ body {
 }
 
 .stat-card:hover .stat-icon {
-  transform: scale(1.1) rotate(5deg);
+  transform: scale(1.06);
 }
 
 /* Contenu de la carte */
@@ -1458,7 +1472,7 @@ body {
   inset: 0;
   pointer-events: none;
   background:
-    linear-gradient(150deg, rgba(255,255,255,0.14), rgba(255,255,255,0.02) 28%, rgba(255,255,255,0.00) 64%);
+    linear-gradient(150deg, rgba(255,255,255,0.06), rgba(255,255,255,0.012) 28%, rgba(255,255,255,0.00) 64%);
   z-index: 0;
 }
 
@@ -1468,7 +1482,7 @@ body {
   inset: -35%;
   pointer-events: none;
   background:
-    radial-gradient(circle at 18% 12%, rgba(255,255,255,0.18), rgba(255,255,255,0.03) 24%, rgba(255,255,255,0) 50%),
+    radial-gradient(circle at 18% 12%, rgba(255,255,255,0.08), rgba(255,255,255,0.014) 24%, rgba(255,255,255,0) 50%),
     radial-gradient(circle at 82% 78%, rgba(86, 186, 255, 0.05), rgba(86, 186, 255, 0) 48%);
   filter: blur(3px);
   transform: rotate(-8deg);
