@@ -37,12 +37,116 @@ html, body { height: 100%; }
 
 body {
   font-family: "Segoe UI", Roboto, Arial, sans-serif;
-  background: linear-gradient(180deg, var(--bg2) 0%, var(--bg1) 30%, var(--bg0) 100%);
+  background: linear-gradient(180deg, #17120a 0%, #120f0b 35%, #0b0b0c 100%);
   background-attachment: fixed;
   color: var(--text);
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* =========================
+   GLOBAL PLEX BACKGROUND
+========================= */
+.site-bg {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.site-bg-gradient,
+.site-bg-vignette,
+.site-particles {
+  position: absolute;
+  inset: 0;
+}
+
+.site-bg-gradient {
+  background:
+    radial-gradient(1200px 640px at 50% 110%, rgba(229, 160, 13, 0.14), rgba(229, 160, 13, 0) 62%),
+    radial-gradient(920px 520px at 10% -12%, rgba(255, 184, 0, 0.10), rgba(255, 184, 0, 0) 60%),
+    radial-gradient(920px 520px at 88% 4%, rgba(255, 138, 64, 0.08), rgba(255, 138, 64, 0) 62%),
+    linear-gradient(180deg, #17120a 0%, #120f0b 35%, #0b0b0c 100%);
+}
+
+.site-bg-vignette {
+  background:
+    radial-gradient(circle at 50% 30%, rgba(0, 0, 0, 0) 48%, rgba(0, 0, 0, 0.46) 100%);
+}
+
+.site-particles {
+  opacity: 0.9;
+}
+
+.site-particle {
+  --size: 6px;
+  --x-start: 50vw;
+  --x-end: 55vw;
+  --y-start: 110vh;
+  --y-end: -30vh;
+  --duration: 12s;
+  --delay: -2s;
+  --twinkle: 2.4s;
+  --particle-color: rgba(229, 160, 13, 0.5);
+
+  position: absolute;
+  width: var(--size);
+  height: var(--size);
+  left: 0;
+  top: 0;
+  border-radius: 50%;
+  mix-blend-mode: screen;
+  background:
+    radial-gradient(circle, var(--particle-color) 0%, rgba(255, 216, 150, 0.26) 22%, rgba(255, 190, 100, 0) 70%);
+  transform: translate3d(var(--x-start), var(--y-start), 0);
+  animation:
+    site-float var(--duration) linear infinite,
+    site-twinkle var(--twinkle) ease-in-out infinite;
+  animation-delay: var(--delay), var(--delay);
+  will-change: transform, opacity;
+}
+
+@keyframes site-float {
+  from {
+    transform: translate3d(var(--x-start), var(--y-start), 0);
+  }
+  to {
+    transform: translate3d(var(--x-end), var(--y-end), 0);
+  }
+}
+
+@keyframes site-twinkle {
+  0% {
+    opacity: 0.24;
+  }
+  50% {
+    opacity: 0.95;
+  }
+  100% {
+    opacity: 0.24;
+  }
+}
+
+.navbar,
+.content {
+  position: relative;
+  z-index: 1;
+}
+
+@media (max-width: 768px) {
+  .site-particles {
+    opacity: 0.75;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .site-particles {
+    display: none;
+  }
 }
 
 /* =========================
