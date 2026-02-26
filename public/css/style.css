@@ -37,7 +37,7 @@ html, body { height: 100%; }
 
 body {
   font-family: "Segoe UI", Roboto, Arial, sans-serif;
-  background: #010204;
+  background: #050607;
   background-attachment: fixed;
   color: var(--text);
   min-height: 100vh;
@@ -67,14 +67,14 @@ body {
 
 .site-bg-gradient {
   background:
-    radial-gradient(880px 520px at 50% -24%, rgba(54, 124, 255, 0.06), rgba(54, 124, 255, 0) 66%),
-    radial-gradient(960px 560px at 108% 72%, rgba(16, 198, 255, 0.035), rgba(16, 198, 255, 0) 68%),
-    linear-gradient(180deg, #020305 0%, #010204 45%, #000102 100%);
+    radial-gradient(1100px 620px at 50% -30%, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0) 64%),
+    radial-gradient(900px 540px at 115% 70%, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0) 66%),
+    linear-gradient(180deg, #0b0c0d 0%, #070809 48%, #030405 100%);
 }
 
 .site-bg-vignette {
   background:
-    radial-gradient(circle at 50% 30%, rgba(0, 0, 0, 0) 48%, rgba(0, 0, 0, 0.46) 100%);
+    radial-gradient(circle at 50% 34%, rgba(0, 0, 0, 0) 50%, rgba(0, 0, 0, 0.54) 100%);
 }
 
 .site-particles {
