@@ -177,17 +177,21 @@ body {
 
 .navbar{
   height: var(--nav-h);
+  min-height: var(--nav-h);
+  max-height: var(--nav-h);
   padding: 0 var(--nav-pad);
   display: flex;
   align-items: center;
   justify-content: space-between;
   background: #111;
   border-bottom: 1px solid var(--line);
+  box-sizing: border-box;
 }
 
 .brand{
   display: flex;
   align-items: center;
+  height: 100%;
   text-decoration: none;
   min-width: 0;
 }
@@ -205,7 +209,19 @@ body {
 .nav-right{
   display: flex;
   align-items: center;
+  height: 100%;
   gap: 18px;
+}
+
+.nav-center {
+  height: 100%;
+}
+
+.nav-link {
+  display: inline-flex;
+  align-items: center;
+  height: 100%;
+  line-height: 1;
 }
 
 .username{
