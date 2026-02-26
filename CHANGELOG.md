@@ -2,6 +2,12 @@
 
 Toutes les modifications notables de ce projet sont documentées dans ce fichier.
 
+## <small>1.26.1 (2026-02-26)</small>
+
+* Merge pull request #21 from iDrinkx/develop ([1548a37](https://github.com/iDrinkx/plex-portal/commit/1548a37)), closes [#21](https://github.com/iDrinkx/plex-portal/issues/21)
+* fix: improve modal backdrop styling and enhance scroll restoration on close ([8826daf](https://github.com/iDrinkx/plex-portal/commit/8826daf))
+* fix: update modal background styles for improved aesthetics and consistency ([e0fa96f](https://github.com/iDrinkx/plex-portal/commit/e0fa96f))
+
 ## 1.26.0 (2026-02-26)
 
 * Merge pull request #20 from iDrinkx/develop ([4e71cdf](https://github.com/iDrinkx/plex-portal/commit/4e71cdf)), closes [#20](https://github.com/iDrinkx/plex-portal/issues/20)
