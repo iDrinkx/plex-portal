@@ -302,16 +302,16 @@ body {
 .login-card{
   width: min(440px, 100%);
   padding: 40px;
-  background: rgba(14, 22, 34, 0.08);
-  border: 1px solid rgba(214, 238, 255, 0.34);
+  background: rgba(14, 22, 34, 0.05);
+  border: 1px solid rgba(220, 242, 255, 0.42);
   border-radius: 20px;
   text-align: center;
   box-shadow:
-    0 30px 90px rgba(0,0,0,.45),
-    0 0 0 1px rgba(210, 238, 255, 0.22) inset,
-    0 18px 34px rgba(98, 178, 255, 0.10);
-  backdrop-filter: blur(14px) saturate(150%) contrast(1.03) brightness(1.04);
-  -webkit-backdrop-filter: blur(14px) saturate(150%) contrast(1.03) brightness(1.04);
+    0 26px 70px rgba(0,0,0,.38),
+    0 0 0 1px rgba(220, 242, 255, 0.20) inset,
+    0 12px 24px rgba(98, 178, 255, 0.08);
+  backdrop-filter: blur(8px) saturate(135%) contrast(1.02) brightness(1.03);
+  -webkit-backdrop-filter: blur(8px) saturate(135%) contrast(1.02) brightness(1.03);
   position: relative;
   overflow: hidden;
   isolation: isolate;
@@ -324,7 +324,7 @@ body {
   z-index: 0;
   pointer-events: none;
   background:
-    linear-gradient(150deg, rgba(255,255,255,0.28), rgba(255,255,255,0.08) 28%, rgba(255,255,255,0.01) 64%);
+    linear-gradient(150deg, rgba(255,255,255,0.18), rgba(255,255,255,0.035) 28%, rgba(255,255,255,0.00) 64%);
 }
 
 .login-card::after {
@@ -334,9 +334,9 @@ body {
   z-index: 0;
   pointer-events: none;
   background:
-    radial-gradient(circle at 18% 12%, rgba(255,255,255,0.38), rgba(255,255,255,0.10) 24%, rgba(255,255,255,0) 50%),
-    radial-gradient(circle at 82% 78%, rgba(86, 186, 255, 0.18), rgba(86, 186, 255, 0) 48%);
-  filter: blur(14px);
+    radial-gradient(circle at 18% 12%, rgba(255,255,255,0.22), rgba(255,255,255,0.05) 24%, rgba(255,255,255,0) 50%),
+    radial-gradient(circle at 82% 78%, rgba(86, 186, 255, 0.10), rgba(86, 186, 255, 0) 48%);
+  filter: blur(8px);
   transform: rotate(-8deg);
   animation: login-glass-shimmer 12s ease-in-out infinite alternate;
 }
