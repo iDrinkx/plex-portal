@@ -672,7 +672,10 @@
   .xp-left-card,
   .xp-progress-section,
   .badges-section,
-  .detail-card {
+  .detail-card,
+  .watch-stats-section .stat-card {
+    background: rgba(14, 22, 34, 0.012);
+    border: 1px solid rgba(226, 246, 255, 0.42);
     box-shadow:
       0 14px 34px rgba(0,0,0,.18),
       0 0 0 1px rgba(232, 248, 255, 0.20) inset,
@@ -688,7 +691,8 @@
   .xp-left-card::before,
   .xp-progress-section::before,
   .badges-section::before,
-  .detail-card::before {
+  .detail-card::before,
+  .watch-stats-section .stat-card::before {
     content: "";
     position: absolute;
     inset: 0;
@@ -702,7 +706,8 @@
   .xp-left-card::after,
   .xp-progress-section::after,
   .badges-section::after,
-  .detail-card::after {
+  .detail-card::after,
+  .watch-stats-section .stat-card::after {
     content: "";
     position: absolute;
     inset: -35%;
@@ -719,7 +724,8 @@
   .xp-left-card > *,
   .xp-progress-section > *,
   .badges-section > *,
-  .detail-card > * {
+  .detail-card > *,
+  .watch-stats-section .stat-card > * {
     position: relative;
     z-index: 1;
   }
