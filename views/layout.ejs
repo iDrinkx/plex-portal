@@ -74,7 +74,7 @@
     const particlesLayer = document.getElementById("siteParticles");
     const reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (particlesLayer && !reduceMotion) {
-      const particleCount = window.innerWidth <= 768 ? 110 : 220;
+      const particleCount = window.innerWidth <= 768 ? 55 : 105;
       const colors = [
         "rgba(46,136,255,0.96)",
         "rgba(78,182,255,0.96)",
@@ -91,7 +91,7 @@
 
         // 3 couches pour des vitesses vraiment différentes
         const r = Math.random();
-        const tier = r < 0.58 ? "far" : r < 0.88 ? "mid" : "near";
+        const tier = r < 0.45 ? "far" : r < 0.82 ? "mid" : "near";
         if (tier === "far") p.classList.add("site-particle--far");
         if (tier === "mid") p.classList.add("site-particle--mid");
         if (tier === "near") p.classList.add("site-particle--near");
@@ -102,10 +102,10 @@
         const bright = Math.random() < (tier === "near" ? 0.42 : tier === "mid" ? 0.26 : 0.12);
 
         const size = tier === "far"
-          ? (0.8 + Math.random() * 1.2)
+          ? (1.2 + Math.random() * 1.4)
           : tier === "mid"
-            ? (1.1 + Math.random() * 1.9)
-            : (1.8 + Math.random() * 2.8);
+            ? (1.8 + Math.random() * 2.2)
+            : (2.8 + Math.random() * 3.0);
         p.style.setProperty("--size", `${size.toFixed(2)}px`);
         p.style.setProperty("--x-start", `${startX}vw`);
         p.style.setProperty("--y-start", `${startY}vh`);
