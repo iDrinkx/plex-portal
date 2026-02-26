@@ -37,7 +37,7 @@ html, body { height: 100%; }
 
 body {
   font-family: "Segoe UI", Roboto, Arial, sans-serif;
-  background: linear-gradient(180deg, #17120a 0%, #120f0b 35%, #0b0b0c 100%);
+  background: linear-gradient(180deg, #07101b 0%, #030811 42%, #010204 100%);
   background-attachment: fixed;
   color: var(--text);
   min-height: 100vh;
@@ -67,10 +67,10 @@ body {
 
 .site-bg-gradient {
   background:
-    radial-gradient(1200px 640px at 50% 110%, rgba(229, 160, 13, 0.14), rgba(229, 160, 13, 0) 62%),
-    radial-gradient(920px 520px at 10% -12%, rgba(255, 184, 0, 0.10), rgba(255, 184, 0, 0) 60%),
-    radial-gradient(920px 520px at 88% 4%, rgba(255, 138, 64, 0.08), rgba(255, 138, 64, 0) 62%),
-    linear-gradient(180deg, #17120a 0%, #120f0b 35%, #0b0b0c 100%);
+    radial-gradient(1000px 600px at 50% 118%, rgba(70, 210, 255, 0.07), rgba(70, 210, 255, 0) 60%),
+    radial-gradient(760px 460px at 8% -8%, rgba(120, 175, 255, 0.06), rgba(120, 175, 255, 0) 58%),
+    radial-gradient(760px 460px at 90% 0%, rgba(70, 210, 255, 0.05), rgba(70, 210, 255, 0) 60%),
+    linear-gradient(180deg, #07101b 0%, #030811 42%, #010204 100%);
 }
 
 .site-bg-vignette {
@@ -79,19 +79,19 @@ body {
 }
 
 .site-particles {
-  opacity: 0.9;
+  opacity: 0.72;
 }
 
 .site-particle {
-  --size: 6px;
+  --size: 2px;
   --x-start: 50vw;
   --x-end: 55vw;
   --y-start: 110vh;
   --y-end: -30vh;
-  --duration: 12s;
+  --duration: 70s;
   --delay: -2s;
-  --twinkle: 2.4s;
-  --particle-color: rgba(229, 160, 13, 0.5);
+  --twinkle: 7s;
+  --particle-color: rgba(130, 190, 255, 0.75);
 
   position: absolute;
   width: var(--size);
@@ -101,7 +101,7 @@ body {
   border-radius: 50%;
   mix-blend-mode: screen;
   background:
-    radial-gradient(circle, var(--particle-color) 0%, rgba(255, 216, 150, 0.26) 22%, rgba(255, 190, 100, 0) 70%);
+    radial-gradient(circle, var(--particle-color) 0%, rgba(195, 234, 255, 0.28) 25%, rgba(130, 190, 255, 0) 72%);
   transform: translate3d(var(--x-start), var(--y-start), 0);
   animation:
     site-float var(--duration) linear infinite,
@@ -121,13 +121,13 @@ body {
 
 @keyframes site-twinkle {
   0% {
-    opacity: 0.24;
+    opacity: 0.18;
   }
   50% {
-    opacity: 0.95;
+    opacity: 0.65;
   }
   100% {
-    opacity: 0.24;
+    opacity: 0.18;
   }
 }
 
@@ -139,7 +139,7 @@ body {
 
 @media (max-width: 768px) {
   .site-particles {
-    opacity: 0.75;
+    opacity: 0.62;
   }
 }
 

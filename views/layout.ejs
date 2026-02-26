@@ -74,25 +74,25 @@
     const particlesLayer = document.getElementById("siteParticles");
     const reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (particlesLayer && !reduceMotion) {
-      const particleCount = window.innerWidth <= 768 ? 90 : 170;
+      const particleCount = window.innerWidth <= 768 ? 55 : 95;
       const colors = [
-        "rgba(229,160,13,0.55)",
-        "rgba(255,184,0,0.48)",
-        "rgba(255,138,64,0.40)"
+        "rgba(130,190,255,0.75)",
+        "rgba(70,210,255,0.80)",
+        "rgba(220,242,255,0.85)"
       ];
 
       const fragment = document.createDocumentFragment();
       for (let i = 0; i < particleCount; i++) {
         const p = document.createElement("span");
         p.className = "site-particle";
-        p.style.setProperty("--size", `${2 + Math.random() * 8}px`);
+        p.style.setProperty("--size", `${1 + Math.random() * 3.2}px`);
         p.style.setProperty("--x-start", `${Math.random() * 100}vw`);
-        p.style.setProperty("--x-end", `${Math.random() * 100}vw`);
+        p.style.setProperty("--x-end", `${Math.min(100, Math.max(0, (Math.random() * 100) + (Math.random() * 12 - 6)))}vw`);
         p.style.setProperty("--y-start", `${100 + Math.random() * 30}vh`);
-        p.style.setProperty("--y-end", `${-20 - Math.random() * 40}vh`);
-        p.style.setProperty("--duration", `${8 + Math.random() * 10}s`);
-        p.style.setProperty("--delay", `${-Math.random() * 16}s`);
-        p.style.setProperty("--twinkle", `${1.4 + Math.random() * 2.2}s`);
+        p.style.setProperty("--y-end", `${-25 - Math.random() * 35}vh`);
+        p.style.setProperty("--duration", `${45 + Math.random() * 95}s`);
+        p.style.setProperty("--delay", `${-Math.random() * 120}s`);
+        p.style.setProperty("--twinkle", `${4 + Math.random() * 7}s`);
         p.style.setProperty("--particle-color", colors[Math.floor(Math.random() * colors.length)]);
         fragment.appendChild(p);
       }
