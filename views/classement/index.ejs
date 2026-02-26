@@ -179,6 +179,50 @@
   grid-template-columns: 1fr 1fr;
   gap: 20px;
 }
+
+/* Carte englobante du tableau classement */
+.lb-main-card {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  padding: 18px 18px 14px;
+  border-radius: 16px;
+  background: rgba(14, 22, 34, 0.012);
+  border: 1px solid rgba(226, 246, 255, 0.42);
+  box-shadow:
+    0 14px 34px rgba(0,0,0,.18),
+    0 0 0 1px rgba(232, 248, 255, 0.20) inset,
+    0 4px 10px rgba(98, 178, 255, 0.04);
+  backdrop-filter: blur(3px) saturate(112%) contrast(1.01) brightness(1.02);
+  -webkit-backdrop-filter: blur(3px) saturate(112%) contrast(1.01) brightness(1.02);
+}
+
+.lb-main-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(150deg, rgba(255,255,255,0.06), rgba(255,255,255,0.012) 28%, rgba(255,255,255,0.00) 64%);
+  z-index: 0;
+}
+
+.lb-main-card::after {
+  content: "";
+  position: absolute;
+  inset: -35%;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 18% 12%, rgba(255,255,255,0.08), rgba(255,255,255,0.014) 24%, rgba(255,255,255,0) 50%),
+    radial-gradient(circle at 82% 78%, rgba(86, 186, 255, 0.05), rgba(86, 186, 255, 0) 48%);
+  filter: blur(3px);
+  transform: rotate(-8deg);
+  z-index: 0;
+}
+
+.lb-main-card > * {
+  position: relative;
+  z-index: 1;
+}
 @media (max-width: 720px) {
   .lb-header { padding-right: 0; }
   .lb-refresh-timer { position: static; margin-top: 8px; text-align: left; }
@@ -520,7 +564,7 @@
     <span>Chargement du classement&hellip;</span>
   </div>
 
-  <div id="lbContent" style="display:none">
+  <div id="lbContent" class="lb-main-card" style="display:none">
 
     <!-- Boutons d'onglets -->
     <div class="lb-tabs">
