@@ -2,6 +2,11 @@
 
 Toutes les modifications notables de ce projet sont documentées dans ce fichier.
 
+## <small>1.23.1 (2026-02-26)</small>
+
+* Merge pull request #17 from iDrinkx/develop ([8561dae](https://github.com/iDrinkx/plex-portal/commit/8561dae)), closes [#17](https://github.com/iDrinkx/plex-portal/issues/17)
+* fix: handle headers already sent error in grabSeerrCookie function ([62e0512](https://github.com/iDrinkx/plex-portal/commit/62e0512))
+
 ## 1.23.0 (2026-02-26)
 
 * Merge pull request #16 from iDrinkx/develop ([ee36ff8](https://github.com/iDrinkx/plex-portal/commit/ee36ff8)), closes [#16](https://github.com/iDrinkx/plex-portal/issues/16)
