@@ -761,6 +761,22 @@
     const hostScrollEl = document.getElementById('succesModalContent') || document.scrollingElement || document.documentElement;
     let savedScrollTop = 0;
     let savedScrollLeft = 0;
+    const overlayHomeParent = overlay ? overlay.parentNode : null;
+    const overlayHomeNext = overlay ? overlay.nextSibling : null;
+
+    function mountOverlayToBody() {
+      if (!overlay || overlay.parentNode === document.body) return;
+      document.body.appendChild(overlay);
+    }
+
+    function restoreOverlayHome() {
+      if (!overlay || !overlayHomeParent || overlay.parentNode === overlayHomeParent) return;
+      if (overlayHomeNext && overlayHomeNext.parentNode === overlayHomeParent) {
+        overlayHomeParent.insertBefore(overlay, overlayHomeNext);
+      } else {
+        overlayHomeParent.appendChild(overlay);
+      }
+    }
 
     function openModal(card) {
       savedScrollTop = hostScrollEl ? hostScrollEl.scrollTop : 0;
@@ -805,6 +821,7 @@
       // Couleur bordure du modal selon catégorie
       modal.className = 'ach-modal' + (cat ? ' ach-modal-border--' + cat : '');
 
+      mountOverlayToBody();
       overlay.classList.add('open');
       try {
         btnClose.focus({ preventScroll: true });
@@ -815,6 +832,7 @@
 
     function closeModal() {
       overlay.classList.remove('open');
+      restoreOverlayHome();
       requestAnimationFrame(function() {
         if (!hostScrollEl) return;
         hostScrollEl.scrollTop = savedScrollTop;
