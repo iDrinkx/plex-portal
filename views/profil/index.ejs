@@ -1008,6 +1008,15 @@
     z-index: 1;
   }
 
+  /* Fix: la version wide (modal succès) doit rester scrollable */
+  .xp-modal-content.xp-modal-content--wide {
+    max-height: 85vh;
+    overflow-x: auto;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(74, 169, 255, 0.72) rgba(255, 255, 255, 0.05);
+  }
+
   @keyframes modalIn {
     from { opacity: 0; transform: scale(0.95) translateY(10px); }
     to   { opacity: 1; transform: scale(1) translateY(0); }
