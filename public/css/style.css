@@ -78,7 +78,7 @@ body {
 }
 
 .site-particles {
-  opacity: 0.98;
+  opacity: 1;
 }
 
 .site-particle {
@@ -90,6 +90,9 @@ body {
   --duration: 84s;
   --delay: -2s;
   --twinkle: 8s;
+  --alpha-min: 0.22;
+  --alpha-max: 0.72;
+  --blur: 0px;
   --particle-color: rgba(130, 190, 255, 0.75);
 
   position: absolute;
@@ -104,12 +107,19 @@ body {
   box-shadow:
     0 0 5px var(--particle-color),
     0 0 12px rgba(95, 190, 255, 0.34);
+  filter: blur(var(--blur));
   transform: translate3d(var(--x-start), var(--y-start), 0);
   animation:
     site-float var(--duration) linear infinite,
     site-twinkle var(--twinkle) ease-in-out infinite;
   animation-delay: var(--delay), var(--delay);
   will-change: transform, opacity;
+}
+
+.site-particle--bright {
+  box-shadow:
+    0 0 8px var(--particle-color),
+    0 0 20px rgba(120, 220, 255, 0.52);
 }
 
 @keyframes site-float {
@@ -123,13 +133,13 @@ body {
 
 @keyframes site-twinkle {
   0% {
-    opacity: 0.28;
+    opacity: var(--alpha-min);
   }
   50% {
-    opacity: 1;
+    opacity: var(--alpha-max);
   }
   100% {
-    opacity: 0.28;
+    opacity: var(--alpha-min);
   }
 }
 

@@ -74,7 +74,7 @@
     const particlesLayer = document.getElementById("siteParticles");
     const reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (particlesLayer && !reduceMotion) {
-      const particleCount = window.innerWidth <= 768 ? 85 : 150;
+      const particleCount = window.innerWidth <= 768 ? 120 : 240;
       const colors = [
         "rgba(88,180,255,0.92)",
         "rgba(30,222,255,0.96)",
@@ -87,17 +87,22 @@
         p.className = "site-particle";
         const startX = (Math.random() * 130) - 15;
         const startY = (Math.random() * 130) - 15;
-        const driftX = (Math.random() * 70) - 35;
-        const driftY = (Math.random() * 70) - 35;
-        p.style.setProperty("--size", `${1 + Math.random() * 3.8}px`);
+        const driftX = (Math.random() * 90) - 45;
+        const driftY = (Math.random() * 90) - 45;
+        const bright = Math.random() < 0.22;
+        p.style.setProperty("--size", bright ? `${2.2 + Math.random() * 3.2}px` : `${0.9 + Math.random() * 2.1}px`);
         p.style.setProperty("--x-start", `${startX}vw`);
         p.style.setProperty("--y-start", `${startY}vh`);
         p.style.setProperty("--x-end", `${startX + driftX}vw`);
         p.style.setProperty("--y-end", `${startY + driftY}vh`);
-        p.style.setProperty("--duration", `${55 + Math.random() * 120}s`);
-        p.style.setProperty("--delay", `${-Math.random() * 120}s`);
-        p.style.setProperty("--twinkle", `${4.2 + Math.random() * 6.8}s`);
+        p.style.setProperty("--duration", `${70 + Math.random() * 140}s`);
+        p.style.setProperty("--delay", `${-Math.random() * 180}s`);
+        p.style.setProperty("--twinkle", bright ? `${3.2 + Math.random() * 4}s` : `${5.5 + Math.random() * 8}s`);
+        p.style.setProperty("--alpha-min", bright ? "0.38" : "0.22");
+        p.style.setProperty("--alpha-max", bright ? "1" : "0.68");
+        p.style.setProperty("--blur", bright ? `${0.4 + Math.random() * 0.8}px` : `${Math.random() * 0.3}px`);
         p.style.setProperty("--particle-color", colors[Math.floor(Math.random() * colors.length)]);
+        if (bright) p.classList.add("site-particle--bright");
         fragment.appendChild(p);
       }
       particlesLayer.appendChild(fragment);
