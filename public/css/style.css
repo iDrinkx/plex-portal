@@ -1799,6 +1799,27 @@ body {
   color: #ccc;
   font-size: 13px;
   line-height: 1.6;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(74, 169, 255, 0.72) rgba(255, 255, 255, 0.05);
+}
+
+.changelog-body::-webkit-scrollbar {
+  width: 10px;
+}
+
+.changelog-body::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 999px;
+}
+
+.changelog-body::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(74, 169, 255, 0.72), rgba(41, 118, 191, 0.72));
+  border-radius: 999px;
+  border: 2px solid rgba(8, 12, 18, 0.92);
+}
+
+.changelog-body::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(104, 189, 255, 0.86), rgba(53, 134, 214, 0.86));
 }
 
 .changelog-body pre {

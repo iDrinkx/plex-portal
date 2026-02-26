@@ -918,8 +918,29 @@
   /* wide modal pour badges */
   .xp-modal-content--wide {
     max-width: 860px;
+    max-height: 85vh;
     overflow-x: hidden;
+    overflow-y: auto;
     padding: 20px 20px 16px;
+  }
+
+  .xp-modal-content--wide::-webkit-scrollbar {
+    width: 10px;
+  }
+
+  .xp-modal-content--wide::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 999px;
+  }
+
+  .xp-modal-content--wide::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, rgba(74, 169, 255, 0.72), rgba(41, 118, 191, 0.72));
+    border-radius: 999px;
+    border: 2px solid rgba(8, 12, 18, 0.92);
+  }
+
+  .xp-modal-content--wide::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, rgba(104, 189, 255, 0.86), rgba(53, 134, 214, 0.86));
   }
 
   /* MODAL XP */
