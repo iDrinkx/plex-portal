@@ -83,11 +83,21 @@
       ];
 
       const fragment = document.createDocumentFragment();
+      const particles = [];
+      let viewportW = window.innerWidth;
+      let viewportH = window.innerHeight;
+
+      const randomSpeed = (tier) => (
+        tier === "far"
+          ? (7 + Math.random() * 6)
+          : tier === "mid"
+            ? (12 + Math.random() * 10)
+            : (20 + Math.random() * 12)
+      );
+
       for (let i = 0; i < particleCount; i++) {
         const p = document.createElement("span");
         p.className = "site-particle";
-        const startX = (Math.random() * 130) - 15;
-        const startY = (Math.random() * 130) - 15;
 
         // 3 couches pour des vitesses vraiment différentes
         const r = Math.random();
@@ -96,37 +106,72 @@
         if (tier === "mid") p.classList.add("site-particle--mid");
         if (tier === "near") p.classList.add("site-particle--near");
 
-        const driftRange = tier === "far" ? 16 : tier === "mid" ? 34 : 58;
-        const driftX = (Math.random() * (driftRange * 2)) - driftRange;
-        const driftY = (Math.random() * (driftRange * 2)) - driftRange;
         const bright = Math.random() < (tier === "near" ? 0.34 : tier === "mid" ? 0.20 : 0.10);
 
         const size = tier === "far"
-          ? (2.0 + Math.random() * 1.4)
+          ? (7.4 + Math.random() * 1.8)
           : tier === "mid"
-            ? (2.8 + Math.random() * 2.0)
-            : (4.0 + Math.random() * 2.8);
-        p.style.setProperty("--size", `${size.toFixed(2)}px`);
-        p.style.setProperty("--x-start", `${startX}vw`);
-        p.style.setProperty("--y-start", `${startY}vh`);
-        p.style.setProperty("--x-end", `${startX + driftX}vw`);
-        p.style.setProperty("--y-end", `${startY + driftY}vh`);
+            ? (8.8 + Math.random() * 2.2)
+            : (11.2 + Math.random() * 2.8);
+        const alpha = bright ? "1" : (tier === "far" ? "0.82" : tier === "mid" ? "0.9" : "0.96");
+        const angle = Math.random() * Math.PI * 2;
+        const speed = randomSpeed(tier);
+        const particle = {
+          el: p,
+          size,
+          x: Math.random() * viewportW,
+          y: Math.random() * viewportH,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed
+        };
 
-        const duration = tier === "far"
-          ? (62 + Math.random() * 86)
-          : tier === "mid"
-            ? (64 + Math.random() * 92)
-            : (34 + Math.random() * 46);
-        p.style.setProperty("--duration", `${duration.toFixed(1)}s`);
-        p.style.setProperty("--delay", `${(-Math.random() * 300).toFixed(1)}s`);
-        p.style.setProperty("--twinkle", bright ? `${2.8 + Math.random() * 3.4}s` : `${4.8 + Math.random() * 7.6}s`);
-        p.style.setProperty("--alpha-min", bright ? "0.58" : (tier === "far" ? "0.40" : "0.46"));
-        p.style.setProperty("--alpha-max", bright ? "1" : (tier === "far" ? "0.90" : tier === "mid" ? "0.96" : "1"));
+        p.style.setProperty("--size", `${size.toFixed(2)}px`);
+        p.style.setProperty("--alpha", alpha);
         p.style.setProperty("--particle-color", colors[Math.floor(Math.random() * colors.length)]);
         if (bright) p.classList.add("site-particle--bright");
+        p.style.transform = `translate3d(${particle.x.toFixed(2)}px, ${particle.y.toFixed(2)}px, 0)`;
+
+        particles.push(particle);
         fragment.appendChild(p);
       }
       particlesLayer.appendChild(fragment);
+
+      let lastTs = performance.now();
+      const tick = (ts) => {
+        const dt = Math.min(0.05, (ts - lastTs) / 1000);
+        lastTs = ts;
+
+        for (let i = 0; i < particles.length; i++) {
+          const s = particles[i];
+          s.x += s.vx * dt;
+          s.y += s.vy * dt;
+
+          if (s.x < -s.size) {
+            s.x = viewportW + s.size;
+            s.y = Math.random() * viewportH;
+          } else if (s.x > viewportW + s.size) {
+            s.x = -s.size;
+            s.y = Math.random() * viewportH;
+          }
+
+          if (s.y < -s.size) {
+            s.y = viewportH + s.size;
+            s.x = Math.random() * viewportW;
+          } else if (s.y > viewportH + s.size) {
+            s.y = -s.size;
+            s.x = Math.random() * viewportW;
+          }
+
+          s.el.style.transform = `translate3d(${s.x.toFixed(2)}px, ${s.y.toFixed(2)}px, 0)`;
+        }
+        window.requestAnimationFrame(tick);
+      };
+      window.requestAnimationFrame(tick);
+
+      window.addEventListener("resize", () => {
+        viewportW = window.innerWidth;
+        viewportH = window.innerHeight;
+      });
     }
 
     const burger = document.getElementById("burger");
