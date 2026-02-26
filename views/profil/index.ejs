@@ -327,15 +327,15 @@
     gap: 30px;
     margin-bottom: 40px;
     padding: 30px;
-    background: rgba(14, 22, 34, 0.012);
+    background: rgba(14, 22, 34, 0.008);
     border-radius: 16px;
     border: 1px solid rgba(226, 246, 255, 0.42);
     box-shadow:
       0 14px 34px rgba(0,0,0,.18),
       0 0 0 1px rgba(232, 248, 255, 0.20) inset,
       0 4px 10px rgba(98, 178, 255, 0.04);
-    backdrop-filter: blur(3px) saturate(112%) contrast(1.01) brightness(1.02);
-    -webkit-backdrop-filter: blur(3px) saturate(112%) contrast(1.01) brightness(1.02);
+    backdrop-filter: blur(7px) saturate(120%) contrast(1.01) brightness(1.02);
+    -webkit-backdrop-filter: blur(7px) saturate(120%) contrast(1.01) brightness(1.02);
     position: relative;
     overflow: hidden;
     isolation: isolate;
@@ -347,7 +347,7 @@
     inset: 0;
     pointer-events: none;
     background:
-      linear-gradient(150deg, rgba(255,255,255,0.06), rgba(255,255,255,0.012) 28%, rgba(255,255,255,0.00) 64%);
+      linear-gradient(150deg, rgba(255,255,255,0.05), rgba(255,255,255,0.010) 28%, rgba(255,255,255,0.00) 64%);
     z-index: 0;
   }
 
@@ -357,9 +357,9 @@
     inset: -35%;
     pointer-events: none;
     background:
-      radial-gradient(circle at 18% 12%, rgba(255,255,255,0.08), rgba(255,255,255,0.014) 24%, rgba(255,255,255,0) 50%),
+      radial-gradient(circle at 18% 12%, rgba(255,255,255,0.07), rgba(255,255,255,0.012) 24%, rgba(255,255,255,0) 50%),
       radial-gradient(circle at 82% 78%, rgba(86, 186, 255, 0.05), rgba(86, 186, 255, 0) 48%);
-    filter: blur(3px);
+    filter: blur(2px);
     transform: rotate(-8deg);
     z-index: 0;
   }
@@ -369,10 +369,23 @@
     z-index: 1;
   }
 
-  /* Override local: blur plus perceptible sur les 4 cartes stats du profil */
+  /* Même rendu clairement visible sur les 4 cartes stats de visionnage */
   .watch-stats-section .stat-card {
-    backdrop-filter: blur(5px) saturate(116%) contrast(1.01) brightness(1.02);
-    -webkit-backdrop-filter: blur(5px) saturate(116%) contrast(1.01) brightness(1.02);
+    background: rgba(14, 22, 34, 0.008);
+    backdrop-filter: blur(7px) saturate(120%) contrast(1.01) brightness(1.02);
+    -webkit-backdrop-filter: blur(7px) saturate(120%) contrast(1.01) brightness(1.02);
+  }
+
+  .watch-stats-section .stat-card::before {
+    background:
+      linear-gradient(150deg, rgba(255,255,255,0.05), rgba(255,255,255,0.010) 28%, rgba(255,255,255,0.00) 64%);
+  }
+
+  .watch-stats-section .stat-card::after {
+    background:
+      radial-gradient(circle at 18% 12%, rgba(255,255,255,0.07), rgba(255,255,255,0.012) 24%, rgba(255,255,255,0) 50%),
+      radial-gradient(circle at 82% 78%, rgba(86, 186, 255, 0.05), rgba(86, 186, 255, 0) 48%);
+    filter: blur(2px);
   }
 
   /* =====================
