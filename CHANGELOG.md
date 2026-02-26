@@ -2,6 +2,15 @@
 
 Toutes les modifications notables de ce projet sont documentées dans ce fichier.
 
+## 1.26.0 (2026-02-26)
+
+* Merge pull request #20 from iDrinkx/develop ([4e71cdf](https://github.com/iDrinkx/plex-portal/commit/4e71cdf)), closes [#20](https://github.com/iDrinkx/plex-portal/issues/20)
+* fix: enhance modal and changelog scrollbar styling for improved usability ([1526e1c](https://github.com/iDrinkx/plex-portal/commit/1526e1c))
+* fix: ensure wide success modal remains scrollable with updated overflow properties ([e5e7e3a](https://github.com/iDrinkx/plex-portal/commit/e5e7e3a))
+* fix: update modal scrollbar styling to allow horizontal overflow for better content accessibility ([b4ac3c5](https://github.com/iDrinkx/plex-portal/commit/b4ac3c5))
+* fix: update modal styling to remove height restriction and hide overflow for improved layout ([5ef76b5](https://github.com/iDrinkx/plex-portal/commit/5ef76b5))
+* feat: enhance modal styling with improved background, shadows, and animations ([220daf1](https://github.com/iDrinkx/plex-portal/commit/220daf1))
+
 ## 1.25.0 (2026-02-26)
 
 * Merge pull request #19 from iDrinkx/develop ([0052a50](https://github.com/iDrinkx/plex-portal/commit/0052a50)), closes [#19](https://github.com/iDrinkx/plex-portal/issues/19)
