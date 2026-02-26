@@ -78,7 +78,7 @@ body {
 }
 
 .site-particles {
-  opacity: 0.98;
+  opacity: 1;
 }
 
 .site-particle {
@@ -92,7 +92,6 @@ body {
   --twinkle: 8s;
   --alpha-min: 0.22;
   --alpha-max: 0.72;
-  --blur: 0px;
   --particle-color: rgba(88, 176, 255, 0.92);
 
   position: absolute;
@@ -105,9 +104,8 @@ body {
   background:
     radial-gradient(circle, var(--particle-color) 0%, rgba(200, 236, 255, 0.22) 28%, rgba(130, 190, 255, 0) 72%);
   box-shadow:
-    0 0 6px var(--particle-color),
-    0 0 14px rgba(72, 176, 255, 0.40);
-  filter: blur(var(--blur));
+    0 0 7px var(--particle-color),
+    0 0 18px rgba(72, 176, 255, 0.52);
   transform: translate3d(var(--x-start), var(--y-start), 0);
   animation:
     site-float var(--duration) linear infinite,
@@ -118,8 +116,8 @@ body {
 
 .site-particle--bright {
   box-shadow:
-    0 0 9px var(--particle-color),
-    0 0 22px rgba(118, 218, 255, 0.56);
+    0 0 10px var(--particle-color),
+    0 0 26px rgba(118, 218, 255, 0.66);
 }
 
 .site-particle--far {
@@ -169,7 +167,7 @@ body {
 
 @media (max-width: 768px) {
   .site-particles {
-    opacity: 0.94;
+    opacity: 1;
   }
 }
 
