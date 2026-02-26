@@ -74,25 +74,29 @@
     const particlesLayer = document.getElementById("siteParticles");
     const reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (particlesLayer && !reduceMotion) {
-      const particleCount = window.innerWidth <= 768 ? 90 : 165;
+      const particleCount = window.innerWidth <= 768 ? 85 : 150;
       const colors = [
-        "rgba(130,190,255,0.90)",
-        "rgba(70,210,255,0.96)",
-        "rgba(220,242,255,0.98)"
+        "rgba(88,180,255,0.92)",
+        "rgba(30,222,255,0.96)",
+        "rgba(202,236,255,0.98)"
       ];
 
       const fragment = document.createDocumentFragment();
       for (let i = 0; i < particleCount; i++) {
         const p = document.createElement("span");
         p.className = "site-particle";
-        p.style.setProperty("--size", `${1.2 + Math.random() * 4.4}px`);
-        p.style.setProperty("--x-start", `${Math.random() * 100}vw`);
-        p.style.setProperty("--x-end", `${Math.min(100, Math.max(0, (Math.random() * 100) + (Math.random() * 12 - 6)))}vw`);
-        p.style.setProperty("--y-start", `${100 + Math.random() * 30}vh`);
-        p.style.setProperty("--y-end", `${-25 - Math.random() * 35}vh`);
+        const startX = (Math.random() * 130) - 15;
+        const startY = (Math.random() * 130) - 15;
+        const driftX = (Math.random() * 70) - 35;
+        const driftY = (Math.random() * 70) - 35;
+        p.style.setProperty("--size", `${1 + Math.random() * 3.8}px`);
+        p.style.setProperty("--x-start", `${startX}vw`);
+        p.style.setProperty("--y-start", `${startY}vh`);
+        p.style.setProperty("--x-end", `${startX + driftX}vw`);
+        p.style.setProperty("--y-end", `${startY + driftY}vh`);
         p.style.setProperty("--duration", `${55 + Math.random() * 120}s`);
         p.style.setProperty("--delay", `${-Math.random() * 120}s`);
-        p.style.setProperty("--twinkle", `${3.4 + Math.random() * 5.4}s`);
+        p.style.setProperty("--twinkle", `${4.2 + Math.random() * 6.8}s`);
         p.style.setProperty("--particle-color", colors[Math.floor(Math.random() * colors.length)]);
         fragment.appendChild(p);
       }

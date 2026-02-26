@@ -37,7 +37,7 @@ html, body { height: 100%; }
 
 body {
   font-family: "Segoe UI", Roboto, Arial, sans-serif;
-  background: linear-gradient(180deg, #07101b 0%, #030811 42%, #010204 100%);
+  background: #030405;
   background-attachment: fixed;
   color: var(--text);
   min-height: 100vh;
@@ -67,10 +67,9 @@ body {
 
 .site-bg-gradient {
   background:
-    radial-gradient(1000px 600px at 50% 118%, rgba(70, 210, 255, 0.07), rgba(70, 210, 255, 0) 60%),
-    radial-gradient(760px 460px at 8% -8%, rgba(120, 175, 255, 0.06), rgba(120, 175, 255, 0) 58%),
-    radial-gradient(760px 460px at 90% 0%, rgba(70, 210, 255, 0.05), rgba(70, 210, 255, 0) 60%),
-    linear-gradient(180deg, #07101b 0%, #030811 42%, #010204 100%);
+    radial-gradient(1000px 600px at 45% -16%, rgba(72, 142, 255, 0.07), rgba(72, 142, 255, 0) 64%),
+    radial-gradient(900px 540px at 120% 60%, rgba(0, 196, 255, 0.04), rgba(0, 196, 255, 0) 65%),
+    linear-gradient(180deg, #040506 0%, #020304 42%, #000102 100%);
 }
 
 .site-bg-vignette {
@@ -79,7 +78,7 @@ body {
 }
 
 .site-particles {
-  opacity: 0.96;
+  opacity: 0.98;
 }
 
 .site-particle {
@@ -88,9 +87,9 @@ body {
   --x-end: 55vw;
   --y-start: 110vh;
   --y-end: -30vh;
-  --duration: 70s;
+  --duration: 84s;
   --delay: -2s;
-  --twinkle: 7s;
+  --twinkle: 8s;
   --particle-color: rgba(130, 190, 255, 0.75);
 
   position: absolute;
@@ -101,10 +100,10 @@ body {
   border-radius: 50%;
   mix-blend-mode: screen;
   background:
-    radial-gradient(circle, var(--particle-color) 0%, rgba(195, 234, 255, 0.28) 25%, rgba(130, 190, 255, 0) 72%);
+    radial-gradient(circle, var(--particle-color) 0%, rgba(200, 236, 255, 0.22) 28%, rgba(130, 190, 255, 0) 72%);
   box-shadow:
-    0 0 6px var(--particle-color),
-    0 0 14px rgba(120, 210, 255, 0.42);
+    0 0 5px var(--particle-color),
+    0 0 12px rgba(95, 190, 255, 0.34);
   transform: translate3d(var(--x-start), var(--y-start), 0);
   animation:
     site-float var(--duration) linear infinite,
@@ -142,7 +141,7 @@ body {
 
 @media (max-width: 768px) {
   .site-particles {
-    opacity: 0.8;
+    opacity: 0.88;
   }
 }
 
@@ -284,17 +283,19 @@ body {
 .login-card{
   width: min(440px, 100%);
   padding: 40px;
-  background: rgba(12, 18, 28, 0.36);
-  border: 1px solid rgba(165, 210, 255, 0.18);
+  background: rgba(10, 16, 24, 0.22);
+  border: 1px solid rgba(196, 230, 255, 0.28);
   border-radius: 14px;
   text-align: center;
   box-shadow:
-    0 24px 70px rgba(0,0,0,.40),
-    0 0 0 1px rgba(140, 195, 255, 0.12) inset;
-  backdrop-filter: blur(14px) saturate(130%) brightness(1.05);
-  -webkit-backdrop-filter: blur(14px) saturate(130%) brightness(1.05);
+    0 26px 72px rgba(0,0,0,.42),
+    0 0 0 1px rgba(205, 235, 255, 0.14) inset,
+    0 10px 30px rgba(82, 160, 255, 0.08);
+  backdrop-filter: blur(24px) saturate(170%) contrast(1.06) brightness(1.04);
+  -webkit-backdrop-filter: blur(24px) saturate(170%) contrast(1.06) brightness(1.04);
   position: relative;
   overflow: hidden;
+  isolation: isolate;
 }
 
 .login-card::before {
@@ -304,7 +305,18 @@ body {
   z-index: 0;
   pointer-events: none;
   background:
-    linear-gradient(140deg, rgba(255,255,255,0.10), rgba(255,255,255,0.03) 35%, rgba(255,255,255,0.01) 70%);
+    linear-gradient(140deg, rgba(255,255,255,0.18), rgba(255,255,255,0.05) 32%, rgba(255,255,255,0.01) 72%);
+}
+
+.login-card::after {
+  content: "";
+  position: absolute;
+  inset: -25%;
+  z-index: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at 12% 10%, rgba(255,255,255,0.24), rgba(255,255,255,0.04) 25%, rgba(255,255,255,0) 48%);
+  filter: blur(12px);
+  transform: rotate(-7deg);
 }
 
 .login-card > * {
