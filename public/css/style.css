@@ -79,7 +79,7 @@ body {
 }
 
 .site-particles {
-  opacity: 0.72;
+  opacity: 0.96;
 }
 
 .site-particle {
@@ -102,6 +102,9 @@ body {
   mix-blend-mode: screen;
   background:
     radial-gradient(circle, var(--particle-color) 0%, rgba(195, 234, 255, 0.28) 25%, rgba(130, 190, 255, 0) 72%);
+  box-shadow:
+    0 0 6px var(--particle-color),
+    0 0 14px rgba(120, 210, 255, 0.42);
   transform: translate3d(var(--x-start), var(--y-start), 0);
   animation:
     site-float var(--duration) linear infinite,
@@ -121,13 +124,13 @@ body {
 
 @keyframes site-twinkle {
   0% {
-    opacity: 0.18;
+    opacity: 0.28;
   }
   50% {
-    opacity: 0.65;
+    opacity: 1;
   }
   100% {
-    opacity: 0.18;
+    opacity: 0.28;
   }
 }
 
@@ -139,7 +142,7 @@ body {
 
 @media (max-width: 768px) {
   .site-particles {
-    opacity: 0.62;
+    opacity: 0.8;
   }
 }
 
@@ -281,15 +284,32 @@ body {
 .login-card{
   width: min(440px, 100%);
   padding: 40px;
-  background: rgba(18, 22, 30, 0.54);
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(12, 18, 28, 0.36);
+  border: 1px solid rgba(165, 210, 255, 0.18);
   border-radius: 14px;
   text-align: center;
   box-shadow:
-    0 20px 60px rgba(0,0,0,.45),
-    0 0 0 1px rgba(130, 190, 255, 0.08) inset;
-  backdrop-filter: blur(8px) saturate(118%);
-  -webkit-backdrop-filter: blur(8px) saturate(118%);
+    0 24px 70px rgba(0,0,0,.40),
+    0 0 0 1px rgba(140, 195, 255, 0.12) inset;
+  backdrop-filter: blur(14px) saturate(130%) brightness(1.05);
+  -webkit-backdrop-filter: blur(14px) saturate(130%) brightness(1.05);
+  position: relative;
+  overflow: hidden;
+}
+
+.login-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(140deg, rgba(255,255,255,0.10), rgba(255,255,255,0.03) 35%, rgba(255,255,255,0.01) 70%);
+}
+
+.login-card > * {
+  position: relative;
+  z-index: 1;
 }
 
 .login-card h1{
