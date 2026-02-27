@@ -222,6 +222,7 @@
     margin-top: 10px;
     display: flex;
     justify-content: flex-end;
+    gap: 8px;
   }
 
   .settings-btn {
@@ -288,6 +289,24 @@
     border: 1px solid rgba(248, 113, 113, 0.42);
     background: rgba(248, 113, 113, 0.14);
     color: #fecaca;
+    border-radius: 8px;
+    padding: 6px 9px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  .dash-card-actions {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
+  .dash-card-edit {
+    border: 1px solid rgba(86, 186, 255, 0.42);
+    background: rgba(86, 186, 255, 0.14);
+    color: #cfeeff;
     border-radius: 8px;
     padding: 6px 9px;
     font-size: 12px;
@@ -370,6 +389,7 @@
           </div>
         </form>
         <div class="settings-actions">
+          <button class="settings-btn" id="cancelDashboardCardEditBtn" type="button" style="display:none;">Annuler</button>
           <button class="settings-btn" id="addDashboardCardBtn" type="button">Ajouter la carte</button>
         </div>
         <div class="settings-inline-note" id="dashCardState">Choisis une couleur disponible et remplis tous les champs.</div>
@@ -381,7 +401,20 @@
                 <div class="dash-card-main"><%= card.icon || "✨" %> <%= card.title %> · <%= card.colorName %></div>
                 <div class="dash-card-sub"><%= card.label %> · <%= card.description %> · <%= card.url %></div>
               </div>
-              <button class="dash-card-delete" data-delete-card-id="<%= card.id %>" type="button">Supprimer</button>
+              <div class="dash-card-actions">
+                <button
+                  class="dash-card-edit"
+                  data-edit-card-id="<%= card.id %>"
+                  data-edit-label="<%= card.label %>"
+                  data-edit-title="<%= card.title %>"
+                  data-edit-description="<%= card.description %>"
+                  data-edit-url="<%= card.url %>"
+                  data-edit-color-key="<%= card.colorKey %>"
+                  data-edit-icon="<%= card.icon || '✨' %>"
+                  type="button"
+                >Modifier</button>
+                <button class="dash-card-delete" data-delete-card-id="<%= card.id %>" type="button">Supprimer</button>
+              </div>
             </div>
           <% }) %>
         </div>
@@ -400,14 +433,17 @@
     const dashCardsList = document.getElementById("dashboardCardsList");
     const form = document.getElementById("dashboardCardForm");
     const colorSelect = document.getElementById("cardColorKey");
+    const cancelEditBtn = document.getElementById("cancelDashboardCardEditBtn");
     const cardLabelInput = document.getElementById("cardLabel");
     const cardTitleInput = document.getElementById("cardTitle");
     const cardDescriptionInput = document.getElementById("cardDescription");
     const cardIconInput = document.getElementById("cardIcon");
     const cardUrlInput = document.getElementById("cardUrl");
-    if (!toggle || !state || !addBtn || !dashCardState || !dashCardsList || !form || !colorSelect) return;
+    if (!toggle || !state || !addBtn || !dashCardState || !dashCardsList || !form || !colorSelect || !cancelEditBtn) return;
 
     let cardBusy = false;
+    let editingCardId = null;
+    let canCreate = true;
 
     function escHtml(v) {
       return String(v == null ? "" : v)
@@ -418,9 +454,36 @@
         .replace(/'/g, "&#39;");
     }
 
-    function setAddCardEnabled(enabled) {
-      addBtn.disabled = !enabled;
-      colorSelect.disabled = !enabled;
+    function updateActionAvailability() {
+      const lockCreate = !editingCardId && !canCreate;
+      addBtn.disabled = lockCreate;
+      colorSelect.disabled = lockCreate;
+    }
+
+    function setFormModeCreate() {
+      editingCardId = null;
+      addBtn.textContent = "Ajouter la carte";
+      cancelEditBtn.style.display = "none";
+      updateActionAvailability();
+    }
+
+    function setFormModeEdit(card) {
+      editingCardId = Number(card.id);
+      addBtn.textContent = "Enregistrer la modification";
+      cancelEditBtn.style.display = "inline-flex";
+      cardLabelInput.value = card.label || "";
+      cardTitleInput.value = card.title || "";
+      cardDescriptionInput.value = card.description || "";
+      cardUrlInput.value = card.url || "";
+      cardIconInput.value = card.icon || "✨";
+      if (!Array.from(colorSelect.options).some(opt => opt.value === (card.colorKey || ""))) {
+        const opt = document.createElement("option");
+        opt.value = card.colorKey || "";
+        opt.textContent = (card.colorKey || "").toUpperCase();
+        colorSelect.appendChild(opt);
+      }
+      colorSelect.value = card.colorKey || "";
+      updateActionAvailability();
     }
 
     async function refreshCardData() {
@@ -433,7 +496,8 @@
         .join("");
 
       const colorsByKey = Object.fromEntries((data.allColors || []).map(c => [c.key, c.name]));
-      setAddCardEnabled((data.availableColors || []).length > 0);
+      canCreate = (data.availableColors || []).length > 0;
+      updateActionAvailability();
 
       dashCardsList.innerHTML = (data.cards || []).map(card => {
         const colorName = colorsByKey[card.colorKey] || card.colorKey;
@@ -442,7 +506,20 @@
             <div class="dash-card-main">${escHtml(card.icon || "✨")} ${escHtml(card.title)} · ${escHtml(colorName)}</div>
             <div class="dash-card-sub">${escHtml(card.label)} · ${escHtml(card.description)} · ${escHtml(card.url)}</div>
           </div>
-          <button class="dash-card-delete" data-delete-card-id="${card.id}" type="button">Supprimer</button>
+          <div class="dash-card-actions">
+            <button
+              class="dash-card-edit"
+              data-edit-card-id="${card.id}"
+              data-edit-label="${escHtml(card.label)}"
+              data-edit-title="${escHtml(card.title)}"
+              data-edit-description="${escHtml(card.description)}"
+              data-edit-url="${escHtml(card.url)}"
+              data-edit-color-key="${escHtml(card.colorKey)}"
+              data-edit-icon="${escHtml(card.icon || "✨")}"
+              type="button"
+            >Modifier</button>
+            <button class="dash-card-delete" data-delete-card-id="${card.id}" type="button">Supprimer</button>
+          </div>
         </div>`;
       }).join("");
 
@@ -495,9 +572,16 @@
 
       cardBusy = true;
       addBtn.disabled = true;
+      cancelEditBtn.disabled = true;
+      const wasEditing = !!editingCardId;
       try {
-        const resp = await fetch(bp + "/api/admin/dashboard-cards", {
-          method: "POST",
+        const endpoint = editingCardId
+          ? (bp + "/api/admin/dashboard-cards/" + editingCardId)
+          : (bp + "/api/admin/dashboard-cards");
+        const method = editingCardId ? "PUT" : "POST";
+
+        const resp = await fetch(endpoint, {
+          method,
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload)
         });
@@ -506,17 +590,41 @@
 
         form.reset();
         cardIconInput.value = "✨";
-        dashCardState.textContent = "Carte ajoutée avec succès.";
+        setFormModeCreate();
+        dashCardState.textContent = wasEditing ? "Carte modifiée avec succès." : "Carte ajoutée avec succès.";
         await refreshCardData();
       } catch (err) {
         dashCardState.textContent = err.message || "Impossible d'ajouter la carte.";
       } finally {
         addBtn.disabled = false;
+        cancelEditBtn.disabled = false;
         cardBusy = false;
       }
     });
 
+    cancelEditBtn.addEventListener("click", function () {
+      form.reset();
+      cardIconInput.value = "✨";
+      setFormModeCreate();
+      dashCardState.textContent = "Mode création réactivé.";
+    });
+
     dashCardsList.addEventListener("click", async function (e) {
+      const editBtn = e.target.closest("[data-edit-card-id]");
+      if (editBtn && !cardBusy) {
+        setFormModeEdit({
+          id: editBtn.getAttribute("data-edit-card-id"),
+          label: editBtn.getAttribute("data-edit-label"),
+          title: editBtn.getAttribute("data-edit-title"),
+          description: editBtn.getAttribute("data-edit-description"),
+          url: editBtn.getAttribute("data-edit-url"),
+          colorKey: editBtn.getAttribute("data-edit-color-key"),
+          icon: editBtn.getAttribute("data-edit-icon")
+        });
+        dashCardState.textContent = "Edition de la carte en cours.";
+        return;
+      }
+
       const btn = e.target.closest("[data-delete-card-id]");
       if (!btn || cardBusy) return;
 
@@ -531,6 +639,11 @@
           throw new Error(data.error || ("HTTP " + resp.status));
         }
         dashCardState.textContent = "Carte supprimée.";
+        if (editingCardId && Number(editingCardId) === Number(id)) {
+          form.reset();
+          cardIconInput.value = "✨";
+          setFormModeCreate();
+        }
         await refreshCardData();
       } catch (err) {
         dashCardState.textContent = err.message || "Impossible de supprimer la carte.";
@@ -539,6 +652,7 @@
       }
     });
 
+    setFormModeCreate();
     refreshCardData().catch(() => {});
   })();
 </script>

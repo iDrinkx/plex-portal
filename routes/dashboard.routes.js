@@ -837,6 +837,55 @@ router.post("/api/admin/dashboard-cards", requireAuth, requireAdmin, (req, res) 
   res.json({ success: true });
 });
 
+router.put("/api/admin/dashboard-cards/:id", requireAuth, requireAdmin, (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isInteger(id) || id <= 0) {
+    return res.status(400).json({ error: "Id invalide" });
+  }
+
+  const payload = req.body || {};
+  const label = String(payload.label || "").trim();
+  const title = String(payload.title || "").trim();
+  const description = String(payload.description || "").trim();
+  const url = String(payload.url || "").trim();
+  const colorKey = String(payload.colorKey || "").trim();
+  const icon = String(payload.icon || "✨").trim();
+
+  if (!label || !title || !description || !url || !colorKey) {
+    return res.status(400).json({ error: "Champs obligatoires manquants" });
+  }
+
+  if (label.length > 40 || title.length > 60 || description.length > 120 || icon.length > 4) {
+    return res.status(400).json({ error: "Un ou plusieurs champs sont trop longs" });
+  }
+
+  const isRelativeUrl = url.startsWith("/");
+  const isAbsoluteUrl = /^https?:\/\//i.test(url);
+  if (!isRelativeUrl && !isAbsoluteUrl) {
+    return res.status(400).json({ error: "Lien invalide (doit commencer par / ou http/https)" });
+  }
+
+  const cards = DashboardCardQueries.list();
+  const target = cards.find(c => Number(c.id) === id);
+  if (!target) {
+    return res.status(404).json({ error: "Carte introuvable" });
+  }
+
+  // Couleur autorisée si elle reste identique, sinon elle doit être libre.
+  const colorUnchanged = target.colorKey === colorKey;
+  if (!colorUnchanged) {
+    const used = new Set([...DEFAULT_DASHBOARD_COLOR_KEYS]);
+    cards.filter(c => Number(c.id) !== id).forEach(c => used.add(c.colorKey));
+    if (used.has(colorKey)) {
+      return res.status(400).json({ error: "Couleur non disponible" });
+    }
+  }
+
+  DashboardCardQueries.update(id, { label, title, description, url, colorKey, icon });
+  log.create("[Admin]").info(`Carte dashboard modifiée par ${req.session.user.username}: id=${id}`);
+  res.json({ success: true });
+});
+
 router.delete("/api/admin/dashboard-cards/:id", requireAuth, requireAdmin, (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (!Number.isInteger(id) || id <= 0) {

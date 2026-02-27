@@ -734,6 +734,29 @@ const DashboardCardQueries = {
     return result.lastInsertRowid;
   },
 
+  update(id, { label, title, description, url, colorKey, icon }) {
+    const db = getDb();
+    return db.prepare(`
+      UPDATE dashboard_custom_cards
+      SET
+        label = ?,
+        title = ?,
+        description = ?,
+        url = ?,
+        color_key = ?,
+        icon = ?
+      WHERE id = ?
+    `).run(
+      String(label || "").trim(),
+      String(title || "").trim(),
+      String(description || "").trim(),
+      String(url || "").trim(),
+      String(colorKey || "").trim(),
+      String(icon || "✨").trim(),
+      id
+    );
+  },
+
   remove(id) {
     const db = getDb();
     return db.prepare(`DELETE FROM dashboard_custom_cards WHERE id = ?`).run(id);
