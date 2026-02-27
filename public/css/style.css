@@ -828,13 +828,13 @@ body {
 
 /* nav link accent for dashboard */
 .nav-link-dashboard {
-  color: rgba(226, 246, 255, 0.9);
+  color: rgba(255, 255, 255, 0.95);
 }
 .nav-link-dashboard:hover {
-  color: #f0fbff;
+  color: #ffffff;
 }
 .nav-link-dashboard::after {
-  background: #7dd3fc;
+  background: #ffffff;
 }
 
 /* nav link accent for profil */
@@ -883,13 +883,13 @@ body {
 
 /* nav link accent for parametres */
 .nav-link-settings {
-  color: rgba(168, 85, 247, 0.92);
+  color: rgba(203, 213, 225, 0.92);
 }
 .nav-link-settings:hover {
-  color: #d8b4fe;
+  color: #e2e8f0;
 }
 .nav-link-settings::after {
-  background: #a855f7;
+  background: #cbd5e1;
 }
 
 .nav-link-custom {
@@ -1346,21 +1346,21 @@ body {
 }
 
 /* Mobile menu keeps the same palette as desktop links */
-.mobile-menu .nav-link-dashboard { color: rgba(226, 246, 255, 0.9) !important; }
+.mobile-menu .nav-link-dashboard { color: rgba(255, 255, 255, 0.95) !important; }
 .mobile-menu .nav-link-profil { color: rgba(229, 160, 13, 0.9) !important; }
 .mobile-menu .nav-link-classement { color: rgba(59, 130, 246, 0.9) !important; }
 .mobile-menu .nav-link-stats { color: rgba(16, 185, 129, 0.9) !important; }
 .mobile-menu .nav-link-demandes { color: rgba(109, 73, 171, 0.9) !important; }
 .mobile-menu .nav-link-calendrier { color: rgba(239, 68, 68, 0.9) !important; }
-.mobile-menu .nav-link-settings { color: rgba(168, 85, 247, 0.92) !important; }
+.mobile-menu .nav-link-settings { color: rgba(203, 213, 225, 0.92) !important; }
 
-.mobile-menu .nav-link-dashboard:hover { color: #f0fbff !important; }
+.mobile-menu .nav-link-dashboard:hover { color: #ffffff !important; }
 .mobile-menu .nav-link-profil:hover { color: #ffcc40 !important; }
 .mobile-menu .nav-link-classement:hover { color: #7db8ff !important; }
 .mobile-menu .nav-link-stats:hover { color: #34d399 !important; }
 .mobile-menu .nav-link-demandes:hover { color: #b48cf0 !important; }
 .mobile-menu .nav-link-calendrier:hover { color: #f87171 !important; }
-.mobile-menu .nav-link-settings:hover { color: #d8b4fe !important; }
+.mobile-menu .nav-link-settings:hover { color: #e2e8f0 !important; }
 
 .mobile-menu.open {
   right: 0;
