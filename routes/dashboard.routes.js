@@ -6,23 +6,53 @@ const log = require("../utils/logger");
 const { computeSubscription } = require("../utils/wizarr");
 const { getTautulliStats } = require("../utils/tautulli");
 const { getSeerrStats } = require("../utils/seerr");
-const { getPlexJoinDate } = require("../utils/plex");
+const { getPlexJoinDate, getServerOwnerId } = require("../utils/plex");
 const { getRadarrCalendar, getSonarrCalendar } = require("../utils/radarr-sonarr");
 const { XP_SYSTEM } = require("../utils/xp-system");
 const { ACHIEVEMENTS } = require("../utils/achievements");
-const { UserAchievementQueries, UserQueries, AchievementProgressQueries } = require("../utils/database");
+const {
+  UserAchievementQueries,
+  UserQueries,
+  AchievementProgressQueries,
+  DatabaseMaintenance,
+  AppSettingQueries
+} = require("../utils/database");
 const { getAchievementUnlockDates, evaluateSecretAchievements, isTautulliReady, getLastPlayedItem, getUserStatsFromTautulli } = require("../utils/tautulli-direct");
 const CacheManager = require("../utils/cache");
 const TautulliEvents = require("../utils/tautulli-events");  // 📢 Import EventEmitter
-const { DatabaseMaintenance } = require("../utils/database");  // 🧹 Database maintenance
 const { calculateUserXp } = require("../utils/xp-calculator");  // 🎯 Fonction centralisée XP
 
 /* ===============================
    🔐 AUTH
 =============================== */
 
-function requireAuth(req, res, next) {
+async function ensureAdminFlag(req) {
+  if (!req.session?.user) return;
+  if (typeof req.session.user.isAdmin === "boolean") return;
+
+  let isAdmin = false;
+  try {
+    const ownerId = await getServerOwnerId(process.env.PLEX_TOKEN);
+    isAdmin = !!ownerId && Number(ownerId) === Number(req.session.user.id);
+  } catch (_) {
+    isAdmin = false;
+  }
+  req.session.user.isAdmin = isAdmin;
+}
+
+async function requireAuth(req, res, next) {
   if (!req.session.user) return res.redirect(req.basePath + "/");
+  await ensureAdminFlag(req);
+  next();
+}
+
+function requireAdmin(req, res, next) {
+  if (!req.session?.user?.isAdmin) {
+    if (req.path.startsWith("/api/")) {
+      return res.status(403).json({ error: "Admin requis" });
+    }
+    return res.redirect(req.basePath + "/dashboard");
+  }
   next();
 }
 
@@ -135,7 +165,12 @@ router.get("/profil", requireAuth, async (req, res) => {
 // Route /abonnement supprimée — infos intégrées dans /profil
 
 router.get("/classement", requireAuth, (req, res) => {
-  res.render("classement/index", { user: req.session.user, basePath: req.basePath });
+  const leaderboardBlurEnabled = AppSettingQueries.getBool("leaderboard_blur_enabled", true);
+  res.render("classement/index", {
+    user: req.session.user,
+    basePath: req.basePath,
+    leaderboardBlurEnabled
+  });
 });
 
 router.get("/statistiques", requireAuth, (req, res) => {
@@ -226,6 +261,15 @@ router.get("/succes", requireAuth, async (req, res) => {
 
 router.get("/calendrier", requireAuth, (req, res) => {
   res.render("calendrier/index", { user: req.session.user, basePath: req.basePath });
+});
+
+router.get("/parametres", requireAuth, requireAdmin, (req, res) => {
+  const leaderboardBlurEnabled = AppSettingQueries.getBool("leaderboard_blur_enabled", true);
+  res.render("parametres/index", {
+    user: req.session.user,
+    basePath: req.basePath,
+    leaderboardBlurEnabled
+  });
 });
 
 /* ===============================
@@ -600,7 +644,7 @@ router.get("/api/all-users", async (req, res) => {
 /* ===============================
     ADMIN: Révoquer un badge
 =============================== */
-router.delete("/api/admin/achievement/:achievementId", requireAuth, (req, res) => {
+router.delete("/api/admin/achievement/:achievementId", requireAuth, requireAdmin, (req, res) => {
   const { UserAchievementQueries, UserQueries } = require('../utils/database');
   const username = req.session.user.username;
   const user = UserQueries.getByUsername(username);
@@ -609,6 +653,18 @@ router.delete("/api/admin/achievement/:achievementId", requireAuth, (req, res) =
   UserAchievementQueries.revoke(user.id, achievementId);
   log.create('[Admin]').info(`Badge "${achievementId}" révoqué pour ${username}`);
   res.json({ success: true, revoked: achievementId });
+});
+
+router.get("/api/admin/settings/leaderboard-blur", requireAuth, requireAdmin, (req, res) => {
+  const enabled = AppSettingQueries.getBool("leaderboard_blur_enabled", true);
+  res.json({ enabled });
+});
+
+router.post("/api/admin/settings/leaderboard-blur", requireAuth, requireAdmin, (req, res) => {
+  const enabled = !!req.body?.enabled;
+  AppSettingQueries.setBool("leaderboard_blur_enabled", enabled);
+  log.create("[Admin]").info(`Leaderboard blur ${enabled ? "activé" : "désactivé"} par ${req.session.user.username}`);
+  res.json({ success: true, enabled });
 });
 
 /* ===============================

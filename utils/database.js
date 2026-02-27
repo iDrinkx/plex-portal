@@ -193,6 +193,21 @@ function runMigrations() {
         FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
       )
     `);  // achievement_progress
+
+    // Table: app_settings - Réglages globaux administrateur
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS app_settings (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);  // app_settings
+
+    // Valeur par défaut: blur des pseudos activé
+    db.prepare(`
+      INSERT OR IGNORE INTO app_settings (key, value)
+      VALUES ('leaderboard_blur_enabled', '1')
+    `).run();
     db.exec(`
       CREATE INDEX IF NOT EXISTS idx_user_achievements_user ON user_achievements(user_id);
       CREATE INDEX IF NOT EXISTS idx_user_achievements_achievement ON user_achievements(achievement_id);
@@ -645,6 +660,37 @@ const AchievementProgressQueries = {
 };
 
 /**
+ * App settings queries (réglages globaux admin)
+ */
+const AppSettingQueries = {
+  get(key, defaultValue = null) {
+    const db = getDb();
+    const row = db.prepare(`SELECT value FROM app_settings WHERE key = ?`).get(key);
+    return row ? row.value : defaultValue;
+  },
+
+  set(key, value) {
+    const db = getDb();
+    return db.prepare(`
+      INSERT INTO app_settings (key, value, updated_at)
+      VALUES (?, ?, CURRENT_TIMESTAMP)
+      ON CONFLICT(key) DO UPDATE SET
+        value = excluded.value,
+        updated_at = CURRENT_TIMESTAMP
+    `).run(key, String(value));
+  },
+
+  getBool(key, defaultValue = false) {
+    const value = this.get(key, defaultValue ? "1" : "0");
+    return value === "1" || value === "true";
+  },
+
+  setBool(key, enabled) {
+    return this.set(key, enabled ? "1" : "0");
+  }
+};
+
+/**
  * Transactions helper
  */
 function transaction(callback) {
@@ -664,5 +710,6 @@ module.exports = {
   DatabaseMaintenance,
   UserAchievementQueries,
   AchievementProgressQueries,
+  AppSettingQueries,
   DB_PATH
 };

@@ -1,0 +1,184 @@
+<style>
+  .settings-page {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 18px 0 40px;
+  }
+
+  .settings-header h1 {
+    margin: 0 0 6px;
+    color: #fff;
+    font-size: 28px;
+    font-weight: 800;
+  }
+
+  .settings-header p {
+    margin: 0 0 22px;
+    color: #a9b3c8;
+    font-size: 13px;
+  }
+
+  .settings-card {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+    background: rgba(14, 22, 34, 0.012);
+    border: 1px solid rgba(226, 246, 255, 0.42);
+    border-radius: 16px;
+    padding: 18px;
+    box-shadow:
+      0 14px 34px rgba(0,0,0,.18),
+      0 0 0 1px rgba(232, 248, 255, 0.20) inset,
+      0 4px 10px rgba(98, 178, 255, 0.04);
+    backdrop-filter: blur(3px) saturate(112%) contrast(1.01) brightness(1.02);
+    -webkit-backdrop-filter: blur(3px) saturate(112%) contrast(1.01) brightness(1.02);
+  }
+
+  .settings-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(150deg, rgba(255,255,255,0.06), rgba(255,255,255,0.012) 28%, rgba(255,255,255,0.00) 64%);
+    z-index: 0;
+  }
+
+  .settings-card > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  .settings-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  .settings-row h3 {
+    margin: 0 0 6px;
+    font-size: 16px;
+    color: #f2f6ff;
+  }
+
+  .settings-row p {
+    margin: 0;
+    color: #a9b3c8;
+    font-size: 13px;
+    line-height: 1.45;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 52px;
+    height: 32px;
+    flex-shrink: 0;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    inset: 0;
+    cursor: pointer;
+    background-color: rgba(255, 255, 255, 0.18);
+    transition: .2s;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 24px;
+    width: 24px;
+    left: 3px;
+    top: 3px;
+    background-color: #fff;
+    transition: .2s;
+    border-radius: 50%;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.35);
+  }
+
+  input:checked + .slider {
+    background-color: #34c759;
+    border-color: rgba(52, 199, 89, 0.9);
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(20px);
+  }
+
+  .settings-state {
+    margin-top: 12px;
+    font-size: 12px;
+    color: #9fb0cd;
+  }
+
+  @media (max-width: 640px) {
+    .settings-row {
+      align-items: flex-start;
+    }
+  }
+</style>
+
+<section class="settings-page">
+  <div class="settings-header">
+    <h1>Parametres Admin</h1>
+    <p>Reglages globaux visibles sur tout le portail.</p>
+  </div>
+
+  <div class="settings-card">
+    <div class="settings-row">
+      <div>
+        <h3>Blur des pseudos dans le classement</h3>
+        <p>Active ou desactive le flou sur les pseudos utilisateurs dans la page classement.</p>
+      </div>
+      <label class="switch" aria-label="Activer ou desactiver le blur des pseudos">
+        <input id="leaderboardBlurToggle" type="checkbox" <%= leaderboardBlurEnabled ? "checked" : "" %>>
+        <span class="slider"></span>
+      </label>
+    </div>
+    <div class="settings-state" id="settingsState">
+      Etat actuel: <strong><%= leaderboardBlurEnabled ? "Active" : "Desactive" %></strong>
+    </div>
+  </div>
+</section>
+
+<script>
+  (function () {
+    const toggle = document.getElementById("leaderboardBlurToggle");
+    const state = document.getElementById("settingsState");
+    if (!toggle || !state) return;
+
+    let inFlight = false;
+    toggle.addEventListener("change", async function () {
+      if (inFlight) return;
+      inFlight = true;
+      toggle.disabled = true;
+      const enabled = !!toggle.checked;
+
+      try {
+        const resp = await fetch((window.APP_BASE_PATH || "") + "/api/admin/settings/leaderboard-blur", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ enabled })
+        });
+
+        if (!resp.ok) throw new Error("HTTP " + resp.status);
+        const data = await resp.json();
+        state.innerHTML = "Etat actuel: <strong>" + (data.enabled ? "Active" : "Desactive") + "</strong>";
+      } catch (_) {
+        toggle.checked = !enabled;
+      } finally {
+        toggle.disabled = false;
+        inFlight = false;
+      }
+    });
+  })();
+</script>

@@ -11,6 +11,11 @@
   --lb-bronze:    #CD7F32;
 }
 
+.lb-page--blur-off .lb-pod-username,
+.lb-page--blur-off .lb-row-name {
+  filter: none;
+}
+
 .lb-page {
   max-width: 1140px;
   margin: 0 auto;
@@ -584,7 +589,7 @@
 }
 </style>
 
-<div class="lb-page">
+<div class="lb-page <%= leaderboardBlurEnabled === false ? 'lb-page--blur-off' : '' %>">
 
   <div class="lb-header">
     <h1 class="lb-title">&#x1F3C6; Classement</h1>
