@@ -11,7 +11,7 @@ const { startSessionCronJob } = require("./utils/cron-session-job");
 const { startDatabaseMaintenanceJob } = require("./utils/cron-maintenance-job");  // 🧹 Database maintenance
 const { startClassementRefreshJob } = require("./utils/cron-classement-refresh");  // 🏆 Classement refresh
 const { runHealthCheck } = require("./utils/health-check");  // 🏥 Health check au boot
-const { initDatabase } = require("./utils/database");  // 🗄️  Database initialization
+const { initDatabase, DashboardCardQueries } = require("./utils/database");  // 🗄️  Database initialization
 const { initTautulliDatabase, getAllUserStatsFromTautulli } = require("./utils/tautulli-direct");  // 📊 Tautulli direct DB
 
 const app = express();
@@ -82,6 +82,29 @@ app.use(express.static("/config"));
 app.use((req, res, next) => {
   res.locals.user = req.session.user || null;
   res.locals.basePath = req.basePath || "";
+  res.locals.customNavCards = [];
+
+  if (req.session.user) {
+    try {
+      const cards = DashboardCardQueries.list();
+      const basePath = req.basePath || "";
+      res.locals.customNavCards = cards.map(card => {
+        const openInIframe = !!card.openInIframe;
+        const rawUrl = String(card.url || "");
+        const href = openInIframe
+          ? `${basePath}/app-card/${card.id}`
+          : (rawUrl.startsWith("/") ? `${basePath}${rawUrl}` : rawUrl);
+        return {
+          id: card.id,
+          label: card.label || card.title || `App ${card.id}`,
+          href,
+          external: !openInIframe && /^https?:\/\//i.test(rawUrl)
+        };
+      });
+    } catch (_) {
+      res.locals.customNavCards = [];
+    }
+  }
   next();
 });
 
