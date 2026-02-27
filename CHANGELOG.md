@@ -2,6 +2,11 @@
 
 Toutes les modifications notables de ce projet sont documentées dans ce fichier.
 
+## <small>1.29.1 (2026-02-27)</small>
+
+* Merge pull request #26 from iDrinkx/develop ([e136541](https://github.com/iDrinkx/plex-portal/commit/e136541)), closes [#26](https://github.com/iDrinkx/plex-portal/issues/26)
+* fix: add fetch function for Komga current user and refactor user fetching logic ([b4f4c19](https://github.com/iDrinkx/plex-portal/commit/b4f4c19))
+
 ## 1.29.0 (2026-02-27)
 
 * Merge pull request #25 from iDrinkx/develop ([eb7a2da](https://github.com/iDrinkx/plex-portal/commit/eb7a2da)), closes [#25](https://github.com/iDrinkx/plex-portal/issues/25)
