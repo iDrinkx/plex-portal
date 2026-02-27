@@ -256,9 +256,9 @@ async function grabKomgaCookie(res) {
     const parentDomain = getCookieParentDomain(komgaPublicUrl);
     const applyCookie = (cookieStr, cookieName) => {
       const value = cookieStr.split(";")[0].replace(`${cookieName}=`, "");
-      const opts = { path: "/", httpOnly: true, sameSite: "lax", secure: true };
+      const opts = { path: "/", httpOnly: true, sameSite: "none", secure: true };
       if (parentDomain) opts.domain = parentDomain;
-      res.cookie(cookieName, decodeURIComponent(value), opts);
+      res.cookie(cookieName, value, opts);
     };
 
     // 1) Auth + session token via X-Auth-Token seed
