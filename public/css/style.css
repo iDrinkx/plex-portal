@@ -764,10 +764,11 @@ body {
 }
 
 .hero-icon-custom-logo {
-  width: 36px;
-  height: 36px;
-  object-fit: contain;
+  width: 58px;
+  height: 58px;
+  object-fit: cover;
   border-radius: 50%;
+  display: block;
 }
 
 .hero-icon--calendrier {
