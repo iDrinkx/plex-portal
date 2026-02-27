@@ -1254,6 +1254,35 @@
       grid-template-columns: 1fr;
       gap: 30px;
     }
+
+    /* Mobile: modal XP scrollable sans impacter desktop */
+    #xpModal .xp-modal-content {
+      max-height: calc(100vh - 24px);
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 20px;
+    }
+
+    /* Mobile: cartes "Détails par catégorie" plus compactes */
+    #xpModal .detail-card {
+      padding: 12px;
+      gap: 10px;
+      margin-bottom: 10px;
+      border-left-width: 3px;
+    }
+
+    #xpModal .detail-icon {
+      font-size: 19px;
+    }
+
+    #xpModal .detail-label {
+      font-size: 10px;
+      margin-bottom: 2px;
+    }
+
+    #xpModal .detail-value {
+      font-size: 14px;
+    }
   }
 
   .breakdown-grid {
