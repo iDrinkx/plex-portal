@@ -740,6 +740,7 @@ body {
 }
 
 .hero-icon--custom {
+  position: relative;
   display: grid;
   place-items: center;
   background: transparent;
@@ -751,12 +752,15 @@ body {
 }
 
 .hero-icon-custom-char {
-  display: block;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  display: inline-block;
   font-size: 28px;
   line-height: 1;
   margin: 0;
   padding: 0;
-  transform: translateY(1px);
+  transform: translate(-50%, -50%);
 }
 
 .hero-icon--calendrier {
