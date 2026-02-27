@@ -231,7 +231,7 @@ router.get("/dashboard", requireAuth, (req, res) => {
     .map(card => {
       const color = colorMap.get(card.colorKey);
       if (!color) return null;
-      return { ...card, color };
+      return { ...card, color, openInIframe: !!card.openInIframe };
     })
     .filter(Boolean);
 
@@ -389,6 +389,7 @@ router.get("/parametres", requireAuth, requireAdmin, (req, res) => {
   const colorMap = getColorMap();
   const customCardsResolved = customCards.map(card => ({
     ...card,
+    openInIframe: !!card.openInIframe,
     colorName: colorMap.get(card.colorKey)?.name || card.colorKey
   }));
 
@@ -810,6 +811,7 @@ router.post("/api/admin/dashboard-cards", requireAuth, requireAdmin, (req, res) 
   const description = String(payload.description || "").trim();
   const url = String(payload.url || "").trim();
   const colorKey = String(payload.colorKey || "").trim();
+  const openInIframe = !!payload.openInIframe;
   const icon = String(payload.icon || "✨").trim();
 
   if (!label || !title || !description || !url || !colorKey) {
@@ -832,7 +834,7 @@ router.post("/api/admin/dashboard-cards", requireAuth, requireAdmin, (req, res) 
     return res.status(400).json({ error: "Couleur non disponible" });
   }
 
-  DashboardCardQueries.create({ label, title, description, url, colorKey, icon });
+  DashboardCardQueries.create({ label, title, description, url, colorKey, openInIframe, icon });
   log.create("[Admin]").info(`Carte dashboard ajoutée par ${req.session.user.username}: ${title} (${colorKey})`);
   res.json({ success: true });
 });
@@ -849,6 +851,7 @@ router.put("/api/admin/dashboard-cards/:id", requireAuth, requireAdmin, (req, re
   const description = String(payload.description || "").trim();
   const url = String(payload.url || "").trim();
   const colorKey = String(payload.colorKey || "").trim();
+  const openInIframe = !!payload.openInIframe;
   const icon = String(payload.icon || "✨").trim();
 
   if (!label || !title || !description || !url || !colorKey) {
@@ -881,9 +884,31 @@ router.put("/api/admin/dashboard-cards/:id", requireAuth, requireAdmin, (req, re
     }
   }
 
-  DashboardCardQueries.update(id, { label, title, description, url, colorKey, icon });
+  DashboardCardQueries.update(id, { label, title, description, url, colorKey, openInIframe, icon });
   log.create("[Admin]").info(`Carte dashboard modifiée par ${req.session.user.username}: id=${id}`);
   res.json({ success: true });
+});
+
+router.get("/app-card/:id", requireAuth, (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isInteger(id) || id <= 0) {
+    return res.redirect(req.basePath + "/dashboard");
+  }
+  const card = DashboardCardQueries.getById(id);
+  if (!card) {
+    return res.redirect(req.basePath + "/dashboard");
+  }
+
+  const srcUrl = String(card.url || "").startsWith("/")
+    ? `${req.basePath}${card.url}`
+    : card.url;
+
+  res.render("apps/iframe", {
+    layout: false,
+    basePath: req.basePath || "",
+    title: card.title || "Application",
+    srcUrl
+  });
 });
 
 router.delete("/api/admin/dashboard-cards/:id", requireAuth, requireAdmin, (req, res) => {

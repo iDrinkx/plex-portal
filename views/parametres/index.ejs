@@ -387,6 +387,12 @@
             <label for="cardUrl">Lien (interne `/seerr` ou externe `https://...`)</label>
             <input id="cardUrl" name="url" maxlength="220" placeholder="/seerr">
           </div>
+          <div class="settings-field settings-field--full">
+            <label style="display:flex;align-items:center;gap:8px;">
+              <input id="cardOpenInIframe" name="openInIframe" type="checkbox" checked>
+              Ouvrir dans une page iframe avec bandeau retour (comme Seerr)
+            </label>
+          </div>
         </form>
         <div class="settings-actions">
           <button class="settings-btn" id="cancelDashboardCardEditBtn" type="button" style="display:none;">Annuler</button>
@@ -410,6 +416,7 @@
                   data-edit-description="<%= card.description %>"
                   data-edit-url="<%= card.url %>"
                   data-edit-color-key="<%= card.colorKey %>"
+                  data-edit-open-in-iframe="<%= card.openInIframe ? '1' : '0' %>"
                   data-edit-icon="<%= card.icon || '✨' %>"
                   type="button"
                 >Modifier</button>
@@ -439,6 +446,7 @@
     const cardDescriptionInput = document.getElementById("cardDescription");
     const cardIconInput = document.getElementById("cardIcon");
     const cardUrlInput = document.getElementById("cardUrl");
+    const cardOpenInIframeInput = document.getElementById("cardOpenInIframe");
     if (!toggle || !state || !addBtn || !dashCardState || !dashCardsList || !form || !colorSelect || !cancelEditBtn) return;
 
     let cardBusy = false;
@@ -476,6 +484,7 @@
       cardDescriptionInput.value = card.description || "";
       cardUrlInput.value = card.url || "";
       cardIconInput.value = card.icon || "✨";
+      cardOpenInIframeInput.checked = !!card.openInIframe;
       if (!Array.from(colorSelect.options).some(opt => opt.value === (card.colorKey || ""))) {
         const opt = document.createElement("option");
         opt.value = card.colorKey || "";
@@ -515,6 +524,7 @@
               data-edit-description="${escHtml(card.description)}"
               data-edit-url="${escHtml(card.url)}"
               data-edit-color-key="${escHtml(card.colorKey)}"
+              data-edit-open-in-iframe="${card.openInIframe ? "1" : "0"}"
               data-edit-icon="${escHtml(card.icon || "✨")}"
               type="button"
             >Modifier</button>
@@ -562,6 +572,7 @@
         description: cardDescriptionInput.value.trim(),
         url: cardUrlInput.value.trim(),
         colorKey: colorSelect.value,
+        openInIframe: !!cardOpenInIframeInput.checked,
         icon: cardIconInput.value.trim() || "✨"
       };
 
@@ -619,6 +630,7 @@
           description: editBtn.getAttribute("data-edit-description"),
           url: editBtn.getAttribute("data-edit-url"),
           colorKey: editBtn.getAttribute("data-edit-color-key"),
+          openInIframe: editBtn.getAttribute("data-edit-open-in-iframe") === "1",
           icon: editBtn.getAttribute("data-edit-icon")
         });
         dashCardState.textContent = "Edition de la carte en cours.";

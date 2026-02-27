@@ -59,6 +59,7 @@ function runMigrations() {
     attemptAddColumn('tautulli_sessions', 'watched_status', 'REAL DEFAULT 0');
     attemptAddColumn('tautulli_sessions', 'rating_key', 'INTEGER');
     attemptAddColumn('tautulli_sessions', 'session_hash', 'TEXT');
+    attemptAddColumn('dashboard_custom_cards', 'open_in_iframe', 'INTEGER NOT NULL DEFAULT 1');
     
     // Table: users
     db.exec(`
@@ -212,6 +213,7 @@ function runMigrations() {
         description TEXT NOT NULL,
         url TEXT NOT NULL,
         color_key TEXT NOT NULL,
+        open_in_iframe INTEGER NOT NULL DEFAULT 1,
         icon TEXT DEFAULT '✨',
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
@@ -711,17 +713,36 @@ const DashboardCardQueries = {
   list() {
     const db = getDb();
     return db.prepare(`
-      SELECT id, label, title, description, url, color_key as colorKey, icon, created_at as createdAt
+      SELECT
+        id, label, title, description, url,
+        color_key as colorKey,
+        open_in_iframe as openInIframe,
+        icon,
+        created_at as createdAt
       FROM dashboard_custom_cards
       ORDER BY id ASC
     `).all();
   },
 
-  create({ label, title, description, url, colorKey, icon }) {
+  getById(id) {
+    const db = getDb();
+    return db.prepare(`
+      SELECT
+        id, label, title, description, url,
+        color_key as colorKey,
+        open_in_iframe as openInIframe,
+        icon,
+        created_at as createdAt
+      FROM dashboard_custom_cards
+      WHERE id = ?
+    `).get(id);
+  },
+
+  create({ label, title, description, url, colorKey, openInIframe, icon }) {
     const db = getDb();
     const stmt = db.prepare(`
-      INSERT INTO dashboard_custom_cards (label, title, description, url, color_key, icon)
-      VALUES (?, ?, ?, ?, ?, ?)
+      INSERT INTO dashboard_custom_cards (label, title, description, url, color_key, open_in_iframe, icon)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
     `);
     const result = stmt.run(
       String(label || "").trim(),
@@ -729,12 +750,13 @@ const DashboardCardQueries = {
       String(description || "").trim(),
       String(url || "").trim(),
       String(colorKey || "").trim(),
+      openInIframe ? 1 : 0,
       String(icon || "✨").trim()
     );
     return result.lastInsertRowid;
   },
 
-  update(id, { label, title, description, url, colorKey, icon }) {
+  update(id, { label, title, description, url, colorKey, openInIframe, icon }) {
     const db = getDb();
     return db.prepare(`
       UPDATE dashboard_custom_cards
@@ -744,6 +766,7 @@ const DashboardCardQueries = {
         description = ?,
         url = ?,
         color_key = ?,
+        open_in_iframe = ?,
         icon = ?
       WHERE id = ?
     `).run(
@@ -752,6 +775,7 @@ const DashboardCardQueries = {
       String(description || "").trim(),
       String(url || "").trim(),
       String(colorKey || "").trim(),
+      openInIframe ? 1 : 0,
       String(icon || "✨").trim(),
       id
     );
