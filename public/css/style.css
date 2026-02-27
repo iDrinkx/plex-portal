@@ -751,6 +751,11 @@ body {
   font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
 }
 
+.hero-icon--custom.hero-icon--logo-mode {
+  border: none;
+  box-shadow: none;
+}
+
 .hero-icon-custom-char {
   position: absolute;
   left: 50%;
@@ -761,6 +766,16 @@ body {
   margin: 0;
   padding: 0;
   transform: translate(-50%, -54%);
+}
+
+.hero-icon-custom-logo {
+  width: 58px;
+  height: 58px;
+  object-fit: cover;
+  border-radius: 50%;
+  display: block;
+  border: 2px solid var(--custom-icon-border);
+  box-shadow: 0 4px 14px var(--custom-icon-glow);
 }
 
 .hero-icon--calendrier {
@@ -826,6 +841,17 @@ body {
   background: #6d49ab;
 }
 
+/* nav link accent for dashboard */
+.nav-link-dashboard {
+  color: rgba(255, 255, 255, 0.95);
+}
+.nav-link-dashboard:hover {
+  color: #ffffff;
+}
+.nav-link-dashboard::after {
+  background: #ffffff;
+}
+
 /* nav link accent for profil */
 .nav-link-profil {
   color: rgba(229, 160, 13, 0.9);
@@ -870,6 +896,17 @@ body {
   background: #ef4444;
 }
 
+/* nav link accent for parametres */
+.nav-link-settings {
+  color: rgba(203, 213, 225, 0.92);
+}
+.nav-link-settings:hover {
+  color: #e2e8f0;
+}
+.nav-link-settings::after {
+  background: #cbd5e1;
+}
+
 .nav-link-custom {
   color: var(--custom-nav-base, rgba(226, 246, 255, 0.9));
 }
@@ -888,6 +925,14 @@ body {
   justify-content: center;
   width: 16px;
   margin-right: 4px;
+}
+
+.nav-custom-icon-logo {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  border-radius: 50%;
+  vertical-align: middle;
 }
 
 .nav-link-custom-mobile {
@@ -1322,6 +1367,23 @@ body {
 .mobile-menu a:hover {
   color: var(--plex);
 }
+
+/* Mobile menu keeps the same palette as desktop links */
+.mobile-menu .nav-link-dashboard { color: rgba(255, 255, 255, 0.95) !important; }
+.mobile-menu .nav-link-profil { color: rgba(229, 160, 13, 0.9) !important; }
+.mobile-menu .nav-link-classement { color: rgba(59, 130, 246, 0.9) !important; }
+.mobile-menu .nav-link-stats { color: rgba(16, 185, 129, 0.9) !important; }
+.mobile-menu .nav-link-demandes { color: rgba(109, 73, 171, 0.9) !important; }
+.mobile-menu .nav-link-calendrier { color: rgba(239, 68, 68, 0.9) !important; }
+.mobile-menu .nav-link-settings { color: rgba(203, 213, 225, 0.92) !important; }
+
+.mobile-menu .nav-link-dashboard:hover { color: #ffffff !important; }
+.mobile-menu .nav-link-profil:hover { color: #ffcc40 !important; }
+.mobile-menu .nav-link-classement:hover { color: #7db8ff !important; }
+.mobile-menu .nav-link-stats:hover { color: #34d399 !important; }
+.mobile-menu .nav-link-demandes:hover { color: #b48cf0 !important; }
+.mobile-menu .nav-link-calendrier:hover { color: #f87171 !important; }
+.mobile-menu .nav-link-settings:hover { color: #e2e8f0 !important; }
 
 .mobile-menu.open {
   right: 0;

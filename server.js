@@ -112,6 +112,7 @@ app.use((req, res, next) => {
           id: card.id,
           label: card.label || card.title || `App ${card.id}`,
           icon: card.icon || "✨",
+          integrationKey,
           href,
           external: integrationKey === "custom" && !openInIframe && /^https?:\/\//i.test(rawUrl),
           navColorBase: navColors.base,
