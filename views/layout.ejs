@@ -28,7 +28,7 @@
 
     <!-- Desktop Menu -->
     <div class="nav-center desktop-menu">
-      <a href="<%= basePath %>/dashboard" class="nav-link">Dashboard&nbsp;🏠</a>
+      <a href="<%= basePath %>/dashboard" class="nav-link nav-link-dashboard">Dashboard&nbsp;🏠</a>
       <a href="<%= basePath %>/profil" class="nav-link nav-link-profil">Profil&nbsp;👤</a>
       <a href="<%= basePath %>/classement" class="nav-link nav-link-classement">Classement&nbsp;🏆</a>
       <a href="<%= basePath %>/mes-stats" class="nav-link nav-link-stats">Statistiques&nbsp;📊</a>
@@ -43,7 +43,7 @@
         ><%= card.label %>&nbsp;<span class="nav-custom-icon"><%= card.icon %></span></a>
       <% }) %>
       <% if (user.isAdmin) { %>
-        <a href="<%= basePath %>/parametres" class="nav-link">Parametres&nbsp;⚙️</a>
+        <a href="<%= basePath %>/parametres" class="nav-link nav-link-settings">Parametres&nbsp;⚙️</a>
       <% } %>
     </div>
 
@@ -65,12 +65,12 @@
 
   <!-- Mobile Menu -->
   <div class="mobile-menu" id="mobileMenu">
-    <a href="<%= basePath %>/dashboard">Dashboard&nbsp;🏠</a>
-    <a href="<%= basePath %>/profil">Profil&nbsp;👤</a>
-    <a href="<%= basePath %>/classement">Classement&nbsp;🏆</a>
-    <a href="<%= basePath %>/mes-stats">Statistiques&nbsp;📊</a>
-    <a href="<%= basePath %>/seerr">Demandes <img src="<%= basePath %>/img/seerr-icon.png" alt="Seerr" class="nav-seerr-logo"></a>
-    <a href="<%= basePath %>/calendrier">Calendrier 📅</a>
+    <a href="<%= basePath %>/dashboard" class="nav-link-dashboard">Dashboard&nbsp;🏠</a>
+    <a href="<%= basePath %>/profil" class="nav-link-profil">Profil&nbsp;👤</a>
+    <a href="<%= basePath %>/classement" class="nav-link-classement">Classement&nbsp;🏆</a>
+    <a href="<%= basePath %>/mes-stats" class="nav-link-stats">Statistiques&nbsp;📊</a>
+    <a href="<%= basePath %>/seerr" class="nav-link-demandes">Demandes <img src="<%= basePath %>/img/seerr-icon.png" alt="Seerr" class="nav-seerr-logo"></a>
+    <a href="<%= basePath %>/calendrier" class="nav-link-calendrier">Calendrier 📅</a>
     <% (customNavCards || []).forEach(function(card) { %>
       <a
         href="<%= card.href %>"
@@ -80,7 +80,7 @@
       ><%= card.label %>&nbsp;<span class="nav-custom-icon"><%= card.icon %></span></a>
     <% }) %>
     <% if (user.isAdmin) { %>
-      <a href="<%= basePath %>/parametres">Parametres ⚙️</a>
+      <a href="<%= basePath %>/parametres" class="nav-link-settings">Parametres ⚙️</a>
     <% } %>
     <a href="<%= basePath %>/logout" class="logout-mobile">Déconnexion</a>
   </div>
