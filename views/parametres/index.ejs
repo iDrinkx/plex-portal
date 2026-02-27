@@ -393,7 +393,7 @@
               <% }) %>
             </select>
           </div>
-          <div class="settings-field settings-field--full">
+          <div class="settings-field settings-field--full" id="cardUrlField">
             <label for="cardUrl">Lien (requis en mode custom)</label>
             <input id="cardUrl" name="url" maxlength="220" placeholder="/seerr">
           </div>
@@ -415,7 +415,9 @@
             <div class="dash-card-row" data-card-id="<%= card.id %>">
               <div class="dash-card-meta">
                 <div class="dash-card-main"><%= card.icon || "✨" %> <%= card.title %> · <%= card.colorName %></div>
-                <div class="dash-card-sub"><%= card.label %> · <%= card.description %> · <%= card.url %></div>
+                <div class="dash-card-sub">
+                  <%= card.label %> · <%= card.description %><%= (card.integrationKey || "custom") === "custom" && card.url ? " · " + card.url : "" %>
+                </div>
               </div>
               <div class="dash-card-actions">
                 <button
@@ -457,6 +459,7 @@
     const cardDescriptionInput = document.getElementById("cardDescription");
     const cardIconInput = document.getElementById("cardIcon");
     const cardUrlInput = document.getElementById("cardUrl");
+    const cardUrlField = document.getElementById("cardUrlField");
     const cardIntegrationKeyInput = document.getElementById("cardIntegrationKey");
     const cardOpenInIframeInput = document.getElementById("cardOpenInIframe");
     if (!toggle || !state || !addBtn || !dashCardState || !dashCardsList || !form || !colorSelect || !cancelEditBtn) return;
@@ -512,6 +515,9 @@
 
     function applyIntegrationUi(integrationKey) {
       const isCustom = integrationKey === "custom";
+      if (cardUrlField) {
+        cardUrlField.style.display = isCustom ? "" : "none";
+      }
       if (isCustom) {
         cardOpenInIframeInput.disabled = false;
       } else {
@@ -546,7 +552,7 @@
         return `<div class="dash-card-row" data-card-id="${card.id}">
           <div class="dash-card-meta">
             <div class="dash-card-main">${escHtml(card.icon || "✨")} ${escHtml(card.title)} · ${escHtml(colorName)}</div>
-            <div class="dash-card-sub">${escHtml(card.label)} · ${escHtml(card.description)} · ${escHtml(card.url)}</div>
+            <div class="dash-card-sub">${escHtml(card.label)} · ${escHtml(card.description)}${(card.integrationKey || "custom") === "custom" && card.url ? " · " + escHtml(card.url) : ""}</div>
           </div>
           <div class="dash-card-actions">
             <button
