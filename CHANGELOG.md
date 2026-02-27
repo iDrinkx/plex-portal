@@ -2,6 +2,33 @@
 
 Toutes les modifications notables de ce projet sont documentées dans ce fichier.
 
+## 1.27.0 (2026-02-27)
+
+* Merge pull request #23 from iDrinkx/develop ([fe8e562](https://github.com/iDrinkx/plex-portal/commit/fe8e562)), closes [#23](https://github.com/iDrinkx/plex-portal/issues/23)
+* fix: adjust body transform for improved vertical alignment ([ad51afd](https://github.com/iDrinkx/plex-portal/commit/ad51afd))
+* fix: auth komga ([b30bf4e](https://github.com/iDrinkx/plex-portal/commit/b30bf4e))
+* fix: blur classement ([94c01b7](https://github.com/iDrinkx/plex-portal/commit/94c01b7))
+* fix: change overflow property to hidden for improved layout ([94e6f7f](https://github.com/iDrinkx/plex-portal/commit/94e6f7f))
+* fix: enhance mobile modal styling for improved scrollability and compactness ([d071faf](https://github.com/iDrinkx/plex-portal/commit/d071faf))
+* fix: enhance modal header styling for improved layout and readability ([642edb2](https://github.com/iDrinkx/plex-portal/commit/642edb2))
+* fix: enhance modal styling for improved aesthetics and user experience ([8b67f19](https://github.com/iDrinkx/plex-portal/commit/8b67f19))
+* fix: enhance settings shell styling for improved layout and visual appeal ([ae6c0c9](https://github.com/iDrinkx/plex-portal/commit/ae6c0c9))
+* fix: refine detail card styling for improved layout and readability ([79ddd61](https://github.com/iDrinkx/plex-portal/commit/79ddd61))
+* fix: refine modal styling for improved layout, readability, and scroll behavior ([0156b24](https://github.com/iDrinkx/plex-portal/commit/0156b24))
+* fix: update cookie options for Komga integration to allow cross-site usage ([8672f8d](https://github.com/iDrinkx/plex-portal/commit/8672f8d))
+* fix: update layout styles for preview section to improve responsiveness ([bbf5d13](https://github.com/iDrinkx/plex-portal/commit/bbf5d13))
+* feat: add custom navigation cards to layout for dynamic user links ([a035204](https://github.com/iDrinkx/plex-portal/commit/a035204))
+* feat: add custom navigation styles and dynamic color support for user links ([390a3ea](https://github.com/iDrinkx/plex-portal/commit/390a3ea))
+* feat: add customizable dashboard cards with admin management ([fbaf2ac](https://github.com/iDrinkx/plex-portal/commit/fbaf2ac))
+* feat: add iframe support for dashboard custom cards and update related settings ([c31d70e](https://github.com/iDrinkx/plex-portal/commit/c31d70e))
+* feat: add integration support for dashboard custom cards with validation and UI updates ([4f8eb7e](https://github.com/iDrinkx/plex-portal/commit/4f8eb7e))
+* feat: add update functionality for dashboard cards with validation and edit mode ([d641e53](https://github.com/iDrinkx/plex-portal/commit/d641e53))
+* feat: enhance card URL handling for custom integration with conditional display ([e7033ed](https://github.com/iDrinkx/plex-portal/commit/e7033ed))
+* feat: enhance hero icon styles with grid layout and custom borders ([2f955ac](https://github.com/iDrinkx/plex-portal/commit/2f955ac))
+* feat: implement admin settings for leaderboard blur functionality ([de42b74](https://github.com/iDrinkx/plex-portal/commit/de42b74))
+* feat: update hero icon styles for improved positioning and layout ([896afc1](https://github.com/iDrinkx/plex-portal/commit/896afc1))
+* feat: update navigation link layout to improve icon positioning ([683b188](https://github.com/iDrinkx/plex-portal/commit/683b188))
+
 ## <small>1.26.2 (2026-02-26)</small>
 
 * Merge pull request #22 from iDrinkx/develop ([d343723](https://github.com/iDrinkx/plex-portal/commit/d343723)), closes [#22](https://github.com/iDrinkx/plex-portal/issues/22)
