@@ -15,7 +15,8 @@ const {
   UserQueries,
   AchievementProgressQueries,
   DatabaseMaintenance,
-  AppSettingQueries
+  AppSettingQueries,
+  DashboardCardQueries
 } = require("../utils/database");
 const { getAchievementUnlockDates, evaluateSecretAchievements, isTautulliReady, getLastPlayedItem, getUserStatsFromTautulli } = require("../utils/tautulli-direct");
 const CacheManager = require("../utils/cache");
@@ -54,6 +55,110 @@ function requireAdmin(req, res, next) {
     return res.redirect(req.basePath + "/dashboard");
   }
   next();
+}
+
+const DEFAULT_DASHBOARD_COLOR_KEYS = new Set(["gold", "blue", "green", "purple", "red"]);
+const DASHBOARD_CARD_PALETTE = [
+  {
+    key: "teal",
+    name: "Teal",
+    bgStart: "rgba(12, 34, 35, 0.72)",
+    bgEnd: "rgba(12, 42, 42, 0.68)",
+    border: "rgba(45, 212, 191, 0.2)",
+    borderHover: "rgba(45, 212, 191, 0.55)",
+    glow: "rgba(45, 212, 191, 0.14)",
+    accentA: "#2dd4bf",
+    accentB: "#5eead4",
+    label: "rgba(45, 212, 191, 0.85)",
+    arrow: "#5eead4",
+    iconBorder: "rgba(45, 212, 191, 0.5)",
+    iconGlow: "rgba(45, 212, 191, 0.2)"
+  },
+  {
+    key: "indigo",
+    name: "Indigo",
+    bgStart: "rgba(20, 22, 43, 0.72)",
+    bgEnd: "rgba(24, 24, 53, 0.68)",
+    border: "rgba(129, 140, 248, 0.2)",
+    borderHover: "rgba(129, 140, 248, 0.55)",
+    glow: "rgba(129, 140, 248, 0.14)",
+    accentA: "#818cf8",
+    accentB: "#a5b4fc",
+    label: "rgba(165, 180, 252, 0.85)",
+    arrow: "#a5b4fc",
+    iconBorder: "rgba(129, 140, 248, 0.5)",
+    iconGlow: "rgba(129, 140, 248, 0.2)"
+  },
+  {
+    key: "pink",
+    name: "Rose",
+    bgStart: "rgba(40, 18, 30, 0.72)",
+    bgEnd: "rgba(48, 18, 35, 0.68)",
+    border: "rgba(244, 114, 182, 0.2)",
+    borderHover: "rgba(244, 114, 182, 0.55)",
+    glow: "rgba(244, 114, 182, 0.14)",
+    accentA: "#f472b6",
+    accentB: "#f9a8d4",
+    label: "rgba(249, 168, 212, 0.85)",
+    arrow: "#f9a8d4",
+    iconBorder: "rgba(244, 114, 182, 0.5)",
+    iconGlow: "rgba(244, 114, 182, 0.2)"
+  },
+  {
+    key: "cyan",
+    name: "Cyan",
+    bgStart: "rgba(12, 28, 40, 0.72)",
+    bgEnd: "rgba(12, 32, 46, 0.68)",
+    border: "rgba(34, 211, 238, 0.2)",
+    borderHover: "rgba(34, 211, 238, 0.55)",
+    glow: "rgba(34, 211, 238, 0.14)",
+    accentA: "#22d3ee",
+    accentB: "#67e8f9",
+    label: "rgba(103, 232, 249, 0.85)",
+    arrow: "#67e8f9",
+    iconBorder: "rgba(34, 211, 238, 0.5)",
+    iconGlow: "rgba(34, 211, 238, 0.2)"
+  },
+  {
+    key: "lime",
+    name: "Lime",
+    bgStart: "rgba(26, 34, 16, 0.72)",
+    bgEnd: "rgba(32, 40, 18, 0.68)",
+    border: "rgba(163, 230, 53, 0.2)",
+    borderHover: "rgba(163, 230, 53, 0.55)",
+    glow: "rgba(163, 230, 53, 0.14)",
+    accentA: "#a3e635",
+    accentB: "#bef264",
+    label: "rgba(190, 242, 100, 0.85)",
+    arrow: "#bef264",
+    iconBorder: "rgba(163, 230, 53, 0.5)",
+    iconGlow: "rgba(163, 230, 53, 0.2)"
+  },
+  {
+    key: "orange",
+    name: "Orange",
+    bgStart: "rgba(40, 24, 14, 0.72)",
+    bgEnd: "rgba(45, 24, 12, 0.68)",
+    border: "rgba(251, 146, 60, 0.2)",
+    borderHover: "rgba(251, 146, 60, 0.55)",
+    glow: "rgba(251, 146, 60, 0.14)",
+    accentA: "#fb923c",
+    accentB: "#fdba74",
+    label: "rgba(253, 186, 116, 0.85)",
+    arrow: "#fdba74",
+    iconBorder: "rgba(251, 146, 60, 0.5)",
+    iconGlow: "rgba(251, 146, 60, 0.2)"
+  }
+];
+
+function getColorMap() {
+  return new Map(DASHBOARD_CARD_PALETTE.map(c => [c.key, c]));
+}
+
+function getAvailableColorKeys(existingCards = []) {
+  const used = new Set([...DEFAULT_DASHBOARD_COLOR_KEYS]);
+  existingCards.forEach(c => used.add(c.colorKey));
+  return DASHBOARD_CARD_PALETTE.filter(c => !used.has(c.key)).map(c => c.key);
 }
 
 /* ===============================
@@ -121,7 +226,20 @@ async function getWizarrSubscription(user) {
 =============================== */
 
 router.get("/dashboard", requireAuth, (req, res) => {
-  res.render("dashboard/index", { user: req.session.user, basePath: req.basePath });
+  const colorMap = getColorMap();
+  const dashboardCustomCards = DashboardCardQueries.list()
+    .map(card => {
+      const color = colorMap.get(card.colorKey);
+      if (!color) return null;
+      return { ...card, color };
+    })
+    .filter(Boolean);
+
+  res.render("dashboard/index", {
+    user: req.session.user,
+    basePath: req.basePath,
+    dashboardCustomCards
+  });
 });
 
 router.get("/profil", requireAuth, async (req, res) => {
@@ -265,10 +383,21 @@ router.get("/calendrier", requireAuth, (req, res) => {
 
 router.get("/parametres", requireAuth, requireAdmin, (req, res) => {
   const leaderboardBlurEnabled = AppSettingQueries.getBool("leaderboard_blur_enabled", true);
+  const customCards = DashboardCardQueries.list();
+  const availableColorKeys = getAvailableColorKeys(customCards);
+  const availableColors = DASHBOARD_CARD_PALETTE.filter(c => availableColorKeys.includes(c.key));
+  const colorMap = getColorMap();
+  const customCardsResolved = customCards.map(card => ({
+    ...card,
+    colorName: colorMap.get(card.colorKey)?.name || card.colorKey
+  }));
+
   res.render("parametres/index", {
     user: req.session.user,
     basePath: req.basePath,
-    leaderboardBlurEnabled
+    leaderboardBlurEnabled,
+    dashboardCustomCards: customCardsResolved,
+    availableDashboardColors: availableColors
   });
 });
 
@@ -665,6 +794,57 @@ router.post("/api/admin/settings/leaderboard-blur", requireAuth, requireAdmin, (
   AppSettingQueries.setBool("leaderboard_blur_enabled", enabled);
   log.create("[Admin]").info(`Leaderboard blur ${enabled ? "activé" : "désactivé"} par ${req.session.user.username}`);
   res.json({ success: true, enabled });
+});
+
+router.get("/api/admin/dashboard-cards", requireAuth, requireAdmin, (req, res) => {
+  const cards = DashboardCardQueries.list();
+  const availableColorKeys = getAvailableColorKeys(cards);
+  const availableColors = DASHBOARD_CARD_PALETTE.filter(c => availableColorKeys.includes(c.key));
+  res.json({ cards, availableColors, allColors: DASHBOARD_CARD_PALETTE });
+});
+
+router.post("/api/admin/dashboard-cards", requireAuth, requireAdmin, (req, res) => {
+  const payload = req.body || {};
+  const label = String(payload.label || "").trim();
+  const title = String(payload.title || "").trim();
+  const description = String(payload.description || "").trim();
+  const url = String(payload.url || "").trim();
+  const colorKey = String(payload.colorKey || "").trim();
+  const icon = String(payload.icon || "✨").trim();
+
+  if (!label || !title || !description || !url || !colorKey) {
+    return res.status(400).json({ error: "Champs obligatoires manquants" });
+  }
+
+  if (label.length > 40 || title.length > 60 || description.length > 120 || icon.length > 4) {
+    return res.status(400).json({ error: "Un ou plusieurs champs sont trop longs" });
+  }
+
+  const isRelativeUrl = url.startsWith("/");
+  const isAbsoluteUrl = /^https?:\/\//i.test(url);
+  if (!isRelativeUrl && !isAbsoluteUrl) {
+    return res.status(400).json({ error: "Lien invalide (doit commencer par / ou http/https)" });
+  }
+
+  const cards = DashboardCardQueries.list();
+  const availableColorKeys = new Set(getAvailableColorKeys(cards));
+  if (!availableColorKeys.has(colorKey)) {
+    return res.status(400).json({ error: "Couleur non disponible" });
+  }
+
+  DashboardCardQueries.create({ label, title, description, url, colorKey, icon });
+  log.create("[Admin]").info(`Carte dashboard ajoutée par ${req.session.user.username}: ${title} (${colorKey})`);
+  res.json({ success: true });
+});
+
+router.delete("/api/admin/dashboard-cards/:id", requireAuth, requireAdmin, (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isInteger(id) || id <= 0) {
+    return res.status(400).json({ error: "Id invalide" });
+  }
+  DashboardCardQueries.remove(id);
+  log.create("[Admin]").info(`Carte dashboard supprimée par ${req.session.user.username}: id=${id}`);
+  res.json({ success: true });
 });
 
 /* ===============================

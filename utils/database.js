@@ -203,6 +203,20 @@ function runMigrations() {
       )
     `);  // app_settings
 
+    // Table: dashboard_custom_cards - Cartes supplémentaires configurées par l'admin
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS dashboard_custom_cards (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        label TEXT NOT NULL,
+        title TEXT NOT NULL,
+        description TEXT NOT NULL,
+        url TEXT NOT NULL,
+        color_key TEXT NOT NULL,
+        icon TEXT DEFAULT '✨',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);  // dashboard_custom_cards
+
     // Valeur par défaut: blur des pseudos activé
     db.prepare(`
       INSERT OR IGNORE INTO app_settings (key, value)
@@ -691,6 +705,42 @@ const AppSettingQueries = {
 };
 
 /**
+ * Dashboard custom cards queries (admin configurable)
+ */
+const DashboardCardQueries = {
+  list() {
+    const db = getDb();
+    return db.prepare(`
+      SELECT id, label, title, description, url, color_key as colorKey, icon, created_at as createdAt
+      FROM dashboard_custom_cards
+      ORDER BY id ASC
+    `).all();
+  },
+
+  create({ label, title, description, url, colorKey, icon }) {
+    const db = getDb();
+    const stmt = db.prepare(`
+      INSERT INTO dashboard_custom_cards (label, title, description, url, color_key, icon)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `);
+    const result = stmt.run(
+      String(label || "").trim(),
+      String(title || "").trim(),
+      String(description || "").trim(),
+      String(url || "").trim(),
+      String(colorKey || "").trim(),
+      String(icon || "✨").trim()
+    );
+    return result.lastInsertRowid;
+  },
+
+  remove(id) {
+    const db = getDb();
+    return db.prepare(`DELETE FROM dashboard_custom_cards WHERE id = ?`).run(id);
+  }
+};
+
+/**
  * Transactions helper
  */
 function transaction(callback) {
@@ -711,5 +761,6 @@ module.exports = {
   UserAchievementQueries,
   AchievementProgressQueries,
   AppSettingQueries,
+  DashboardCardQueries,
   DB_PATH
 };

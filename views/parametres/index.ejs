@@ -163,6 +163,139 @@
     color: #9fb0cd;
   }
 
+  .settings-stack {
+    display: grid;
+    gap: 14px;
+  }
+
+  .settings-card-title {
+    margin: 0 0 4px;
+    font-size: 16px;
+    color: #f2f6ff;
+  }
+
+  .settings-card-sub {
+    margin: 0 0 12px;
+    color: #a9b3c8;
+    font-size: 13px;
+  }
+
+  .settings-form {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .settings-field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .settings-field--full {
+    grid-column: 1 / -1;
+  }
+
+  .settings-field label {
+    font-size: 12px;
+    color: #c6d1e7;
+  }
+
+  .settings-field input,
+  .settings-field select {
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 10px;
+    background: rgba(8, 12, 18, 0.36);
+    color: #eef3ff;
+    padding: 9px 10px;
+    font-size: 13px;
+    outline: none;
+  }
+
+  .settings-field input:focus,
+  .settings-field select:focus {
+    border-color: rgba(86, 186, 255, 0.9);
+    box-shadow: 0 0 0 2px rgba(86, 186, 255, 0.18);
+  }
+
+  .settings-actions {
+    margin-top: 10px;
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .settings-btn {
+    border: 1px solid rgba(86, 186, 255, 0.4);
+    background: rgba(86, 186, 255, 0.15);
+    color: #cfeeff;
+    border-radius: 10px;
+    padding: 9px 12px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .settings-btn:disabled {
+    opacity: 0.45;
+    cursor: default;
+  }
+
+  .settings-inline-note {
+    margin-top: 8px;
+    font-size: 12px;
+    color: #9fb0cd;
+  }
+
+  .dash-cards-list {
+    margin-top: 12px;
+    display: grid;
+    gap: 8px;
+  }
+
+  .dash-card-row {
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 10px;
+    background: rgba(8, 12, 18, 0.28);
+    padding: 9px 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .dash-card-meta {
+    min-width: 0;
+  }
+
+  .dash-card-main {
+    color: #eef3ff;
+    font-size: 13px;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .dash-card-sub {
+    color: #9fb0cd;
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .dash-card-delete {
+    border: 1px solid rgba(248, 113, 113, 0.42);
+    background: rgba(248, 113, 113, 0.14);
+    color: #fecaca;
+    border-radius: 8px;
+    padding: 6px 9px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
   @media (max-width: 640px) {
     .settings-shell {
       padding: 16px;
@@ -170,6 +303,10 @@
 
     .settings-row {
       align-items: flex-start;
+    }
+
+    .settings-form {
+      grid-template-columns: 1fr;
     }
   }
 </style>
@@ -181,19 +318,73 @@
       <p>Reglages globaux visibles sur tout le portail.</p>
     </div>
 
-    <div class="settings-card">
-      <div class="settings-row">
-        <div>
-          <h3>Blur des pseudos dans le classement</h3>
-          <p>Active ou desactive le flou sur les pseudos utilisateurs dans la page classement.</p>
+    <div class="settings-stack">
+      <div class="settings-card">
+        <div class="settings-row">
+          <div>
+            <h3>Blur des pseudos dans le classement</h3>
+            <p>Active ou desactive le flou sur les pseudos utilisateurs dans la page classement.</p>
+          </div>
+          <label class="switch" aria-label="Activer ou desactiver le blur des pseudos">
+            <input id="leaderboardBlurToggle" type="checkbox" <%= leaderboardBlurEnabled ? "checked" : "" %>>
+            <span class="slider"></span>
+          </label>
         </div>
-        <label class="switch" aria-label="Activer ou desactiver le blur des pseudos">
-          <input id="leaderboardBlurToggle" type="checkbox" <%= leaderboardBlurEnabled ? "checked" : "" %>>
-          <span class="slider"></span>
-        </label>
+        <div class="settings-state" id="settingsState">
+          Etat actuel: <strong><%= leaderboardBlurEnabled ? "Active" : "Desactive" %></strong>
+        </div>
       </div>
-      <div class="settings-state" id="settingsState">
-        Etat actuel: <strong><%= leaderboardBlurEnabled ? "Active" : "Desactive" %></strong>
+
+      <div class="settings-card">
+        <h3 class="settings-card-title">Cartes supplementaires du dashboard</h3>
+        <p class="settings-card-sub">Ajoute une carte perso (texte, couleur, lien interne ou externe).</p>
+
+        <form id="dashboardCardForm" class="settings-form">
+          <div class="settings-field">
+            <label for="cardLabel">Label</label>
+            <input id="cardLabel" name="label" maxlength="40" placeholder="Ex: Services">
+          </div>
+          <div class="settings-field">
+            <label for="cardTitle">Titre</label>
+            <input id="cardTitle" name="title" maxlength="60" placeholder="Ex: Radarr">
+          </div>
+          <div class="settings-field settings-field--full">
+            <label for="cardDescription">Description</label>
+            <input id="cardDescription" name="description" maxlength="120" placeholder="Ex: Gestion films et sorties">
+          </div>
+          <div class="settings-field">
+            <label for="cardIcon">Icone (emoji)</label>
+            <input id="cardIcon" name="icon" maxlength="4" placeholder="✨" value="✨">
+          </div>
+          <div class="settings-field">
+            <label for="cardColorKey">Couleur (uniquement libre)</label>
+            <select id="cardColorKey" name="colorKey">
+              <% (availableDashboardColors || []).forEach(function(color) { %>
+                <option value="<%= color.key %>"><%= color.name %></option>
+              <% }) %>
+            </select>
+          </div>
+          <div class="settings-field settings-field--full">
+            <label for="cardUrl">Lien (interne `/seerr` ou externe `https://...`)</label>
+            <input id="cardUrl" name="url" maxlength="220" placeholder="/seerr">
+          </div>
+        </form>
+        <div class="settings-actions">
+          <button class="settings-btn" id="addDashboardCardBtn" type="button">Ajouter la carte</button>
+        </div>
+        <div class="settings-inline-note" id="dashCardState">Choisis une couleur disponible et remplis tous les champs.</div>
+
+        <div class="dash-cards-list" id="dashboardCardsList">
+          <% (dashboardCustomCards || []).forEach(function(card) { %>
+            <div class="dash-card-row" data-card-id="<%= card.id %>">
+              <div class="dash-card-meta">
+                <div class="dash-card-main"><%= card.icon || "✨" %> <%= card.title %> · <%= card.colorName %></div>
+                <div class="dash-card-sub"><%= card.label %> · <%= card.description %> · <%= card.url %></div>
+              </div>
+              <button class="dash-card-delete" data-delete-card-id="<%= card.id %>" type="button">Supprimer</button>
+            </div>
+          <% }) %>
+        </div>
       </div>
     </div>
   </div>
@@ -201,9 +392,64 @@
 
 <script>
   (function () {
+    const bp = window.APP_BASE_PATH || "";
     const toggle = document.getElementById("leaderboardBlurToggle");
     const state = document.getElementById("settingsState");
-    if (!toggle || !state) return;
+    const addBtn = document.getElementById("addDashboardCardBtn");
+    const dashCardState = document.getElementById("dashCardState");
+    const dashCardsList = document.getElementById("dashboardCardsList");
+    const form = document.getElementById("dashboardCardForm");
+    const colorSelect = document.getElementById("cardColorKey");
+    const cardLabelInput = document.getElementById("cardLabel");
+    const cardTitleInput = document.getElementById("cardTitle");
+    const cardDescriptionInput = document.getElementById("cardDescription");
+    const cardIconInput = document.getElementById("cardIcon");
+    const cardUrlInput = document.getElementById("cardUrl");
+    if (!toggle || !state || !addBtn || !dashCardState || !dashCardsList || !form || !colorSelect) return;
+
+    let cardBusy = false;
+
+    function escHtml(v) {
+      return String(v == null ? "" : v)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    function setAddCardEnabled(enabled) {
+      addBtn.disabled = !enabled;
+      colorSelect.disabled = !enabled;
+    }
+
+    async function refreshCardData() {
+      const resp = await fetch(bp + "/api/admin/dashboard-cards");
+      if (!resp.ok) throw new Error("HTTP " + resp.status);
+      const data = await resp.json();
+
+      colorSelect.innerHTML = (data.availableColors || [])
+        .map(c => `<option value="${c.key}">${c.name}</option>`)
+        .join("");
+
+      const colorsByKey = Object.fromEntries((data.allColors || []).map(c => [c.key, c.name]));
+      setAddCardEnabled((data.availableColors || []).length > 0);
+
+      dashCardsList.innerHTML = (data.cards || []).map(card => {
+        const colorName = colorsByKey[card.colorKey] || card.colorKey;
+        return `<div class="dash-card-row" data-card-id="${card.id}">
+          <div class="dash-card-meta">
+            <div class="dash-card-main">${escHtml(card.icon || "✨")} ${escHtml(card.title)} · ${escHtml(colorName)}</div>
+            <div class="dash-card-sub">${escHtml(card.label)} · ${escHtml(card.description)} · ${escHtml(card.url)}</div>
+          </div>
+          <button class="dash-card-delete" data-delete-card-id="${card.id}" type="button">Supprimer</button>
+        </div>`;
+      }).join("");
+
+      if ((data.availableColors || []).length === 0) {
+        dashCardState.textContent = "Toutes les couleurs disponibles sont déjà utilisées.";
+      }
+    }
 
     let inFlight = false;
     toggle.addEventListener("change", async function () {
@@ -213,7 +459,7 @@
       const enabled = !!toggle.checked;
 
       try {
-        const resp = await fetch((window.APP_BASE_PATH || "") + "/api/admin/settings/leaderboard-blur", {
+        const resp = await fetch(bp + "/api/admin/settings/leaderboard-blur", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ enabled })
@@ -229,5 +475,70 @@
         inFlight = false;
       }
     });
+
+    addBtn.addEventListener("click", async function () {
+      if (cardBusy) return;
+
+      const payload = {
+        label: cardLabelInput.value.trim(),
+        title: cardTitleInput.value.trim(),
+        description: cardDescriptionInput.value.trim(),
+        url: cardUrlInput.value.trim(),
+        colorKey: colorSelect.value,
+        icon: cardIconInput.value.trim() || "✨"
+      };
+
+      if (!payload.label || !payload.title || !payload.description || !payload.url || !payload.colorKey) {
+        dashCardState.textContent = "Tous les champs sont obligatoires.";
+        return;
+      }
+
+      cardBusy = true;
+      addBtn.disabled = true;
+      try {
+        const resp = await fetch(bp + "/api/admin/dashboard-cards", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data.error || ("HTTP " + resp.status));
+
+        form.reset();
+        cardIconInput.value = "✨";
+        dashCardState.textContent = "Carte ajoutée avec succès.";
+        await refreshCardData();
+      } catch (err) {
+        dashCardState.textContent = err.message || "Impossible d'ajouter la carte.";
+      } finally {
+        addBtn.disabled = false;
+        cardBusy = false;
+      }
+    });
+
+    dashCardsList.addEventListener("click", async function (e) {
+      const btn = e.target.closest("[data-delete-card-id]");
+      if (!btn || cardBusy) return;
+
+      const id = btn.getAttribute("data-delete-card-id");
+      if (!id) return;
+
+      cardBusy = true;
+      try {
+        const resp = await fetch(bp + "/api/admin/dashboard-cards/" + id, { method: "DELETE" });
+        if (!resp.ok) {
+          const data = await resp.json().catch(() => ({}));
+          throw new Error(data.error || ("HTTP " + resp.status));
+        }
+        dashCardState.textContent = "Carte supprimée.";
+        await refreshCardData();
+      } catch (err) {
+        dashCardState.textContent = err.message || "Impossible de supprimer la carte.";
+      } finally {
+        cardBusy = false;
+      }
+    });
+
+    refreshCardData().catch(() => {});
   })();
 </script>
