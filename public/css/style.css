@@ -763,6 +763,13 @@ body {
   transform: translate(-50%, -54%);
 }
 
+.hero-icon-custom-logo {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+  border-radius: 50%;
+}
+
 .hero-icon--calendrier {
   background: transparent;
   border: 2px solid rgba(239, 68, 68, 0.5);
@@ -910,6 +917,14 @@ body {
   justify-content: center;
   width: 16px;
   margin-right: 4px;
+}
+
+.nav-custom-icon-logo {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  border-radius: 50%;
+  vertical-align: middle;
 }
 
 .nav-link-custom-mobile {
