@@ -2,6 +2,17 @@
 
 Toutes les modifications notables de ce projet sont documentées dans ce fichier.
 
+## 1.28.0 (2026-02-27)
+
+* Merge pull request #24 from iDrinkx/develop ([ee948ae](https://github.com/iDrinkx/plex-portal/commit/ee948ae)), closes [#24](https://github.com/iDrinkx/plex-portal/issues/24)
+* feat: add custom icons for Komga, Jellyfin, and RomM integrations in dashboard and navigation ([5c8e4e7](https://github.com/iDrinkx/plex-portal/commit/5c8e4e7))
+* feat: add user service credential management for Komga, Jellyfin, and RomM integrations ([78bee7f](https://github.com/iDrinkx/plex-portal/commit/78bee7f))
+* feat: enhance hero icon styling for custom integrations in dashboard ([b3d9aae](https://github.com/iDrinkx/plex-portal/commit/b3d9aae))
+* feat: update Docker configuration and environment files for improved security and integration ([2e4f3f8](https://github.com/iDrinkx/plex-portal/commit/2e4f3f8))
+* fix: add accent styles for dashboard, settings, and mobile menu links ([06345a7](https://github.com/iDrinkx/plex-portal/commit/06345a7))
+* fix: update hero icon size and styling for better display ([b4bf03a](https://github.com/iDrinkx/plex-portal/commit/b4bf03a))
+* fix: update nav link accent colors for dashboard and settings ([e92e19c](https://github.com/iDrinkx/plex-portal/commit/e92e19c))
+
 ## 1.27.0 (2026-02-27)
 
 * Merge pull request #23 from iDrinkx/develop ([fe8e562](https://github.com/iDrinkx/plex-portal/commit/fe8e562)), closes [#23](https://github.com/iDrinkx/plex-portal/issues/23)
