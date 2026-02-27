@@ -37,9 +37,10 @@
       <% (customNavCards || []).forEach(function(card) { %>
         <a
           href="<%= card.href %>"
-          class="nav-link"
+          class="nav-link nav-link-custom"
+          style="--custom-nav-base:<%= card.navColorBase %>;--custom-nav-hover:<%= card.navColorHover %>;--custom-nav-accent:<%= card.navColorAccent %>;"
           <% if (card.external) { %>target="_blank" rel="noopener noreferrer"<% } %>
-        ><%= card.label %></a>
+        ><span class="nav-custom-icon"><%= card.icon %></span><%= card.label %></a>
       <% }) %>
       <% if (user.isAdmin) { %>
         <a href="<%= basePath %>/parametres" class="nav-link">Parametres&nbsp;⚙️</a>
@@ -73,8 +74,10 @@
     <% (customNavCards || []).forEach(function(card) { %>
       <a
         href="<%= card.href %>"
+        class="nav-link-custom-mobile"
+        style="--custom-nav-base:<%= card.navColorBase %>;--custom-nav-hover:<%= card.navColorHover %>;--custom-nav-accent:<%= card.navColorAccent %>;"
         <% if (card.external) { %>target="_blank" rel="noopener noreferrer"<% } %>
-      ><%= card.label %></a>
+      ><span class="nav-custom-icon"><%= card.icon %></span><%= card.label %></a>
     <% }) %>
     <% if (user.isAdmin) { %>
       <a href="<%= basePath %>/parametres">Parametres ⚙️</a>

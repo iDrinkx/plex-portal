@@ -870,6 +870,34 @@ body {
   background: #ef4444;
 }
 
+.nav-link-custom {
+  color: var(--custom-nav-base, rgba(226, 246, 255, 0.9));
+}
+
+.nav-link-custom:hover {
+  color: var(--custom-nav-hover, #e8f6ff);
+}
+
+.nav-link-custom::after {
+  background: var(--custom-nav-accent, #62b2ff);
+}
+
+.nav-custom-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  margin-right: 4px;
+}
+
+.nav-link-custom-mobile {
+  color: var(--custom-nav-base, rgba(226, 246, 255, 0.9)) !important;
+}
+
+.nav-link-custom-mobile:hover {
+  color: var(--custom-nav-hover, #e8f6ff) !important;
+}
+
 /* =========================
    NAVBAR SUBSCRIPTION PILL
 ========================= */
