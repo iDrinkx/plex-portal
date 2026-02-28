@@ -25,6 +25,7 @@ const COLLECTION_KEYS = {
   'black-knight': { ratingKey: 14715 },  // Star Wars (7 films min)
   'tolkiendil':   { ratingKey: 325498 }, // Middle Earth
   'evolutionist': { ratingKey: 15344 },  // La Planète des Singes
+  'agent-007':    { ratingKey: 4095 },   // James Bond 007
   'monsterverse': { movieRatingKey: 306783, seriesRatingKey: 306625 }, // MonsterVerse (films + séries)
 };
 
@@ -664,6 +665,14 @@ async function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckId
             null,
             null
           );
+          if (r.date) results[id] = r.date;
+          if (r.total > 0) progress[id] = { current: r.current, total: r.total };
+          break;
+        }
+
+        // 🕴️ Agent 007 — Toute la collection James Bond 007
+        case 'agent-007': {
+          const r = await checkCollection(id, null, 26);
           if (r.date) results[id] = r.date;
           if (r.total > 0) progress[id] = { current: r.current, total: r.total };
           break;

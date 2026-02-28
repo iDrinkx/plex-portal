@@ -495,6 +495,21 @@ const ACHIEVEMENTS = {
       revocable: true,
       // Barème équilibré collections: valeur mixte films+séries
       xp: 2000
+    },
+    {
+      id: "agent-007",
+      name: "Agent 007",
+      icon: "🕴️",
+      description: "A regardé toute la collection James Bond 007",
+      condition: (data) => false,
+      conditionText: "A regardé toute la collection James Bond 007",
+      getProgress: (data) => ({ current: 0, total: 26, percent: 0 }),
+      unlockedDate: null,
+      category: "collections",
+      isSecret: false,
+      revocable: true,
+      // Barème équilibré collections: 250 XP/film
+      xp: 6500
     }
   ],
 
