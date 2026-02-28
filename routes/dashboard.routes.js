@@ -747,13 +747,13 @@ router.get("/succes", requireAuth, async (req, res) => {
     // ? Rendu instantané depuis la DB uniquement — l'évaluation Tautulli
     //    se fait en arrière-plan via /api/badges-eval (appelé par le client)
     const achievementsByCategory = {
-      temporels:   { icon: "??", name: "Temporels",   achievements: ACHIEVEMENTS.temporels },
-      activites:   { icon: "??", name: "Activité",    achievements: ACHIEVEMENTS.activites },
-      films:       { icon: "??", name: "Films",        achievements: ACHIEVEMENTS.films },
-      series:      { icon: "??", name: "Séries",       achievements: ACHIEVEMENTS.series },
-      mensuels:    { icon: "??", name: "Mensuels",     achievements: ACHIEVEMENTS.mensuels },
-      collections: { icon: "??", name: "Collections", achievements: ACHIEVEMENTS.collections },
-      secrets:     { icon: "??", name: "Secrets",     achievements: ACHIEVEMENTS.secrets }
+      temporels:   { icon: "🎁", name: "Temporels",   achievements: ACHIEVEMENTS.temporels },
+      activites:   { icon: "🔥", name: "Activité",    achievements: ACHIEVEMENTS.activites },
+      films:       { icon: "🎬", name: "Films",       achievements: ACHIEVEMENTS.films },
+      series:      { icon: "📺", name: "Séries",      achievements: ACHIEVEMENTS.series },
+      mensuels:    { icon: "📅", name: "Mensuels",    achievements: ACHIEVEMENTS.mensuels },
+      collections: { icon: "🎬", name: "Collections", achievements: ACHIEVEMENTS.collections },
+      secrets:     { icon: "🔒", name: "Secrets",     achievements: ACHIEVEMENTS.secrets }
     };
 
     const username   = req.session.user.username;
