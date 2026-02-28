@@ -25,6 +25,11 @@ const COLLECTION_KEYS = {
   'black-knight': { ratingKey: 14715 },  // Star Wars (7 films min)
   'tolkiendil':   { ratingKey: 325498 }, // Middle Earth
   'evolutionist': { ratingKey: 15344 },  // La Planète des Singes
+  'agent-007':    { ratingKey: 4095 },   // James Bond 007
+  'fast-family':  { ratingKey: 8607 },   // Fast and Furious
+  'charlots-forever': { ratingKey: 4090 }, // Les Charlots
+  'star-trek-universe': { seriesRatingKey: 306622 }, // Star Trek Universe
+  'arrowverse':   { seriesRatingKey: 306801 }, // Arrowverse
   'monsterverse': { movieRatingKey: 306783, seriesRatingKey: 306625 }, // MonsterVerse (films + séries)
 };
 
@@ -664,6 +669,46 @@ async function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckId
             null,
             null
           );
+          if (r.date) results[id] = r.date;
+          if (r.total > 0) progress[id] = { current: r.current, total: r.total };
+          break;
+        }
+
+        // 🕴️ Agent 007 — Toute la collection James Bond 007
+        case 'agent-007': {
+          const r = await checkCollection(id, null, 26);
+          if (r.date) results[id] = r.date;
+          if (r.total > 0) progress[id] = { current: r.current, total: r.total };
+          break;
+        }
+
+        // 🏎️ Fast Family — Toute la collection Fast and Furious
+        case 'fast-family': {
+          const r = await checkCollection(id, null, 10);
+          if (r.date) results[id] = r.date;
+          if (r.total > 0) progress[id] = { current: r.current, total: r.total };
+          break;
+        }
+
+        // 🎭 Les Charlots Forever — Toute la collection Les Charlots
+        case 'charlots-forever': {
+          const r = await checkCollection(id, null, 15);
+          if (r.date) results[id] = r.date;
+          if (r.total > 0) progress[id] = { current: r.current, total: r.total };
+          break;
+        }
+
+        // 🖖 Star Trek Universe — Toutes les séries de la collection
+        case 'star-trek-universe': {
+          const r = await checkMixedCollection(id, null, null, 0, 9);
+          if (r.date) results[id] = r.date;
+          if (r.total > 0) progress[id] = { current: r.current, total: r.total };
+          break;
+        }
+
+        // 🏹 Arrowverse — Toutes les séries de la collection
+        case 'arrowverse': {
+          const r = await checkMixedCollection(id, null, null, 0, 8);
           if (r.date) results[id] = r.date;
           if (r.total > 0) progress[id] = { current: r.current, total: r.total };
           break;

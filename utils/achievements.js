@@ -495,6 +495,81 @@ const ACHIEVEMENTS = {
       revocable: true,
       // Barème équilibré collections: valeur mixte films+séries
       xp: 2000
+    },
+    {
+      id: "agent-007",
+      name: "Agent 007",
+      icon: "🕴️",
+      description: "A regardé toute la collection James Bond 007",
+      condition: (data) => false,
+      conditionText: "A regardé toute la collection James Bond 007",
+      getProgress: (data) => ({ current: 0, total: 26, percent: 0 }),
+      unlockedDate: null,
+      category: "collections",
+      isSecret: false,
+      revocable: true,
+      // Barème équilibré collections: 250 XP/film
+      xp: 6500
+    },
+    {
+      id: "fast-family",
+      name: "Fast Family",
+      icon: "🏎️",
+      description: "A regardé toute la collection Fast and Furious",
+      condition: (data) => false,
+      conditionText: "A regardé toute la collection Fast and Furious",
+      getProgress: (data) => ({ current: 0, total: 10, percent: 0 }),
+      unlockedDate: null,
+      category: "collections",
+      isSecret: false,
+      revocable: true,
+      // Barème équilibré collections: 250 XP/film
+      xp: 2500
+    },
+    {
+      id: "charlots-forever",
+      name: "Les Charlots Forever",
+      icon: "🎭",
+      description: "A regardé toute la collection Les Charlots",
+      condition: (data) => false,
+      conditionText: "A regardé toute la collection Les Charlots",
+      getProgress: (data) => ({ current: 0, total: 15, percent: 0 }),
+      unlockedDate: null,
+      category: "collections",
+      isSecret: false,
+      revocable: true,
+      // Barème équilibré collections: 250 XP/film
+      xp: 3750
+    },
+    {
+      id: "star-trek-universe",
+      name: "Star Trek Universe",
+      icon: "🖖",
+      description: "A regardé toutes les séries de la collection Star Trek Universe",
+      condition: (data) => false,
+      conditionText: "A regardé toutes les séries de la collection Star Trek Universe",
+      getProgress: (data) => ({ current: 0, total: 9, percent: 0 }),
+      unlockedDate: null,
+      category: "collections",
+      isSecret: false,
+      revocable: true,
+      // Barème équilibré collections: 250 XP/série
+      xp: 2250
+    },
+    {
+      id: "arrowverse",
+      name: "Arrowverse",
+      icon: "🏹",
+      description: "A regardé toutes les séries de la collection Arrowverse",
+      condition: (data) => false,
+      conditionText: "A regardé toutes les séries de la collection Arrowverse",
+      getProgress: (data) => ({ current: 0, total: 8, percent: 0 }),
+      unlockedDate: null,
+      category: "collections",
+      isSecret: false,
+      revocable: true,
+      // Barème équilibré collections: 250 XP/série
+      xp: 2000
     }
   ],
 
