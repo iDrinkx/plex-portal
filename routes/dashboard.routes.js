@@ -376,13 +376,14 @@ async function authenticateJellyfin(username, password) {
   }
 }
 
-async function loginRommAndGetSessionCookie(username, password) {
+async function loginRommAndGetSessionCookies(username, password) {
   const rommUrl = (process.env.ROMM_URL || "").replace(/\/$/, "");
   if (!rommUrl || !username || !password) return null;
 
   const attempts = [
     {
       method: "POST",
+      redirect: "manual",
       headers: {
         "Content-Type": "application/json",
         "Accept": "application/json"
@@ -391,6 +392,7 @@ async function loginRommAndGetSessionCookie(username, password) {
     },
     {
       method: "POST",
+      redirect: "manual",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
         "Accept": "application/json"
@@ -402,13 +404,34 @@ async function loginRommAndGetSessionCookie(username, password) {
   for (const options of attempts) {
     try {
       const resp = await fetch(`${rommUrl}/login`, options);
-      if (!resp.ok) continue;
       const setCookies = resp.headers.raw()["set-cookie"] || [];
       const sessionCookie = setCookies.find(c => c.startsWith("session_id="));
-      if (sessionCookie) return sessionCookie;
+      if (!sessionCookie) continue;
+
+      const csrfCookie = setCookies.find(c => c.startsWith("csrftoken=")) || null;
+      return { sessionCookie, csrfCookie };
     } catch (_) {}
   }
   return null;
+}
+
+async function validateRommCredentials(username, password) {
+  const rommUrl = (process.env.ROMM_URL || "").replace(/\/$/, "");
+  if (!rommUrl || !username || !password) return false;
+
+  try {
+    const basic = Buffer.from(`${username}:${password}`).toString("base64");
+    const resp = await fetch(`${rommUrl}/api/libraries`, {
+      method: "GET",
+      headers: {
+        "Accept": "application/json",
+        "Authorization": `Basic ${basic}`
+      }
+    });
+    return resp.ok;
+  } catch (_) {
+    return false;
+  }
 }
 
 async function loginKomgaAndGetSessionCookies(username, password) {
@@ -567,17 +590,30 @@ async function grabRommCookieForUser(res, sessionUser) {
   const cred = getUserServiceCredential(sessionUser, "romm");
   if (!cred?.username || !cred?.password) return { ok: false, needsSetup: true };
 
-  const sessionCookie = await loginRommAndGetSessionCookie(cred.username, cred.password);
-  if (!sessionCookie) {
+  const cookies = await loginRommAndGetSessionCookies(cred.username, cred.password);
+  if (!cookies?.sessionCookie) {
     clearUserServiceCredential(sessionUser, "romm");
     return { ok: false, needsSetup: true };
   }
 
   const parentDomain = getCookieParentDomain(rommPublicUrl);
-  const value = sessionCookie.split(";")[0].replace("session_id=", "");
   const opts = { path: "/", httpOnly: true, sameSite: "none", secure: true };
   if (parentDomain) opts.domain = parentDomain;
-  res.cookie("session_id", value, opts);
+
+  const sessionValue = cookies.sessionCookie.split(";")[0].replace("session_id=", "");
+  res.cookie("session_id", sessionValue, opts);
+
+  if (cookies.csrfCookie) {
+    const csrfValue = cookies.csrfCookie.split(";")[0].replace("csrftoken=", "");
+    res.cookie("csrftoken", csrfValue, {
+      path: "/",
+      httpOnly: false,
+      sameSite: "none",
+      secure: true,
+      ...(parentDomain ? { domain: parentDomain } : {})
+    });
+  }
+
   return { ok: true };
 }
 
@@ -1263,8 +1299,8 @@ router.post("/api/integrations/:service/connect", requireAuth, async (req, res) 
       if (!auth?.accessToken) return res.status(401).json({ error: "Identifiants Jellyfin invalides" });
     }
     if (service === "romm") {
-      const sessionCookie = await loginRommAndGetSessionCookie(username, password);
-      if (!sessionCookie) return res.status(401).json({ error: "Identifiants RomM invalides" });
+      const valid = await validateRommCredentials(username, password);
+      if (!valid) return res.status(401).json({ error: "Identifiants RomM invalides" });
     }
 
     const saved = saveUserServiceCredential(req.session.user, service, username, password);
