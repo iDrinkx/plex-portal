@@ -3,6 +3,7 @@ const router = express.Router();
 const fetch = require("node-fetch");
 const crypto = require("crypto");
 const log = require("../utils/logger");
+const logRomm = log.create("[RomM]");
 
 const { computeSubscription } = require("../utils/wizarr");
 const { getTautulliStats } = require("../utils/tautulli");
@@ -393,6 +394,7 @@ async function loginRommAndGetSessionCookies(username, password) {
     });
 
     const preflightCookies = preflightResp.headers.raw()["set-cookie"] || [];
+    logRomm.info(`GET /login -> ${preflightResp.status} | cookies: ${preflightCookies.map(c => c.split("=")[0]).join(", ") || "none"}`);
     const csrfCookie = preflightCookies.find(c => c.startsWith("csrftoken=")) || "";
     const sessionCookie = preflightCookies.find(c => c.startsWith("session_id=")) || "";
 
@@ -450,13 +452,17 @@ async function loginRommAndGetSessionCookies(username, password) {
     try {
       const resp = await fetch(`${rommUrl}/login`, options);
       const setCookies = resp.headers.raw()["set-cookie"] || [];
+      const location = resp.headers.get("location") || "";
+      logRomm.info(`POST /login -> ${resp.status}${location ? ` -> ${location}` : ""} | cookies: ${setCookies.map(c => c.split("=")[0]).join(", ") || "none"} | content-type: ${resp.headers.get("content-type") || "unknown"}`);
       const sessionCookie = setCookies.find(c => c.startsWith("session_id="));
       if (!sessionCookie) continue;
 
       const csrfCookie = setCookies.find(c => c.startsWith("csrftoken=")) || null;
+      logRomm.info("Session RomM detectee via /login");
       return { sessionCookie, csrfCookie };
     } catch (_) {}
   }
+  logRomm.warn("Aucun cookie de session RomM retourne par /login");
   return null;
 }
 
@@ -618,6 +624,7 @@ async function grabRommCookieForUser(res, sessionUser) {
 
   const cookies = await loginRommAndGetSessionCookies(cred.username, cred.password);
   if (!cookies?.sessionCookie) {
+    logRomm.warn(`Echec auto-auth pour ${sessionUser?.username || "unknown"} via ${process.env.ROMM_URL || ""}`);
     return { ok: false, needsSetup: false, error: "Connexion automatique RomM impossible avec les identifiants enregistrés" };
   }
 
