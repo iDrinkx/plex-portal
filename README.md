@@ -9,7 +9,7 @@ Application web pour gérer votre accès Plex, afficher abonnements, statistique
 
 **📖 [Voir le CHANGELOG complet](./CHANGELOG.md)** pour l'historique des versions et fonctionnalités
 
-Les changements sont **automatiquement synchronisés** vers le repo public après chaque release.
+Les changements sont **automatiquement synchronisés** vers le dépôt Docker après chaque release.
 
 ---
 
@@ -163,10 +163,11 @@ Pour plus de détails, consultez la page `/succes` ou le dashboard.
 ### Fichier d'environnement Docker
 
 Toutes les URLs et clés API du `docker-compose.yml` sont externalisées dans `config/.env`.
+Le template d'environnement est fourni à la racine du projet sous `.env.example`.
 
 1. Copier l'exemple:
 ```bash
-cp config/.env.example config/.env
+cp .env.example config/.env
 ```
 2. Éditer `config/.env` et renseigner vos valeurs (`SESSION_SECRET`, URLs, API keys...).
    Pour `komga_auto`, `jellyfin_auto` et `romm_auto`, chaque utilisateur connecte son compte une seule fois dans le portail.

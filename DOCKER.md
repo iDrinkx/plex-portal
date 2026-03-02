@@ -8,13 +8,13 @@ Le `docker-compose.yml` charge maintenant les variables via `config/.env` pour n
 
 - `docker-compose.yml` : définition du service
 - `config/.env` : variables privées (non versionné)
-- `config/.env.example` : template versionné
+- `.env.example` : template d'environnement à copier
 
 ## Demarrage rapide
 
 1. Créez le fichier d'environnement:
 ```bash
-cp config/.env.example config/.env
+cp .env.example config/.env
 ```
 2. Editez `config/.env`:
 - `SESSION_SECRET` (obligatoire)
