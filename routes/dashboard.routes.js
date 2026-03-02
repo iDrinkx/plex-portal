@@ -380,13 +380,44 @@ async function loginRommAndGetSessionCookies(username, password) {
   const rommUrl = (process.env.ROMM_URL || "").replace(/\/$/, "");
   if (!rommUrl || !username || !password) return null;
 
+  let preflightCookieHeader = "";
+  let preflightCsrfToken = "";
+
+  try {
+    const preflightResp = await fetch(`${rommUrl}/login`, {
+      method: "GET",
+      redirect: "manual",
+      headers: {
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
+      }
+    });
+
+    const preflightCookies = preflightResp.headers.raw()["set-cookie"] || [];
+    const csrfCookie = preflightCookies.find(c => c.startsWith("csrftoken=")) || "";
+    const sessionCookie = preflightCookies.find(c => c.startsWith("session_id=")) || "";
+
+    const cookiePairs = [csrfCookie, sessionCookie]
+      .filter(Boolean)
+      .map(c => c.split(";")[0]);
+
+    if (cookiePairs.length) {
+      preflightCookieHeader = cookiePairs.join("; ");
+    }
+    if (csrfCookie) {
+      preflightCsrfToken = csrfCookie.split(";")[0].replace("csrftoken=", "");
+    }
+  } catch (_) {}
+
   const attempts = [
     {
       method: "POST",
       redirect: "manual",
       headers: {
         "Content-Type": "application/json",
-        "Accept": "application/json"
+        "Accept": "application/json, text/plain, */*",
+        ...(preflightCookieHeader ? { "Cookie": preflightCookieHeader } : {}),
+        ...(preflightCsrfToken ? { "X-CSRFToken": preflightCsrfToken, "X-CSRF-Token": preflightCsrfToken } : {}),
+        "Referer": `${rommUrl}/login`
       },
       body: JSON.stringify({ username, password })
     },
@@ -395,7 +426,10 @@ async function loginRommAndGetSessionCookies(username, password) {
       redirect: "manual",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
-        "Accept": "application/json"
+        "Accept": "application/json, text/plain, */*",
+        ...(preflightCookieHeader ? { "Cookie": preflightCookieHeader } : {}),
+        ...(preflightCsrfToken ? { "X-CSRFToken": preflightCsrfToken, "X-CSRF-Token": preflightCsrfToken } : {}),
+        "Referer": `${rommUrl}/login`
       },
       body: `username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`
     }
@@ -416,19 +450,9 @@ async function loginRommAndGetSessionCookies(username, password) {
 }
 
 async function validateRommCredentials(username, password) {
-  const rommUrl = (process.env.ROMM_URL || "").replace(/\/$/, "");
-  if (!rommUrl || !username || !password) return false;
-
   try {
-    const basic = Buffer.from(`${username}:${password}`).toString("base64");
-    const resp = await fetch(`${rommUrl}/api/libraries`, {
-      method: "GET",
-      headers: {
-        "Accept": "application/json",
-        "Authorization": `Basic ${basic}`
-      }
-    });
-    return resp.ok;
+    const cookies = await loginRommAndGetSessionCookies(username, password);
+    return !!cookies?.sessionCookie;
   } catch (_) {
     return false;
   }
