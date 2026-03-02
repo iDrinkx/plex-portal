@@ -408,6 +408,12 @@ async function loginRommAndGetSessionCookies(username, password) {
     }
   } catch (_) {}
 
+  const formBody = new URLSearchParams();
+  formBody.set("username", username);
+  formBody.set("password", password);
+  if (preflightCsrfToken) formBody.set("csrfmiddlewaretoken", preflightCsrfToken);
+  formBody.set("next", "/");
+
   const attempts = [
     {
       method: "POST",
@@ -419,7 +425,11 @@ async function loginRommAndGetSessionCookies(username, password) {
         ...(preflightCsrfToken ? { "X-CSRFToken": preflightCsrfToken, "X-CSRF-Token": preflightCsrfToken } : {}),
         "Referer": `${rommUrl}/login`
       },
-      body: JSON.stringify({ username, password })
+      body: JSON.stringify({
+        username,
+        password,
+        ...(preflightCsrfToken ? { csrfmiddlewaretoken: preflightCsrfToken } : {})
+      })
     },
     {
       method: "POST",
@@ -429,9 +439,10 @@ async function loginRommAndGetSessionCookies(username, password) {
         "Accept": "application/json, text/plain, */*",
         ...(preflightCookieHeader ? { "Cookie": preflightCookieHeader } : {}),
         ...(preflightCsrfToken ? { "X-CSRFToken": preflightCsrfToken, "X-CSRF-Token": preflightCsrfToken } : {}),
-        "Referer": `${rommUrl}/login`
+        "Referer": `${rommUrl}/login`,
+        "Origin": rommUrl
       },
-      body: `username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`
+      body: formBody.toString()
     }
   ];
 
@@ -607,8 +618,7 @@ async function grabRommCookieForUser(res, sessionUser) {
 
   const cookies = await loginRommAndGetSessionCookies(cred.username, cred.password);
   if (!cookies?.sessionCookie) {
-    clearUserServiceCredential(sessionUser, "romm");
-    return { ok: false, needsSetup: true };
+    return { ok: false, needsSetup: false, error: "Connexion automatique RomM impossible avec les identifiants enregistrés" };
   }
 
   const parentDomain = getCookieParentDomain(rommPublicUrl);
@@ -1520,7 +1530,7 @@ router.get("/app-card/:id", requireAuth, async (req, res) => {
         return renderServiceConnectGate(res, req, "romm", card.title, "Connecte ton compte RomM pour continuer");
       }
       if (!result.ok && result.error) {
-        return res.status(503).send(result.error);
+        return renderServiceConnectGate(res, req, "romm", card.title, result.error);
       }
     } catch (_) {
       return renderServiceConnectGate(res, req, "romm", card.title, "Connexion RomM requise");
