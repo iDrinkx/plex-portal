@@ -368,6 +368,15 @@ function clearUserServiceCredential(sessionUser, serviceKey) {
   return true;
 }
 
+function decodeCookieValue(rawValue) {
+  const value = String(rawValue || "");
+  try {
+    return decodeURIComponent(value);
+  } catch (_) {
+    return value;
+  }
+}
+
 async function authenticateJellyfin(username, password) {
   const jellyfinUrl = getConfigValue("JELLYFIN_URL", "").replace(/\/$/, "");
   if (!jellyfinUrl || !username || !password) return null;
@@ -564,8 +573,8 @@ async function grabKomgaCookieForUser(res, sessionUser) {
 
     const parentDomain = getCookieParentDomain(komgaPublicUrl);
     const applyCookie = (cookieStr, cookieName) => {
-      const value = cookieStr.split(";")[0].replace(`${cookieName}=`, "");
-      const opts = { path: "/", httpOnly: true, sameSite: "none", secure: true };
+      const value = decodeCookieValue(cookieStr.split(";")[0].replace(`${cookieName}=`, ""));
+      const opts = { path: "/", httpOnly: true, sameSite: "none", secure: true, encode: v => v };
       if (parentDomain) opts.domain = parentDomain;
       res.cookie(cookieName, value, opts);
     };
@@ -618,8 +627,8 @@ async function grabKomgaCookieForUser(res, sessionUser) {
     if (fallbackCookies?.sessionCookie) {
       const parentDomain = getCookieParentDomain(komgaPublicUrl);
       const applyCookie = (cookieStr, cookieName) => {
-        const value = cookieStr.split(";")[0].replace(`${cookieName}=`, "");
-        const opts = { path: "/", httpOnly: true, sameSite: "none", secure: true };
+        const value = decodeCookieValue(cookieStr.split(";")[0].replace(`${cookieName}=`, ""));
+        const opts = { path: "/", httpOnly: true, sameSite: "none", secure: true, encode: v => v };
         if (parentDomain) opts.domain = parentDomain;
         res.cookie(cookieName, value, opts);
       };
@@ -659,19 +668,20 @@ async function grabRommCookieForUser(res, sessionUser) {
   }
 
   const parentDomain = getCookieParentDomain(rommPublicUrl);
-  const opts = { path: "/", httpOnly: true, sameSite: "none", secure: true };
+  const opts = { path: "/", httpOnly: true, sameSite: "none", secure: true, encode: v => v };
   if (parentDomain) opts.domain = parentDomain;
 
-  const sessionValue = cookies.sessionCookie.split(";")[0].replace("session_id=", "");
+  const sessionValue = decodeCookieValue(cookies.sessionCookie.split(";")[0].replace("session_id=", ""));
   res.cookie("session_id", sessionValue, opts);
 
   if (cookies.csrfCookie) {
-    const csrfValue = cookies.csrfCookie.split(";")[0].replace("csrftoken=", "");
+    const csrfValue = decodeCookieValue(cookies.csrfCookie.split(";")[0].replace("csrftoken=", ""));
     res.cookie("csrftoken", csrfValue, {
       path: "/",
       httpOnly: false,
       sameSite: "none",
       secure: true,
+      encode: v => v,
       ...(parentDomain ? { domain: parentDomain } : {})
     });
   }
