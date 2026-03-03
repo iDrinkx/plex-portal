@@ -9,33 +9,27 @@
     <div class="login-error"><%= t("login.unauthorized", { serverName: plexServerName }) %></div>
     <% } %>
     <a class="plex-btn plex-btn--logo" href="<%= basePath %>/login" aria-label="<%= t('login.withPlex') %>">
+      <span class="plex-btn-label"><%= locale === "en" ? "Sign in with" : "Se connecter avec" %></span>
       <img src="<%= basePath %>/img/plex-alt-light.svg" alt="Plex" class="plex-btn-logo" />
-      <span class="sr-only"><%= t("login.withPlex") %></span>
     </a>
   </div>
 </div>
 
 <style>
-  .sr-only {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
+  .plex-btn--logo {
+    min-width: 320px;
+    gap: 4px;
   }
 
-  .plex-btn--logo {
-    min-width: 240px;
+  .plex-btn-label {
+    line-height: 1;
   }
 
   .plex-btn-logo {
-    width: 110px;
+    width: 28px;
     height: auto;
     display: block;
+    transform: translateY(1px);
   }
 
   .login-error {
