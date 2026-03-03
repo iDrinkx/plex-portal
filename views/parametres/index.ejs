@@ -1209,11 +1209,11 @@
     let editingCardId = null;
     let canCreate = true;
     let dashboardBuiltinsInFlight = false;
-    let siteBackgroundFileDataUrl = <%- JSON.stringify(siteBackground && String(siteBackground.customUrl || "").startsWith("data:image/") ? siteBackground.customUrl : "") %>;
+    let siteBackgroundFileDataUrl = <%- JSON.stringify(siteBackground && String(siteBackground.customUrl || "").startsWith("data:image/") ? siteBackground.customUrl : "").replace(/<\//g, "<\\/") %>;
     let siteBackgroundCustomSource = siteBackgroundFileDataUrl ? "file" : "url";
     const SITE_BACKGROUND_RECOMMENDED_MAX_BYTES = 8 * 1024 * 1024;
-    let dashboardBuiltinItems = <%- JSON.stringify(dashboardBuiltinItems || []) %>;
-    let dashboardHtmlBlockItems = <%- JSON.stringify((dashboardCustomHtmlBlocks && dashboardCustomHtmlBlocks.length ? dashboardCustomHtmlBlocks : [{ id: "block-1", html: dashboardCustomHtmlRaw || "" }]) || []) %>;
+    let dashboardBuiltinItems = <%- JSON.stringify(dashboardBuiltinItems || []).replace(/<\//g, "<\\/") %>;
+    let dashboardHtmlBlockItems = <%- JSON.stringify((dashboardCustomHtmlBlocks && dashboardCustomHtmlBlocks.length ? dashboardCustomHtmlBlocks : [{ id: "block-1", html: dashboardCustomHtmlRaw || "" }]) || []).replace(/<\//g, "<\\/") %>;
     const backgroundPresetLabels = {
       particles: "<%= t('settings.background.presets.particles') %>",
       aurora: "<%= t('settings.background.presets.aurora') %>",
