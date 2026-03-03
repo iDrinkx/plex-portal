@@ -2,6 +2,36 @@
 
 Toutes les modifications notables de ce projet sont documentées dans ce fichier.
 
+## 1.31.0 (2026-03-03)
+
+* Merge pull request #28 from iDrinkx/develop ([601381d](https://github.com/iDrinkx/plex-portal/commit/601381d)), closes [#28](https://github.com/iDrinkx/plex-portal/issues/28)
+* feat: add customizable HTML section to dashboard with related API endpoints ([f17e223](https://github.com/iDrinkx/plex-portal/commit/f17e223))
+* feat: add navigation subscription pill toggle in settings with API integration ([1de6e5e](https://github.com/iDrinkx/plex-portal/commit/1de6e5e))
+* feat: add server stats toggle in dashboard settings and implement related API endpoints ([88a5667](https://github.com/iDrinkx/plex-portal/commit/88a5667))
+* feat: add site background settings management ([1a5b127](https://github.com/iDrinkx/plex-portal/commit/1a5b127))
+* feat: enhance dashboard custom HTML management with raw mode support and improved UI feedback ([f6412d4](https://github.com/iDrinkx/plex-portal/commit/f6412d4))
+* feat: enhance internationalization support with dynamic translations for activity and statistics pag ([9324de9](https://github.com/iDrinkx/plex-portal/commit/9324de9))
+* feat: enhance success message translations for achievements ([1b25b19](https://github.com/iDrinkx/plex-portal/commit/1b25b19))
+* feat: implement dashboard built-in items management and navigation integration ([b1e4cf9](https://github.com/iDrinkx/plex-portal/commit/b1e4cf9))
+* feat: implement setup process with configuration management and UI ([f8342c4](https://github.com/iDrinkx/plex-portal/commit/f8342c4))
+* feat: sync .env.example configuration file from private repo to public repo ([9f5d1b1](https://github.com/iDrinkx/plex-portal/commit/9f5d1b1))
+* feat: update Seerr integration with dynamic base path and improved public URL configuration ([dbc7cbe](https://github.com/iDrinkx/plex-portal/commit/dbc7cbe))
+* feat(i18n): add multilingual support with French and English translations ([09a9a54](https://github.com/iDrinkx/plex-portal/commit/09a9a54))
+* refactor: remove .env.example and update documentation for hybrid configuration management ([db09ba9](https://github.com/iDrinkx/plex-portal/commit/db09ba9))
+* refactor: update setup views and documentation for improved user experience ([94588fd](https://github.com/iDrinkx/plex-portal/commit/94588fd))
+* fix: add cookie value decoding function and update cookie handling for improved security ([58cbbe9](https://github.com/iDrinkx/plex-portal/commit/58cbbe9))
+* fix: enhance achievement texts and server name handling in views ([f8ac302](https://github.com/iDrinkx/plex-portal/commit/f8ac302))
+* fix: enhance RomM authentication by adding CSRF token handling and validating credentials ([71fedf2](https://github.com/iDrinkx/plex-portal/commit/71fedf2))
+* fix: enhance RomM login process by adding CSRF token handling and cookie management ([fe67d1f](https://github.com/iDrinkx/plex-portal/commit/fe67d1f))
+* fix: enhance RomM login process by adding detailed logging for session cookie retrieval ([5a72cdf](https://github.com/iDrinkx/plex-portal/commit/5a72cdf))
+* fix: enhance RomM login process by dynamically handling form action and hidden fields ([c07a756](https://github.com/iDrinkx/plex-portal/commit/c07a756))
+* fix: enhance RomM login process by improving CSRF token handling and error messaging ([f3c1b08](https://github.com/iDrinkx/plex-portal/commit/f3c1b08))
+* fix: refactor integration URL handling to use configuration values instead of environment variables ([0d136d8](https://github.com/iDrinkx/plex-portal/commit/0d136d8))
+* fix: refactor Seerr URL handling to use configuration values ([cf5b031](https://github.com/iDrinkx/plex-portal/commit/cf5b031))
+* fix: remove redundant RomM credentials validation from integration route ([61ba527](https://github.com/iDrinkx/plex-portal/commit/61ba527))
+* fix: update docker-compose environment variables and enhance config UI with restart requirements ([cc90ea3](https://github.com/iDrinkx/plex-portal/commit/cc90ea3))
+* fix: update README and DOCKER.md for accurate environment file instructions ([ceb9a2f](https://github.com/iDrinkx/plex-portal/commit/ceb9a2f))
+
 ## 1.30.0 (2026-02-28)
 
 * Merge pull request #27 from iDrinkx/develop ([41cb58c](https://github.com/iDrinkx/plex-portal/commit/41cb58c)), closes [#27](https://github.com/iDrinkx/plex-portal/issues/27)
