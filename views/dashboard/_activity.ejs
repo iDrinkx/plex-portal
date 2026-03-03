@@ -1,14 +1,14 @@
-<a href="/activite"
+<a href="<%= basePath %>/activite"
    class="card dashboard-card activity-preview"
    id="activityCard">
 
   <div class="card-header">
-    <h3>🎬 Activité</h3>
-    <span class="status-mini loading" id="activityStatus">Chargement...</span>
+    <h3>🎬 <%= t("dashboard.activity.title") %></h3>
+    <span class="status-mini loading" id="activityStatus"><%= t("dashboard.activity.loading") %></span>
   </div>
 
   <div id="activityContent">
-    <p class="activity-loading">Récupération de l'activité...</p>
+    <p class="activity-loading"><%= t("dashboard.activity.fetching") %></p>
   </div>
 
 </a>

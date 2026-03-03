@@ -1,6 +1,8 @@
 ﻿document.addEventListener("DOMContentLoaded", async () => {
 
   const basePath  = window.APP_BASE_PATH || "";
+  const locale = (window.APP_LOCALE || "fr").toLowerCase() === "en" ? "en-US" : "fr-FR";
+  const isEnglish = locale === "en-US";
   const container = document.getElementById("statsContainer");
   const CACHE_DURATION = 30000; // 30 secondes (sessionStorage)
   const SWR_TTL        = 30 * 60 * 1000; // 30 min (localStorage stale-while-revalidate)
@@ -25,13 +27,14 @@
     const diffMonth = Math.floor(diffDay / 30);
     const diffYear = Math.floor(diffDay / 365);
 
-    if (diffYear > 0) return `il y a ${diffYear} an${diffYear > 1 ? 's' : ''}`;
-    if (diffMonth > 0) return `il y a ${diffMonth} mois`;
-    if (diffWeek > 0) return `il y a ${diffWeek} semaine${diffWeek > 1 ? 's' : ''}`;
-    if (diffDay > 0) return `il y a ${diffDay} jour${diffDay > 1 ? 's' : ''}`;
-    if (diffHour > 0) return `il y a ${diffHour}h`;
-    if (diffMin > 0) return `il y a ${diffMin}min`;
-    return 'À l\'instant';
+    const rtf = new Intl.RelativeTimeFormat(isEnglish ? "en" : "fr", { numeric: "auto" });
+    if (diffYear > 0) return rtf.format(-diffYear, "year");
+    if (diffMonth > 0) return rtf.format(-diffMonth, "month");
+    if (diffWeek > 0) return rtf.format(-diffWeek, "week");
+    if (diffDay > 0) return rtf.format(-diffDay, "day");
+    if (diffHour > 0) return rtf.format(-diffHour, "hour");
+    if (diffMin > 0) return rtf.format(-diffMin, "minute");
+    return isEnglish ? "Just now" : "À l'instant";
   }
 
   /* ===============================
@@ -100,12 +103,12 @@
       }
 
       const joined = data.joinedAt
-        ? new Date(data.joinedAt).toLocaleDateString("fr-FR")
-        : "Inconnu";
+        ? new Date(data.joinedAt).toLocaleDateString(locale)
+        : (isEnglish ? "Unknown" : "Inconnu");
 
       const last = data.lastActivity
         ? formatRelativeTime(data.lastActivity)
-        : "Aucune activité";
+        : (isEnglish ? "No activity" : "Aucune activité");
 
       return { joined, last };
     } catch (err) {
@@ -162,11 +165,11 @@
       html += `
         <div style="margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid #333;">
           <div class="subscription-row">
-            <span class="label">📅 Membre depuis</span>
+            <span class="label">📅 ${isEnglish ? "Member since" : "Membre depuis"}</span>
             <span class="value">${tautulliData.joined}</span>
           </div>
           <div class="subscription-row">
-            <span class="label">🕒 Dernière activité</span>
+            <span class="label">🕒 ${isEnglish ? "Last activity" : "Dernière activité"}</span>
             <span class="value">${tautulliData.last}</span>
           </div>
         </div>
@@ -176,17 +179,17 @@
     if (seerrData) {
       html += `
         <div>
-          <h4 style="margin-bottom: 10px;"><img src="${window.APP_BASE_PATH || ''}/img/seerr-icon.png" alt="Seerr" style="width:16px;height:16px;object-fit:contain;vertical-align:middle;margin-right:4px;border-radius:3px;"> Demandes de contenu</h4>
+          <h4 style="margin-bottom: 10px;"><img src="${window.APP_BASE_PATH || ''}/img/seerr-icon.png" alt="Seerr" style="width:16px;height:16px;object-fit:contain;vertical-align:middle;margin-right:4px;border-radius:3px;"> ${isEnglish ? "Content requests" : "Demandes de contenu"}</h4>
           <div class="subscription-row">
-            <span class="label">📊 Total demandes</span>
+            <span class="label">📊 ${isEnglish ? "Total requests" : "Total demandes"}</span>
             <span class="value">${seerrData.total}</span>
           </div>
           <div class="subscription-row">
-            <span class="label">🔄 En attente</span>
+            <span class="label">🔄 ${isEnglish ? "Pending" : "En attente"}</span>
             <span class="value">${seerrData.pending}</span>
           </div>
           <div class="subscription-row">
-            <span class="label">✅ Approuvées</span>
+            <span class="label">✅ ${isEnglish ? "Approved" : "Approuvées"}</span>
             <span class="value">${seerrData.approved}</span>
           </div>
         </div>
@@ -194,7 +197,7 @@
     }
 
     if (!tautulliData && !seerrData) {
-      html = "<p>Aucune donnée disponible.</p>";
+      html = `<p>${isEnglish ? "No data available." : "Aucune donnée disponible."}</p>`;
     }
 
     container.innerHTML = html;
@@ -207,7 +210,7 @@
 
   } catch (err) {
     console.error("Stats loading error:", err);
-    container.innerHTML = "<p>Erreur lors du chargement des statistiques.</p>";
+    container.innerHTML = `<p>${isEnglish ? "Error while loading statistics." : "Erreur lors du chargement des statistiques."}</p>`;
   }
 
 });
