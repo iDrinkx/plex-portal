@@ -628,6 +628,9 @@
 
   <!-- ACHIEVEMENTS BY CATEGORY -->
   <% const categories = ['temporels', 'activites', 'films', 'series', 'mensuels', 'collections', 'secrets']; %>
+  <% const successUnlockedOnTemplate = t("success.unlockedOn", { date: "__DATE__" }); %>
+  <% const successUnlockedShort = t("success.unlockedShort"); %>
+  <% const successSecretBadge = t("success.secretBadge"); %>
   
   <% categories.forEach(categoryKey => {
     const category = ACHIEVEMENTS[categoryKey];
@@ -649,11 +652,11 @@
           if (achievement.unlocked) {
             descText = achievement.description || '';
             dateText = achievement.unlockedDate
-              ? '<%= t("success.unlockedOn", { date: "__DATE__" }) %>'.replace('__DATE__', achievement.unlockedDate)
-              : '<%= t("success.unlockedShort") %>';
+              ? successUnlockedOnTemplate.replace('__DATE__', achievement.unlockedDate)
+              : successUnlockedShort;
           } else if (isSecret && !isRevocable) {
             descText = '';
-            dateText = '<%= t("success.secretBadge") %>';
+            dateText = successSecretBadge;
           } else if (isRevocable) {
             descText = achievement.description || '';
             // Fallback pour revocable: afficher une progression de base
@@ -1001,7 +1004,7 @@
           card.classList.remove('locked');
           card.classList.add('unlocked');
           // Mettre à jour les data attributes pour le modal
-          const dateLabel = '<%= t("success.unlockedOn", { date: "__DATE__" }) %>'.replace('__DATE__', date);
+          const dateLabel = <%- JSON.stringify(t("success.unlockedOn", { date: "__DATE__" })) %>.replace('__DATE__', date);
           const unlockedDesc = card.dataset.descUnlocked || card.dataset.desc || '';
           card.dataset.desc = unlockedDesc;
           card.dataset.date = dateLabel;
