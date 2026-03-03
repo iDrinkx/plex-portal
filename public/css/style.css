@@ -60,7 +60,13 @@ body {
 
 .site-bg-gradient,
 .site-bg-vignette,
-.site-particles {
+.site-particles,
+.site-bg-aurora,
+.site-bg-mesh,
+.site-bg-nebula,
+.site-bg-spotlight,
+.site-bg-waves,
+.site-bg-image {
   position: absolute;
   inset: 0;
 }
@@ -79,6 +85,133 @@ body {
 
 .site-particles {
   opacity: 1;
+}
+
+.site-bg-aurora,
+.site-bg-mesh,
+.site-bg-nebula,
+.site-bg-spotlight,
+.site-bg-waves,
+.site-bg-image {
+  display: none;
+}
+
+.site-bg-image {
+  background-image: var(--site-bg-image);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  opacity: var(--site-bg-opacity, 0.34);
+  filter: saturate(1.08) contrast(1.04) brightness(0.72);
+  transform: scale(1.04);
+}
+
+.site-bg-aurora {
+  background:
+    radial-gradient(circle at 18% 24%, rgba(72, 195, 255, 0.24), transparent 34%),
+    radial-gradient(circle at 82% 18%, rgba(114, 255, 196, 0.18), transparent 30%),
+    radial-gradient(circle at 48% 78%, rgba(255, 170, 92, 0.14), transparent 28%);
+  filter: blur(32px);
+  opacity: 0.92;
+  animation: siteAuroraFloat 18s ease-in-out infinite alternate;
+}
+
+.site-bg-mesh {
+  background:
+    linear-gradient(125deg, rgba(44, 82, 130, 0.18), rgba(0, 0, 0, 0) 42%),
+    linear-gradient(205deg, rgba(9, 89, 122, 0.18), rgba(0, 0, 0, 0) 48%),
+    repeating-linear-gradient(90deg, rgba(138, 211, 255, 0.06) 0 1px, transparent 1px 86px),
+    repeating-linear-gradient(0deg, rgba(138, 211, 255, 0.04) 0 1px, transparent 1px 86px);
+  opacity: 0.62;
+  animation: siteMeshShift 20s linear infinite;
+}
+
+.site-bg-nebula {
+  background:
+    radial-gradient(circle at 18% 24%, rgba(118, 77, 255, 0.24), transparent 26%),
+    radial-gradient(circle at 72% 18%, rgba(51, 170, 255, 0.18), transparent 24%),
+    radial-gradient(circle at 58% 72%, rgba(255, 122, 76, 0.15), transparent 28%),
+    radial-gradient(circle at 34% 80%, rgba(95, 255, 197, 0.12), transparent 24%);
+  filter: blur(36px) saturate(1.08);
+  opacity: 0.95;
+  animation: siteNebulaDrift 22s ease-in-out infinite alternate;
+}
+
+.site-bg-spotlight {
+  background:
+    radial-gradient(circle at 20% 18%, rgba(103, 198, 255, 0.22), transparent 20%),
+    radial-gradient(circle at 80% 18%, rgba(255, 203, 110, 0.18), transparent 18%),
+    radial-gradient(circle at 50% 76%, rgba(255, 255, 255, 0.08), transparent 28%);
+  opacity: 0.88;
+  filter: blur(14px);
+  animation: siteSpotlightSweep 18s ease-in-out infinite alternate;
+}
+
+.site-bg-waves {
+  background:
+    radial-gradient(circle at 50% 120%, rgba(59, 130, 246, 0.18), transparent 42%),
+    repeating-radial-gradient(circle at 50% 120%, rgba(120, 198, 255, 0.09) 0 2px, transparent 2px 28px);
+  opacity: 0.68;
+  transform-origin: center bottom;
+  animation: siteWavesPulse 16s ease-in-out infinite alternate;
+}
+
+body.site-bg-mode-particles .site-particles {
+  display: block;
+}
+
+body.site-bg-mode-aurora .site-bg-gradient {
+  background:
+    linear-gradient(180deg, #070b12 0%, #05070b 54%, #020305 100%);
+}
+
+body.site-bg-mode-aurora .site-bg-aurora {
+  display: block;
+}
+
+body.site-bg-mode-mesh .site-bg-gradient {
+  background:
+    linear-gradient(180deg, #071018 0%, #05080c 54%, #020304 100%);
+}
+
+body.site-bg-mode-mesh .site-bg-mesh {
+  display: block;
+}
+
+body.site-bg-mode-custom .site-bg-gradient {
+  background:
+    linear-gradient(180deg, rgba(8, 10, 13, 0.72) 0%, rgba(3, 4, 5, 0.84) 100%);
+}
+
+body.site-bg-mode-nebula .site-bg-gradient {
+  background:
+    linear-gradient(180deg, #0b0916 0%, #05070d 54%, #020304 100%);
+}
+
+body.site-bg-mode-nebula .site-bg-nebula {
+  display: block;
+}
+
+body.site-bg-mode-spotlight .site-bg-gradient {
+  background:
+    linear-gradient(180deg, #0a0d13 0%, #05070b 52%, #020304 100%);
+}
+
+body.site-bg-mode-spotlight .site-bg-spotlight {
+  display: block;
+}
+
+body.site-bg-mode-waves .site-bg-gradient {
+  background:
+    linear-gradient(180deg, #081018 0%, #04070b 54%, #010203 100%);
+}
+
+body.site-bg-mode-waves .site-bg-waves {
+  display: block;
+}
+
+body.site-bg-mode-custom .site-bg-image {
+  display: block;
 }
 
 .site-particle {
@@ -135,6 +268,68 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .site-particles {
     display: none;
+  }
+
+  .site-bg-aurora,
+  .site-bg-mesh,
+  .site-bg-nebula,
+  .site-bg-spotlight,
+  .site-bg-waves {
+    animation: none;
+  }
+}
+
+@keyframes siteAuroraFloat {
+  0% {
+    transform: translate3d(-2%, -1%, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(2%, 3%, 0) scale(1.06);
+  }
+  100% {
+    transform: translate3d(-1%, 1%, 0) scale(1.02);
+  }
+}
+
+@keyframes siteMeshShift {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(-1.5%, -1%, 0) scale(1.03);
+  }
+  100% {
+    transform: translate3d(1.5%, 1%, 0) scale(1);
+  }
+}
+
+@keyframes siteNebulaDrift {
+  0% {
+    transform: translate3d(-1%, -1%, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(1.5%, 2%, 0) scale(1.06);
+  }
+  100% {
+    transform: translate3d(-1%, 1%, 0) scale(1.02);
+  }
+}
+
+@keyframes siteSpotlightSweep {
+  0% {
+    transform: translate3d(-2%, 0, 0) scale(1);
+  }
+  100% {
+    transform: translate3d(2%, 1%, 0) scale(1.05);
+  }
+}
+
+@keyframes siteWavesPulse {
+  0% {
+    transform: scale(1) translate3d(0, 0, 0);
+  }
+  100% {
+    transform: scale(1.06) translate3d(0, -1%, 0);
   }
 }
 

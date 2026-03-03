@@ -39,6 +39,7 @@ const {
   saveDashboardCustomHtml
 } = require("../utils/dashboard-custom-html");
 const { SUPPORTED_LOCALES, getSiteLanguage } = require("../utils/i18n");
+const { BACKGROUND_PRESETS, getSiteBackgroundSettings, saveSiteBackgroundSettings } = require("../utils/site-background");
 
 /* ===============================
    ?? AUTH
@@ -931,6 +932,7 @@ router.get("/parametres", requireAuth, requireAdmin, (req, res) => {
   const dashboardServerStatsEnabled = AppSettingQueries.getBool("dashboard_server_stats_enabled", true);
   const navSubscriptionPillEnabled = AppSettingQueries.getBool("nav_subscription_pill_enabled", true);
   const dashboardBuiltinItems = getDashboardBuiltinAdminItems(res.locals.t);
+  const siteBackground = getSiteBackgroundSettings();
   const customCards = DashboardCardQueries.list();
   const availableColorKeys = getAvailableColorKeys(customCards);
   const availableColors = DASHBOARD_CARD_PALETTE.filter(c => availableColorKeys.includes(c.key));
@@ -957,6 +959,8 @@ router.get("/parametres", requireAuth, requireAdmin, (req, res) => {
     leaderboardBlurEnabled,
     dashboardServerStatsEnabled,
     navSubscriptionPillEnabled,
+    siteBackground,
+    backgroundPresets: BACKGROUND_PRESETS,
     supportedLocales: SUPPORTED_LOCALES,
     siteLanguage: getSiteLanguage(),
     dashboardBuiltinItems,
@@ -1455,6 +1459,19 @@ router.post("/api/admin/settings/site-language", requireAuth, requireAdmin, (req
   AppSettingQueries.set("site_language", language);
   log.create("[Admin]").info(`Langue du site ${language} par ${req.session.user.username}`);
   res.json({ success: true, language });
+});
+
+router.get("/api/admin/settings/site-background", requireAuth, requireAdmin, (req, res) => {
+  res.json({
+    background: getSiteBackgroundSettings(),
+    presets: BACKGROUND_PRESETS
+  });
+});
+
+router.post("/api/admin/settings/site-background", requireAuth, requireAdmin, (req, res) => {
+  const background = saveSiteBackgroundSettings(req.body || {});
+  log.create("[Admin]").info(`Background du site ${background.mode} par ${req.session.user.username}`);
+  res.json({ success: true, background });
 });
 
 router.get("/api/admin/dashboard-builtins", requireAuth, requireAdmin, (req, res) => {

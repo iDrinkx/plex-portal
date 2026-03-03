@@ -11,12 +11,19 @@
     window.APP_BASE_PATH = "<%= basePath %>";
     window.APP_LOCALE = "<%= locale || 'fr' %>";
     window.APP_RUNTIME_TEXT_MAP = <%- JSON.stringify(runtimeTextMap || {}) %>;
+    window.APP_SITE_BACKGROUND = <%- JSON.stringify(siteBackground || { mode: "particles", customUrl: "", customOpacity: 0.34 }) %>;
   </script>
 </head>
-<body <% if (user) { %>data-user-id="<%= user.id %>"<% } %>>
-<div class="site-bg" aria-hidden="true">
+<body class="site-bg-mode-<%= (siteBackground && siteBackground.mode) || 'particles' %>" style="--site-bg-opacity:<%= siteBackground && siteBackground.customOpacity != null ? siteBackground.customOpacity : 0.34 %>;<% if (siteBackground && siteBackground.mode === 'custom' && siteBackground.customUrl) { %>--site-bg-image:url('<%= siteBackground.customUrl.replace(/'/g, "\\'") %>');<% } %>" <% if (user) { %>data-user-id="<%= user.id %>"<% } %>>
+<div class="site-bg site-bg--<%= (siteBackground && siteBackground.mode) || 'particles' %>" aria-hidden="true">
   <div class="site-bg-gradient"></div>
   <div class="site-bg-vignette"></div>
+  <div class="site-bg-aurora"></div>
+  <div class="site-bg-mesh"></div>
+  <div class="site-bg-nebula"></div>
+  <div class="site-bg-spotlight"></div>
+  <div class="site-bg-waves"></div>
+  <div class="site-bg-image"></div>
   <div class="site-particles" id="siteParticles"></div>
 </div>
 
@@ -156,9 +163,10 @@
 
 <script>
   document.addEventListener("DOMContentLoaded", () => {
+    const backgroundMode = (window.APP_SITE_BACKGROUND && window.APP_SITE_BACKGROUND.mode) || "particles";
     const particlesLayer = document.getElementById("siteParticles");
     const reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (particlesLayer && !reduceMotion) {
+    if (particlesLayer && backgroundMode === "particles" && !reduceMotion) {
       const particleCount = window.innerWidth <= 768 ? 46 : 92;
       const colors = [
         "rgba(46,136,255,0.96)",

@@ -17,6 +17,7 @@ const { applyRuntimeConfig, isSetupComplete } = require("./utils/config");
 const { initTautulliDatabase, getAllUserStatsFromTautulli } = require("./utils/tautulli-direct");  // 📊 Tautulli direct DB
 const { buildDashboardNavItems } = require("./utils/dashboard-builtins");
 const { getSiteLanguage, createTranslator, getRuntimeTextMap } = require("./utils/i18n");
+const { getSiteBackgroundSettings } = require("./utils/site-background");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -149,6 +150,7 @@ app.use(async (req, res, next) => {
   res.locals.customNavCards = [];
   res.locals.dashboardNavItems = [];
   res.locals.navSubscriptionPillEnabled = AppSettingQueries.getBool("nav_subscription_pill_enabled", true);
+  res.locals.siteBackground = getSiteBackgroundSettings();
   res.locals.plexServerName = await getPlexServerName() || "votre serveur Plex";
 
   if (req.session.user) {
