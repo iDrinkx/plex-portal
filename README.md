@@ -9,7 +9,7 @@ Application web pour gérer votre accès Plex, afficher abonnements, statistique
 
 **📖 [Voir le CHANGELOG complet](./CHANGELOG.md)** pour l'historique des versions et fonctionnalités
 
-Les changements sont **automatiquement synchronisés** vers le repo public après chaque release.
+Les changements sont **automatiquement synchronisés** vers le dépôt Docker après chaque release.
 
 ---
 
@@ -63,6 +63,7 @@ docker compose up -d
 - **[SETUP.md](./SETUP.md)**  Guide pas à pas complet
 - **[DOCKER.md](./DOCKER.md)**  Guide Docker et reverse proxy
 - **[UNRAID.md](./UNRAID.md)**  Configuration spécifique Unraid
+- **[TECHNICAL.md](./TECHNICAL.md)**  Architecture technique et fonctionnement runtime
 
 ---
 
@@ -73,63 +74,55 @@ plex-portal/
  Dockerfile
  docker-compose.yml
  server.js                           # Serveur Express principal
+ TECHNICAL.md                        # Architecture et configuration runtime
  package.json
 
- middleware/
-    auth.middleware.js              # Vérification session
-    reverseproxy.middleware.js      # Auto-détection reverse proxy
-
  routes/
-    auth.routes.js                  # Login Plex OAuth + SSO Seerr
-    dashboard.routes.js             # APIs dashboard, stats, profil
+    auth.routes.js                  # Login Plex OAuth + setup initial
+    dashboard.routes.js             # Dashboard, paramètres admin, intégrations
     seerr-proxy.routes.js           # Route iframe Seerr (/seerr)
 
  views/
     layout.ejs
     login.ejs
-    badges.ejs
+    setup.ejs
+    succes.ejs
+    parametres/
+       index.ejs                    # Onglets admin
     dashboard/
+       index.ejs                    # Dashboard principal
+    profil/
        index.ejs
-       _activity.ejs
-       _overseerr.ejs
-       _stats.ejs
-       _subscription.ejs
-
-     profil/
-       index.ejs
-     seerr/
+    seerr/
        index.ejs                   # Iframe full-page Seerr
-     statistiques/
+    apps/
+       iframe.ejs                  # Wrapper iframe pour cartes custom/intégrations
+       service-connect.ejs         # Connexion utilisateur Komga/Jellyfin/RomM
+    statistiques/
         index.ejs
         activite.ejs
 
-   public/
-     css/style.css
-     js/
+  public/
+    css/style.css
+    js/
         dashboard.js
         statistiques.js
 
-   utils/
-     achievements.js                 # Système de succès
-     cache.js                        # Couche de cache mémoire
-     cron-session-job.js             # Job cron sessions/stats
-     database.js                     # SQLite (sessions, XP, cache)
-     health-check.js                 # Vérification santé services
-     plex.js                         # Whitelist utilisateurs Plex
-     seerr.js                        # API Seerr (stats demandes)
-     session-stats-cache.js
-     session-stats-cache-db.js
-     tautulli.js                     # API Tautulli
-     tautulli-direct.js              # Lecture directe DB Tautulli
-     tautulli-events.js
-     logger.js                       # Logger unifié (timestamp + couleurs)
-     wizarr.js                       # API Wizarr
-     radarr-sonarr.js                # APIs calendrier Radarr + Sonarr
-     xp-system.js                    # Calcul XP et niveaux
+  utils/
+    config.js                       # Config centralisée DB > env > défaut
+    database.js                     # SQLite et app_settings
+    i18n.js                         # Traductions fr/en
+    site-background.js              # Fond global configurable
+    dashboard-builtins.js           # Cartes natives dashboard
+    dashboard-custom-html.js        # HTML custom sous les cartes
+    achievements.js                 # Système de succès
+    tautulli-direct.js              # Lecture directe DB Tautulli
+    seerr.js                        # API Seerr (stats demandes)
+    wizarr.js                       # API Wizarr
 
-   config/
-      logo.png                        # Logo personnalisable
-  ```
+  config/
+    logo.png                        # Logo personnalisable
+```
 
   ---
 
@@ -160,16 +153,25 @@ Pour plus de détails, consultez la page `/succes` ou le dashboard.
 
 ##  Configuration
 
-### Fichier d'environnement Docker
+### Configuration actuelle
 
-Toutes les URLs et clés API du `docker-compose.yml` sont externalisées dans `config/.env`.
+Le projet n'a plus besoin d'un fichier de configuration runtime séparé pour fonctionner.
 
-1. Copier l'exemple:
-```bash
-cp config/.env.example config/.env
-```
-2. Éditer `config/.env` et renseigner vos valeurs (`SESSION_SECRET`, URLs, API keys...).
-   Pour `komga_auto`, `jellyfin_auto` et `romm_auto`, chaque utilisateur connecte son compte une seule fois dans le portail.
+Le modèle actuel est:
+
+1. `docker-compose.yml` contient uniquement les variables de bootstrap
+2. le premier lancement passe par `/setup`
+3. les URLs et tokens des services sont ensuite gérés dans `Parametres > Connexions`
+4. les valeurs sont persistées en base SQLite
+
+Variables de bootstrap typiques:
+
+- `SESSION_SECRET`
+- `PORT`
+- `COOKIE_SECURE`
+- `NODE_ENV`
+
+Pour `komga_auto`, `jellyfin_auto` et `romm_auto`, chaque utilisateur connecte son compte une seule fois dans le portail.
 
 ### docker-compose.yml complet (exemple production)
 
@@ -180,10 +182,10 @@ services:
     container_name: plex-portal
     ports:
       - "4000:3000"
-    env_file:
-      - ./config/.env
     environment:
-      - NODE_ENV=production
+      SESSION_SECRET: "change-me"
+      NODE_ENV: "production"
+      COOKIE_SECURE: "true"
     restart: unless-stopped
     networks:
       - proxy
@@ -211,6 +213,7 @@ Plex Portal intègre Seerr (ex-Overseerr / Jellyseerr) via **SSO Organizr-style*
 - `SEERR_PUBLIC_URL` et l'URL de plex-portal doivent partager le même domaine parent
   _(ex: `plex-portal.votredomaine.com` + `seerr.votredomaine.com`  parent `.votredomaine.com`)_
 - HTTPS obligatoire en production (cookie `secure: true`)
+- `SEERR_URL` et `SEERR_PUBLIC_URL` peuvent être renseignés depuis `Parametres > Connexions`
 
 ---
 

@@ -3,6 +3,7 @@ const router = express.Router();
 const fetch = require("node-fetch");
 const crypto = require("crypto");
 const log = require("../utils/logger");
+const logRomm = log.create("[RomM]");
 
 const { computeSubscription } = require("../utils/wizarr");
 const { getTautulliStats } = require("../utils/tautulli");
@@ -10,7 +11,7 @@ const { getSeerrStats } = require("../utils/seerr");
 const { getPlexJoinDate, getServerOwnerId } = require("../utils/plex");
 const { getRadarrCalendar, getSonarrCalendar } = require("../utils/radarr-sonarr");
 const { XP_SYSTEM } = require("../utils/xp-system");
-const { ACHIEVEMENTS } = require("../utils/achievements");
+const { ACHIEVEMENTS, hydrateAchievementTexts } = require("../utils/achievements");
 const {
   UserAchievementQueries,
   UserQueries,
@@ -24,6 +25,21 @@ const { getAchievementUnlockDates, evaluateSecretAchievements, isTautulliReady, 
 const CacheManager = require("../utils/cache");
 const TautulliEvents = require("../utils/tautulli-events");  // ?? Import EventEmitter
 const { calculateUserXp } = require("../utils/xp-calculator");  // ?? Fonction centralisée XP
+const { getConfigSections, getConfigValue, getEditableConfigValues, saveEditableConfig } = require("../utils/config");
+const {
+  getDashboardBuiltinAdminItems,
+  saveDashboardBuiltinConfig,
+  buildDashboardBuiltinCards
+} = require("../utils/dashboard-builtins");
+const {
+  getDashboardCustomHtml,
+  getDashboardCustomHtmlRaw,
+  getDashboardCustomHtmlMode,
+  isDashboardCustomHtmlRawMode,
+  saveDashboardCustomHtml
+} = require("../utils/dashboard-custom-html");
+const { SUPPORTED_LOCALES, getSiteLanguage } = require("../utils/i18n");
+const { BACKGROUND_PRESETS, getSiteBackgroundSettings, saveSiteBackgroundSettings } = require("../utils/site-background");
 
 /* ===============================
    ?? AUTH
@@ -175,13 +191,13 @@ function resolveIntegrationSrc(card, basePath = "") {
   const rawUrl = String(card.url || "");
 
   if (integrationKey === "komga_auto") {
-    return (process.env.KOMGA_PUBLIC_URL || rawUrl || "").trim();
+    return (getConfigValue("KOMGA_PUBLIC_URL", "") || rawUrl || "").trim();
   }
   if (integrationKey === "jellyfin_auto" || integrationKey === "jellyfin_iframe") {
-    return (process.env.JELLYFIN_PUBLIC_URL || rawUrl || "").trim();
+    return (getConfigValue("JELLYFIN_PUBLIC_URL", "") || rawUrl || "").trim();
   }
   if (integrationKey === "romm_auto") {
-    return (process.env.ROMM_PUBLIC_URL || rawUrl || "").trim();
+    return (getConfigValue("ROMM_PUBLIC_URL", "") || rawUrl || "").trim();
   }
 
   if (rawUrl.startsWith("/")) return `${basePath}${rawUrl}`;
@@ -199,16 +215,16 @@ function toCardHref(card, basePath = "") {
 
 function getIntegrationAvailability() {
   const komgaConfigured = !!(
-    process.env.KOMGA_URL &&
-    process.env.KOMGA_PUBLIC_URL
+    getConfigValue("KOMGA_URL", "") &&
+    getConfigValue("KOMGA_PUBLIC_URL", "")
   );
   const jellyfinAutoConfigured = !!(
-    process.env.JELLYFIN_URL &&
-    process.env.JELLYFIN_PUBLIC_URL
+    getConfigValue("JELLYFIN_URL", "") &&
+    getConfigValue("JELLYFIN_PUBLIC_URL", "")
   );
   const rommAutoConfigured = !!(
-    process.env.ROMM_URL &&
-    process.env.ROMM_PUBLIC_URL
+    getConfigValue("ROMM_URL", "") &&
+    getConfigValue("ROMM_PUBLIC_URL", "")
   );
   return {
     komgaConfigured,
@@ -229,8 +245,8 @@ function validateIntegrationForCreateOrUpdate(integrationKey, srcUrl) {
 
   if (integrationKey === "komga_auto") {
     const ok = !!(
-      process.env.KOMGA_URL &&
-      process.env.KOMGA_PUBLIC_URL
+      getConfigValue("KOMGA_URL", "") &&
+      getConfigValue("KOMGA_PUBLIC_URL", "")
     );
     if (!ok) return { ok: false, error: "Komga non configuré côté serveur (KOMGA_URL + KOMGA_PUBLIC_URL requis)" };
     return { ok: true };
@@ -238,8 +254,8 @@ function validateIntegrationForCreateOrUpdate(integrationKey, srcUrl) {
 
   if (integrationKey === "jellyfin_auto" || integrationKey === "jellyfin_iframe") {
     const ok = !!(
-      process.env.JELLYFIN_URL &&
-      process.env.JELLYFIN_PUBLIC_URL
+      getConfigValue("JELLYFIN_URL", "") &&
+      getConfigValue("JELLYFIN_PUBLIC_URL", "")
     );
     if (!ok) {
       return {
@@ -252,8 +268,8 @@ function validateIntegrationForCreateOrUpdate(integrationKey, srcUrl) {
 
   if (integrationKey === "romm_auto") {
     const ok = !!(
-      process.env.ROMM_URL &&
-      process.env.ROMM_PUBLIC_URL
+      getConfigValue("ROMM_URL", "") &&
+      getConfigValue("ROMM_PUBLIC_URL", "")
     );
     if (!ok) {
       return {
@@ -352,8 +368,17 @@ function clearUserServiceCredential(sessionUser, serviceKey) {
   return true;
 }
 
+function decodeCookieValue(rawValue) {
+  const value = String(rawValue || "");
+  try {
+    return decodeURIComponent(value);
+  } catch (_) {
+    return value;
+  }
+}
+
 async function authenticateJellyfin(username, password) {
-  const jellyfinUrl = (process.env.JELLYFIN_URL || "").replace(/\/$/, "");
+  const jellyfinUrl = getConfigValue("JELLYFIN_URL", "").replace(/\/$/, "");
   if (!jellyfinUrl || !username || !password) return null;
   try {
     const authResp = await fetch(`${jellyfinUrl}/Users/AuthenticateByName`, {
@@ -376,43 +401,111 @@ async function authenticateJellyfin(username, password) {
   }
 }
 
-async function loginRommAndGetSessionCookie(username, password) {
-  const rommUrl = (process.env.ROMM_URL || "").replace(/\/$/, "");
+async function loginRommAndGetSessionCookies(username, password) {
+  const rommUrl = getConfigValue("ROMM_URL", "").replace(/\/$/, "");
   if (!rommUrl || !username || !password) return null;
+
+  let preflightCookieHeader = "";
+  let preflightCsrfToken = "";
+  let loginPostUrl = `${rommUrl}/login`;
+  let hiddenFields = {};
+
+  try {
+    const preflightResp = await fetch(`${rommUrl}/login`, {
+      method: "GET",
+      redirect: "manual",
+      headers: {
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
+      }
+    });
+
+    const preflightCookies = preflightResp.headers.raw()["set-cookie"] || [];
+    const preflightHtml = await preflightResp.text().catch(() => "");
+    const formActionMatch = preflightHtml.match(/<form[^>]*action=["']([^"']+)["']/i);
+    if (formActionMatch?.[1]) {
+      loginPostUrl = new URL(formActionMatch[1], `${rommUrl}/login`).toString();
+    }
+    const hiddenFieldMatches = [...preflightHtml.matchAll(/<input[^>]*type=["']hidden["'][^>]*name=["']([^"']+)["'][^>]*value=["']([^"']*)["'][^>]*>/gi)];
+    hiddenFields = Object.fromEntries(hiddenFieldMatches.map((m) => [m[1], m[2]]));
+
+    logRomm.info(`GET /login -> ${preflightResp.status} | form action: ${loginPostUrl} | cookies: ${preflightCookies.map(c => c.split("=")[0]).join(", ") || "none"}`);
+    const csrfCookie = preflightCookies.find(c => c.startsWith("csrftoken=")) || "";
+    const sessionCookie = preflightCookies.find(c => c.startsWith("session_id=")) || "";
+
+    const cookiePairs = [csrfCookie, sessionCookie]
+      .filter(Boolean)
+      .map(c => c.split(";")[0]);
+
+    if (cookiePairs.length) {
+      preflightCookieHeader = cookiePairs.join("; ");
+    }
+    if (csrfCookie) {
+      preflightCsrfToken = csrfCookie.split(";")[0].replace("csrftoken=", "");
+    }
+  } catch (_) {}
+
+  const formBody = new URLSearchParams();
+  for (const [name, value] of Object.entries(hiddenFields)) {
+    formBody.set(name, value);
+  }
+  formBody.set("username", username);
+  formBody.set("password", password);
+  if (preflightCsrfToken) formBody.set("csrfmiddlewaretoken", preflightCsrfToken);
+  formBody.set("next", "/");
 
   const attempts = [
     {
       method: "POST",
+      redirect: "manual",
       headers: {
         "Content-Type": "application/json",
-        "Accept": "application/json"
+        "Accept": "application/json, text/plain, text/html, */*",
+        ...(preflightCookieHeader ? { "Cookie": preflightCookieHeader } : {}),
+        ...(preflightCsrfToken ? { "X-CSRFToken": preflightCsrfToken, "X-CSRF-Token": preflightCsrfToken } : {}),
+        "Referer": `${rommUrl}/login`,
+        "Origin": rommUrl
       },
-      body: JSON.stringify({ username, password })
+      body: JSON.stringify({
+        username,
+        password,
+        ...(preflightCsrfToken ? { csrfmiddlewaretoken: preflightCsrfToken } : {})
+      })
     },
     {
       method: "POST",
+      redirect: "manual",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
-        "Accept": "application/json"
+        "Accept": "application/json, text/plain, text/html, */*",
+        ...(preflightCookieHeader ? { "Cookie": preflightCookieHeader } : {}),
+        ...(preflightCsrfToken ? { "X-CSRFToken": preflightCsrfToken, "X-CSRF-Token": preflightCsrfToken } : {}),
+        "Referer": `${rommUrl}/login`,
+        "Origin": rommUrl
       },
-      body: `username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`
+      body: formBody.toString()
     }
   ];
 
   for (const options of attempts) {
     try {
-      const resp = await fetch(`${rommUrl}/login`, options);
-      if (!resp.ok) continue;
+      const resp = await fetch(loginPostUrl, options);
       const setCookies = resp.headers.raw()["set-cookie"] || [];
+      const location = resp.headers.get("location") || "";
+      logRomm.info(`POST ${loginPostUrl} -> ${resp.status}${location ? ` -> ${location}` : ""} | cookies: ${setCookies.map(c => c.split("=")[0]).join(", ") || "none"} | content-type: ${resp.headers.get("content-type") || "unknown"}`);
       const sessionCookie = setCookies.find(c => c.startsWith("session_id="));
-      if (sessionCookie) return sessionCookie;
+      if (!sessionCookie) continue;
+
+      const csrfCookie = setCookies.find(c => c.startsWith("csrftoken=")) || null;
+      logRomm.info("Session RomM detectee via /login");
+      return { sessionCookie, csrfCookie };
     } catch (_) {}
   }
+  logRomm.warn("Aucun cookie de session RomM retourne par /login");
   return null;
 }
 
 async function loginKomgaAndGetSessionCookies(username, password) {
-  const komgaUrl = (process.env.KOMGA_URL || "").replace(/\/$/, "");
+  const komgaUrl = getConfigValue("KOMGA_URL", "").replace(/\/$/, "");
   if (!komgaUrl || !username || !password) return null;
 
   const attempts = [
@@ -464,8 +557,8 @@ async function fetchKomgaCurrentUser(komgaUrl, headers) {
 }
 
 async function grabKomgaCookieForUser(res, sessionUser) {
-  const komgaUrl = (process.env.KOMGA_URL || "").replace(/\/$/, "");
-  const komgaPublicUrl = (process.env.KOMGA_PUBLIC_URL || "").trim();
+  const komgaUrl = getConfigValue("KOMGA_URL", "").replace(/\/$/, "");
+  const komgaPublicUrl = getConfigValue("KOMGA_PUBLIC_URL", "").trim();
   if (!komgaUrl || !komgaPublicUrl) return { ok: false, needsSetup: false, error: "Komga non configuré côté serveur" };
 
   const cred = getUserServiceCredential(sessionUser, "komga");
@@ -480,8 +573,8 @@ async function grabKomgaCookieForUser(res, sessionUser) {
 
     const parentDomain = getCookieParentDomain(komgaPublicUrl);
     const applyCookie = (cookieStr, cookieName) => {
-      const value = cookieStr.split(";")[0].replace(`${cookieName}=`, "");
-      const opts = { path: "/", httpOnly: true, sameSite: "none", secure: true };
+      const value = decodeCookieValue(cookieStr.split(";")[0].replace(`${cookieName}=`, ""));
+      const opts = { path: "/", httpOnly: true, sameSite: "none", secure: true, encode: v => v };
       if (parentDomain) opts.domain = parentDomain;
       res.cookie(cookieName, value, opts);
     };
@@ -534,8 +627,8 @@ async function grabKomgaCookieForUser(res, sessionUser) {
     if (fallbackCookies?.sessionCookie) {
       const parentDomain = getCookieParentDomain(komgaPublicUrl);
       const applyCookie = (cookieStr, cookieName) => {
-        const value = cookieStr.split(";")[0].replace(`${cookieName}=`, "");
-        const opts = { path: "/", httpOnly: true, sameSite: "none", secure: true };
+        const value = decodeCookieValue(cookieStr.split(";")[0].replace(`${cookieName}=`, ""));
+        const opts = { path: "/", httpOnly: true, sameSite: "none", secure: true, encode: v => v };
         if (parentDomain) opts.domain = parentDomain;
         res.cookie(cookieName, value, opts);
       };
@@ -559,25 +652,40 @@ async function buildJellyfinAutoAuthUrlForUser(srcUrl, sessionUser) {
 }
 
 async function grabRommCookieForUser(res, sessionUser) {
-  const rommPublicUrl = (process.env.ROMM_PUBLIC_URL || "").trim();
-  if (!process.env.ROMM_URL || !rommPublicUrl) {
+  const rommUrl = getConfigValue("ROMM_URL", "").replace(/\/$/, "");
+  const rommPublicUrl = getConfigValue("ROMM_PUBLIC_URL", "").trim();
+  if (!rommUrl || !rommPublicUrl) {
     return { ok: false, needsSetup: false, error: "RomM non configuré côté serveur" };
   }
 
   const cred = getUserServiceCredential(sessionUser, "romm");
   if (!cred?.username || !cred?.password) return { ok: false, needsSetup: true };
 
-  const sessionCookie = await loginRommAndGetSessionCookie(cred.username, cred.password);
-  if (!sessionCookie) {
-    clearUserServiceCredential(sessionUser, "romm");
-    return { ok: false, needsSetup: true };
+  const cookies = await loginRommAndGetSessionCookies(cred.username, cred.password);
+  if (!cookies?.sessionCookie) {
+    logRomm.warn(`Echec auto-auth pour ${sessionUser?.username || "unknown"} via ${rommUrl}`);
+    return { ok: false, needsSetup: false, error: "Connexion automatique RomM impossible avec les identifiants enregistrés" };
   }
 
   const parentDomain = getCookieParentDomain(rommPublicUrl);
-  const value = sessionCookie.split(";")[0].replace("session_id=", "");
-  const opts = { path: "/", httpOnly: true, sameSite: "none", secure: true };
+  const opts = { path: "/", httpOnly: true, sameSite: "none", secure: true, encode: v => v };
   if (parentDomain) opts.domain = parentDomain;
-  res.cookie("session_id", value, opts);
+
+  const sessionValue = decodeCookieValue(cookies.sessionCookie.split(";")[0].replace("session_id=", ""));
+  res.cookie("session_id", sessionValue, opts);
+
+  if (cookies.csrfCookie) {
+    const csrfValue = decodeCookieValue(cookies.csrfCookie.split(";")[0].replace("csrftoken=", ""));
+    res.cookie("csrftoken", csrfValue, {
+      path: "/",
+      httpOnly: false,
+      sameSite: "none",
+      secure: true,
+      encode: v => v,
+      ...(parentDomain ? { domain: parentDomain } : {})
+    });
+  }
+
   return { ok: true };
 }
 
@@ -590,6 +698,7 @@ function renderServiceConnectGate(res, req, serviceKey, cardTitle, errorMessage 
   return res.render("apps/service-connect", {
     layout: false,
     basePath: req.basePath || "",
+    locale: res.locals.locale || "fr",
     serviceKey,
     serviceName,
     cardTitle: cardTitle || serviceName,
@@ -664,6 +773,8 @@ async function getWizarrSubscription(user) {
 
 router.get("/dashboard", requireAuth, (req, res) => {
   const colorMap = getColorMap();
+  const dashboardServerStatsEnabled = AppSettingQueries.getBool("dashboard_server_stats_enabled", true);
+  const dashboardBuiltinCards = buildDashboardBuiltinCards(req.session.user, req.basePath || "", res.locals.t);
   const dashboardCustomCards = DashboardCardQueries.list()
     .map(card => {
       const color = colorMap.get(card.colorKey);
@@ -681,7 +792,11 @@ router.get("/dashboard", requireAuth, (req, res) => {
   res.render("dashboard/index", {
     user: req.session.user,
     basePath: req.basePath,
-    dashboardCustomCards
+    dashboardBuiltinCards,
+    dashboardCustomCards,
+    dashboardCustomHtml: getDashboardCustomHtml(),
+    dashboardCustomHtmlMode: getDashboardCustomHtmlMode(),
+    dashboardServerStatsEnabled
   });
 });
 
@@ -780,7 +895,7 @@ router.get("/succes", requireAuth, async (req, res) => {
     // Construire les cards depuis l'état DB courant
     for (const category in achievementsByCategory) {
       achievementsByCategory[category].achievements = achievementsByCategory[category].achievements.map(a => ({
-        ...a,
+        ...hydrateAchievementTexts(a, res.locals.plexServerName),
         unlocked:     !!userUnlockedMap[a.id],
         unlockedDate: userUnlockedMap[a.id] || null
       }));
@@ -826,6 +941,10 @@ router.get("/calendrier", requireAuth, (req, res) => {
 
 router.get("/parametres", requireAuth, requireAdmin, (req, res) => {
   const leaderboardBlurEnabled = AppSettingQueries.getBool("leaderboard_blur_enabled", true);
+  const dashboardServerStatsEnabled = AppSettingQueries.getBool("dashboard_server_stats_enabled", true);
+  const navSubscriptionPillEnabled = AppSettingQueries.getBool("nav_subscription_pill_enabled", true);
+  const dashboardBuiltinItems = getDashboardBuiltinAdminItems(res.locals.t);
+  const siteBackground = getSiteBackgroundSettings();
   const customCards = DashboardCardQueries.list();
   const availableColorKeys = getAvailableColorKeys(customCards);
   const availableColors = DASHBOARD_CARD_PALETTE.filter(c => availableColorKeys.includes(c.key));
@@ -850,6 +969,18 @@ router.get("/parametres", requireAuth, requireAdmin, (req, res) => {
     user: req.session.user,
     basePath: req.basePath,
     leaderboardBlurEnabled,
+    dashboardServerStatsEnabled,
+    navSubscriptionPillEnabled,
+    siteBackground,
+    backgroundPresets: BACKGROUND_PRESETS,
+    supportedLocales: SUPPORTED_LOCALES,
+    siteLanguage: getSiteLanguage(),
+    dashboardBuiltinItems,
+    dashboardCustomHtmlRaw: getDashboardCustomHtmlRaw(),
+    dashboardCustomHtmlPreview: getDashboardCustomHtml(),
+    dashboardCustomHtmlMode: getDashboardCustomHtmlMode(),
+    dashboardCustomHtmlRawMode: isDashboardCustomHtmlRawMode(),
+    configSections: getConfigSections(),
     dashboardCustomCards: customCardsResolved,
     availableDashboardColors: availableColors,
     dashboardIntegrationOptions: integrations
@@ -1242,7 +1373,7 @@ router.post("/api/integrations/:service/connect", requireAuth, async (req, res) 
 
   try {
     if (service === "komga") {
-      const komgaUrl = (process.env.KOMGA_URL || "").replace(/\/$/, "");
+      const komgaUrl = getConfigValue("KOMGA_URL", "").replace(/\/$/, "");
       if (!komgaUrl) return res.status(400).json({ error: "KOMGA_URL manquant côté serveur" });
 
       const basic = Buffer.from(`${username}:${password}`).toString("base64");
@@ -1262,11 +1393,6 @@ router.post("/api/integrations/:service/connect", requireAuth, async (req, res) 
       const auth = await authenticateJellyfin(username, password);
       if (!auth?.accessToken) return res.status(401).json({ error: "Identifiants Jellyfin invalides" });
     }
-    if (service === "romm") {
-      const sessionCookie = await loginRommAndGetSessionCookie(username, password);
-      if (!sessionCookie) return res.status(401).json({ error: "Identifiants RomM invalides" });
-    }
-
     const saved = saveUserServiceCredential(req.session.user, service, username, password);
     if (!saved) return res.status(500).json({ error: "Impossible d'enregistrer les identifiants" });
 
@@ -1309,6 +1435,103 @@ router.post("/api/admin/settings/leaderboard-blur", requireAuth, requireAdmin, (
   AppSettingQueries.setBool("leaderboard_blur_enabled", enabled);
   log.create("[Admin]").info(`Leaderboard blur ${enabled ? "activé" : "désactivé"} par ${req.session.user.username}`);
   res.json({ success: true, enabled });
+});
+
+router.get("/api/admin/settings/dashboard-server-stats", requireAuth, requireAdmin, (req, res) => {
+  const enabled = AppSettingQueries.getBool("dashboard_server_stats_enabled", true);
+  res.json({ enabled });
+});
+
+router.post("/api/admin/settings/dashboard-server-stats", requireAuth, requireAdmin, (req, res) => {
+  const enabled = !!req.body?.enabled;
+  AppSettingQueries.setBool("dashboard_server_stats_enabled", enabled);
+  log.create("[Admin]").info(`Barre stats dashboard ${enabled ? "activée" : "désactivée"} par ${req.session.user.username}`);
+  res.json({ success: true, enabled });
+});
+
+router.get("/api/admin/settings/nav-subscription-pill", requireAuth, requireAdmin, (req, res) => {
+  const enabled = AppSettingQueries.getBool("nav_subscription_pill_enabled", true);
+  res.json({ enabled });
+});
+
+router.post("/api/admin/settings/nav-subscription-pill", requireAuth, requireAdmin, (req, res) => {
+  const enabled = !!req.body?.enabled;
+  AppSettingQueries.setBool("nav_subscription_pill_enabled", enabled);
+  log.create("[Admin]").info(`Pastille abonnement navbar ${enabled ? "activée" : "désactivée"} par ${req.session.user.username}`);
+  res.json({ success: true, enabled });
+});
+
+router.get("/api/admin/settings/site-language", requireAuth, requireAdmin, (req, res) => {
+  res.json({ language: getSiteLanguage(), supportedLocales: SUPPORTED_LOCALES });
+});
+
+router.post("/api/admin/settings/site-language", requireAuth, requireAdmin, (req, res) => {
+  const raw = String(req.body?.language || "").trim().toLowerCase();
+  const language = SUPPORTED_LOCALES.includes(raw) ? raw : "fr";
+  AppSettingQueries.set("site_language", language);
+  log.create("[Admin]").info(`Langue du site ${language} par ${req.session.user.username}`);
+  res.json({ success: true, language });
+});
+
+router.get("/api/admin/settings/site-background", requireAuth, requireAdmin, (req, res) => {
+  res.json({
+    background: getSiteBackgroundSettings(),
+    presets: BACKGROUND_PRESETS
+  });
+});
+
+router.post("/api/admin/settings/site-background", requireAuth, requireAdmin, (req, res) => {
+  const background = saveSiteBackgroundSettings(req.body || {});
+  log.create("[Admin]").info(`Background du site ${background.mode} par ${req.session.user.username}`);
+  res.json({ success: true, background });
+});
+
+router.get("/api/admin/dashboard-builtins", requireAuth, requireAdmin, (req, res) => {
+  res.json({ items: getDashboardBuiltinAdminItems() });
+});
+
+router.post("/api/admin/dashboard-builtins", requireAuth, requireAdmin, (req, res) => {
+  const items = Array.isArray(req.body?.items) ? req.body.items : [];
+  const savedItems = saveDashboardBuiltinConfig(items);
+  log.create("[Admin]").info(`Ordre des cartes dashboard mis a jour par ${req.session.user.username}`);
+  res.json({ success: true, items: savedItems });
+});
+
+router.get("/api/admin/dashboard-html", requireAuth, requireAdmin, (req, res) => {
+  res.json({
+    raw: getDashboardCustomHtmlRaw(),
+    rendered: getDashboardCustomHtml(),
+    mode: getDashboardCustomHtmlMode()
+  });
+});
+
+router.post("/api/admin/dashboard-html", requireAuth, requireAdmin, (req, res) => {
+  const result = saveDashboardCustomHtml(req.body?.html || "", { mode: req.body?.mode || "safe" });
+  log.create("[Admin]").info(`HTML dashboard mis a jour par ${req.session.user.username}`);
+  res.json({
+    success: true,
+    raw: result.raw,
+    rendered: result.rendered,
+    sanitized: result.sanitized,
+    mode: result.mode
+  });
+});
+
+router.get("/api/admin/config", requireAuth, requireAdmin, (req, res) => {
+  res.json({
+    sections: getConfigSections(),
+    values: getEditableConfigValues()
+  });
+});
+
+router.post("/api/admin/config", requireAuth, requireAdmin, (req, res) => {
+  saveEditableConfig(req.body || {});
+  log.create("[Admin]").info(`Connexions mises à jour par ${req.session.user.username}`);
+  res.json({
+    success: true,
+    sections: getConfigSections(),
+    values: getEditableConfigValues()
+  });
 });
 
 router.get("/api/admin/dashboard-cards", requireAuth, requireAdmin, (req, res) => {
@@ -1474,7 +1697,7 @@ router.get("/app-card/:id", requireAuth, async (req, res) => {
         return renderServiceConnectGate(res, req, "romm", card.title, "Connecte ton compte RomM pour continuer");
       }
       if (!result.ok && result.error) {
-        return res.status(503).send(result.error);
+        return renderServiceConnectGate(res, req, "romm", card.title, result.error);
       }
     } catch (_) {
       return renderServiceConnectGate(res, req, "romm", card.title, "Connexion RomM requise");

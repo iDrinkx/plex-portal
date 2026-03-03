@@ -703,6 +703,16 @@ const AppSettingQueries = {
     return row ? row.value : defaultValue;
   },
 
+  listPrefix(prefix) {
+    const db = getDb();
+    return db.prepare(`
+      SELECT key, value
+      FROM app_settings
+      WHERE key LIKE ?
+      ORDER BY key ASC
+    `).all(`${prefix}%`);
+  },
+
   set(key, value) {
     const db = getDb();
     return db.prepare(`
@@ -717,6 +727,11 @@ const AppSettingQueries = {
   getBool(key, defaultValue = false) {
     const value = this.get(key, defaultValue ? "1" : "0");
     return value === "1" || value === "true";
+  },
+
+  remove(key) {
+    const db = getDb();
+    return db.prepare(`DELETE FROM app_settings WHERE key = ?`).run(key);
   },
 
   setBool(key, enabled) {

@@ -168,6 +168,38 @@
     gap: 14px;
   }
 
+  .settings-tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .settings-tab {
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.05);
+    color: #d6e4fb;
+    border-radius: 999px;
+    padding: 9px 14px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .settings-tab.active {
+    background: rgba(86, 186, 255, 0.18);
+    border-color: rgba(86, 186, 255, 0.45);
+    color: #f2f8ff;
+  }
+
+  .settings-panel {
+    display: none;
+  }
+
+  .settings-panel.active {
+    display: grid;
+    gap: 14px;
+  }
+
   .settings-card-title {
     margin: 0 0 4px;
     font-size: 16px;
@@ -202,7 +234,8 @@
   }
 
   .settings-field input,
-  .settings-field select {
+  .settings-field select,
+  .settings-field textarea {
     border: 1px solid rgba(255, 255, 255, 0.18);
     border-radius: 10px;
     background: rgba(8, 12, 18, 0.36);
@@ -213,9 +246,56 @@
   }
 
   .settings-field input:focus,
-  .settings-field select:focus {
+  .settings-field select:focus,
+  .settings-field textarea:focus {
     border-color: rgba(86, 186, 255, 0.9);
     box-shadow: 0 0 0 2px rgba(86, 186, 255, 0.18);
+  }
+
+  .settings-field textarea {
+    min-height: 260px;
+    resize: vertical;
+    font-family: Consolas, monospace;
+    line-height: 1.5;
+  }
+
+  .settings-inline-select {
+    min-width: 180px;
+    width: 100%;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 10px;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01)),
+      rgba(8, 12, 18, 0.36);
+    color: #eef3ff;
+    padding: 9px 36px 9px 12px;
+    font-size: 13px;
+    outline: none;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image:
+      linear-gradient(45deg, transparent 50%, #cfe6ff 50%),
+      linear-gradient(135deg, #cfe6ff 50%, transparent 50%),
+      linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+    background-position:
+      calc(100% - 18px) calc(50% - 1px),
+      calc(100% - 12px) calc(50% - 1px),
+      0 0;
+    background-size:
+      6px 6px,
+      6px 6px,
+      100% 100%;
+    background-repeat: no-repeat;
+    box-shadow:
+      0 10px 24px rgba(0,0,0,.16),
+      0 0 0 1px rgba(255,255,255,0.04) inset;
+  }
+
+  .settings-inline-select:focus {
+    border-color: rgba(86, 186, 255, 0.9);
+    box-shadow:
+      0 0 0 2px rgba(86, 186, 255, 0.18),
+      0 10px 24px rgba(0,0,0,.16);
   }
 
   .settings-actions {
@@ -315,6 +395,351 @@
     flex-shrink: 0;
   }
 
+  .builtin-cards-list {
+    margin-top: 12px;
+    display: grid;
+    gap: 8px;
+  }
+
+  .builtin-card-row {
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 10px;
+    background: rgba(8, 12, 18, 0.28);
+    padding: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .builtin-card-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .builtin-card-order-btn {
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.06);
+    color: #dce7fa;
+    border-radius: 8px;
+    padding: 6px 9px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .builtin-card-order-btn:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+
+  .config-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 12px;
+  }
+
+  .config-section {
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    background: rgba(8, 12, 18, 0.24);
+    padding: 14px;
+  }
+
+  .config-section-title {
+    margin: 0 0 12px;
+    font-size: 15px;
+    color: #eef3ff;
+  }
+
+  .settings-required {
+    color: #f6c453;
+    font-size: 11px;
+    margin-left: 6px;
+  }
+
+  .settings-restart {
+    color: #fda4af;
+    font-size: 11px;
+    margin-left: 6px;
+  }
+
+  .dashboard-html-preview {
+    margin-top: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    background: rgba(8, 12, 18, 0.24);
+    padding: 14px;
+  }
+
+  .dashboard-html-preview-title {
+    margin: 0 0 10px;
+    font-size: 13px;
+    color: #cfe0ff;
+    font-weight: 700;
+  }
+
+  .settings-preview-box {
+    margin-top: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    background: rgba(8, 12, 18, 0.24);
+    padding: 12px;
+    color: #c7d8f4;
+    font-size: 12px;
+  }
+
+  .settings-range-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .settings-range-row input[type="range"] {
+    flex: 1;
+    padding: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .settings-range-badge {
+    min-width: 52px;
+    text-align: center;
+    border-radius: 999px;
+    padding: 6px 10px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.06);
+    color: #eef3ff;
+    font-weight: 700;
+  }
+
+  .settings-preview-meta {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+    color: #d9e6fb;
+  }
+
+  .settings-preview-meta strong {
+    color: #f6fbff;
+  }
+
+  .site-bg-preview-shell {
+    position: relative;
+    overflow: hidden;
+    border-radius: 16px;
+    min-height: 250px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: #050607;
+  }
+
+  .site-bg-preview-shell,
+  .site-bg-preview-shell * {
+    box-sizing: border-box;
+  }
+
+  .site-bg-preview {
+    --site-bg-preview-image: none;
+    --site-bg-preview-opacity: 0.34;
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+  }
+
+  .site-bg-preview-layer,
+  .site-bg-preview-ui {
+    position: absolute;
+    inset: 0;
+  }
+
+  .site-bg-preview-gradient,
+  .site-bg-preview-vignette,
+  .site-bg-preview-particles,
+  .site-bg-preview-aurora,
+  .site-bg-preview-mesh,
+  .site-bg-preview-nebula,
+  .site-bg-preview-spotlight,
+  .site-bg-preview-waves,
+  .site-bg-preview-image {
+    position: absolute;
+    inset: 0;
+  }
+
+  .site-bg-preview-gradient {
+    background:
+      radial-gradient(360px 180px at 50% -10%, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0) 64%),
+      linear-gradient(180deg, #0b0c0d 0%, #070809 48%, #030405 100%);
+  }
+
+  .site-bg-preview-vignette {
+    background: radial-gradient(circle at 50% 34%, rgba(0, 0, 0, 0) 44%, rgba(0, 0, 0, 0.62) 100%);
+  }
+
+  .site-bg-preview-particles,
+  .site-bg-preview-aurora,
+  .site-bg-preview-mesh,
+  .site-bg-preview-nebula,
+  .site-bg-preview-spotlight,
+  .site-bg-preview-waves,
+  .site-bg-preview-image {
+    display: none;
+  }
+
+  .site-bg-preview-particles {
+    background:
+      radial-gradient(circle at 16% 22%, rgba(105, 212, 255, 0.9) 0 3px, transparent 4px),
+      radial-gradient(circle at 72% 18%, rgba(105, 212, 255, 0.95) 0 4px, transparent 5px),
+      radial-gradient(circle at 84% 52%, rgba(105, 212, 255, 0.72) 0 3px, transparent 4px),
+      radial-gradient(circle at 42% 66%, rgba(105, 212, 255, 0.8) 0 3px, transparent 4px),
+      radial-gradient(circle at 30% 42%, rgba(255, 255, 255, 0.18) 0 2px, transparent 3px),
+      radial-gradient(circle at 62% 74%, rgba(255, 255, 255, 0.12) 0 2px, transparent 3px);
+    opacity: 0.96;
+  }
+
+  .site-bg-preview-aurora {
+    background:
+      radial-gradient(circle at 18% 24%, rgba(72, 195, 255, 0.24), transparent 34%),
+      radial-gradient(circle at 82% 18%, rgba(114, 255, 196, 0.18), transparent 30%),
+      radial-gradient(circle at 48% 78%, rgba(255, 170, 92, 0.14), transparent 28%);
+    filter: blur(22px);
+    opacity: 0.92;
+  }
+
+  .site-bg-preview-mesh {
+    background:
+      linear-gradient(125deg, rgba(44, 82, 130, 0.18), rgba(0, 0, 0, 0) 42%),
+      linear-gradient(205deg, rgba(9, 89, 122, 0.18), rgba(0, 0, 0, 0) 48%),
+      repeating-linear-gradient(90deg, rgba(138, 211, 255, 0.06) 0 1px, transparent 1px 28px),
+      repeating-linear-gradient(0deg, rgba(138, 211, 255, 0.04) 0 1px, transparent 1px 28px);
+    opacity: 0.62;
+  }
+
+  .site-bg-preview-nebula {
+    background:
+      radial-gradient(circle at 18% 24%, rgba(118, 77, 255, 0.24), transparent 26%),
+      radial-gradient(circle at 72% 18%, rgba(51, 170, 255, 0.18), transparent 24%),
+      radial-gradient(circle at 58% 72%, rgba(255, 122, 76, 0.15), transparent 28%),
+      radial-gradient(circle at 34% 80%, rgba(95, 255, 197, 0.12), transparent 24%);
+    filter: blur(24px);
+    opacity: 0.95;
+  }
+
+  .site-bg-preview-spotlight {
+    background:
+      radial-gradient(circle at 20% 18%, rgba(103, 198, 255, 0.22), transparent 20%),
+      radial-gradient(circle at 80% 18%, rgba(255, 203, 110, 0.18), transparent 18%),
+      radial-gradient(circle at 50% 76%, rgba(255, 255, 255, 0.08), transparent 28%);
+    filter: blur(10px);
+    opacity: 0.88;
+  }
+
+  .site-bg-preview-waves {
+    background:
+      radial-gradient(circle at 50% 120%, rgba(59, 130, 246, 0.18), transparent 42%),
+      repeating-radial-gradient(circle at 50% 120%, rgba(120, 198, 255, 0.09) 0 2px, transparent 2px 18px);
+    opacity: 0.68;
+  }
+
+  .site-bg-preview-image {
+    background-image: var(--site-bg-preview-image);
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: cover;
+    opacity: var(--site-bg-preview-opacity);
+    filter: saturate(1.08) contrast(1.04) brightness(0.72);
+    transform: scale(1.04);
+  }
+
+  .site-bg-preview-shell[data-mode="particles"] .site-bg-preview-particles,
+  .site-bg-preview-shell[data-mode="aurora"] .site-bg-preview-aurora,
+  .site-bg-preview-shell[data-mode="mesh"] .site-bg-preview-mesh,
+  .site-bg-preview-shell[data-mode="nebula"] .site-bg-preview-nebula,
+  .site-bg-preview-shell[data-mode="spotlight"] .site-bg-preview-spotlight,
+  .site-bg-preview-shell[data-mode="waves"] .site-bg-preview-waves,
+  .site-bg-preview-shell[data-mode="custom"] .site-bg-preview-image {
+    display: block;
+  }
+
+  .site-bg-preview-shell[data-mode="aurora"] .site-bg-preview-gradient {
+    background: linear-gradient(180deg, #070b12 0%, #05070b 54%, #020305 100%);
+  }
+
+  .site-bg-preview-shell[data-mode="mesh"] .site-bg-preview-gradient {
+    background: linear-gradient(180deg, #071018 0%, #05080c 54%, #020304 100%);
+  }
+
+  .site-bg-preview-shell[data-mode="nebula"] .site-bg-preview-gradient {
+    background: linear-gradient(180deg, #0b0916 0%, #05070d 54%, #020304 100%);
+  }
+
+  .site-bg-preview-shell[data-mode="spotlight"] .site-bg-preview-gradient {
+    background: linear-gradient(180deg, #0a0d13 0%, #05070b 52%, #020304 100%);
+  }
+
+  .site-bg-preview-shell[data-mode="waves"] .site-bg-preview-gradient {
+    background: linear-gradient(180deg, #081018 0%, #04070b 54%, #010203 100%);
+  }
+
+  .site-bg-preview-shell[data-mode="custom"] .site-bg-preview-gradient {
+    background: linear-gradient(180deg, rgba(8, 10, 13, 0.72) 0%, rgba(3, 4, 5, 0.84) 100%);
+  }
+
+  .site-bg-preview-ui {
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 16px;
+  }
+
+  .site-bg-preview-topbar {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .site-bg-preview-pill,
+  .site-bg-preview-chip {
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(12, 18, 28, 0.56);
+    backdrop-filter: blur(8px);
+  }
+
+  .site-bg-preview-pill {
+    width: 96px;
+    height: 16px;
+  }
+
+  .site-bg-preview-chip {
+    width: 54px;
+    height: 16px;
+    margin-left: auto;
+  }
+
+  .site-bg-preview-cards {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    align-self: stretch;
+  }
+
+  .site-bg-preview-card {
+    height: 84px;
+    border-radius: 16px;
+    border: 1px solid rgba(226, 246, 255, 0.24);
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.012)),
+      rgba(8, 12, 18, 0.28);
+    box-shadow:
+      0 14px 34px rgba(0,0,0,.18),
+      0 0 0 1px rgba(232, 248, 255, 0.12) inset;
+    backdrop-filter: blur(8px);
+  }
+
   @media (max-width: 640px) {
     .settings-shell {
       padding: 16px;
@@ -327,22 +752,38 @@
     .settings-form {
       grid-template-columns: 1fr;
     }
+
+    .settings-preview-meta {
+      flex-direction: column;
+    }
+
+    .site-bg-preview-cards {
+      grid-template-columns: 1fr;
+    }
   }
 </style>
 
 <section class="settings-page">
   <div class="settings-shell">
     <div class="settings-header">
-      <h1>Parametres Admin</h1>
-      <p>Reglages globaux visibles sur tout le portail.</p>
+      <h1><%= t("settings.title") %></h1>
+      <p><%= t("settings.subtitle") %></p>
+    </div>
+
+    <div class="settings-tabs" id="settingsTabs">
+      <button class="settings-tab active" type="button" data-tab-target="general"><%= t("settings.tab.general") %></button>
+      <button class="settings-tab" type="button" data-tab-target="background"><%= t("settings.tab.background") %></button>
+      <button class="settings-tab" type="button" data-tab-target="connections"><%= t("settings.tab.connections") %></button>
+      <button class="settings-tab" type="button" data-tab-target="dashboard-html">Dashboard HTML</button>
     </div>
 
     <div class="settings-stack">
-      <div class="settings-card">
+      <div class="settings-panel active" data-tab-panel="general">
+        <div class="settings-card">
         <div class="settings-row">
           <div>
-            <h3>Blur des pseudos dans le classement</h3>
-            <p>Active ou desactive le flou sur les pseudos utilisateurs dans la page classement.</p>
+            <h3><%= t("settings.general.leaderboard.title") %></h3>
+            <p><%= t("settings.general.leaderboard.desc") %></p>
           </div>
           <label class="switch" aria-label="Activer ou desactiver le blur des pseudos">
             <input id="leaderboardBlurToggle" type="checkbox" <%= leaderboardBlurEnabled ? "checked" : "" %>>
@@ -350,33 +791,108 @@
           </label>
         </div>
         <div class="settings-state" id="settingsState">
-          Etat actuel: <strong><%= leaderboardBlurEnabled ? "Active" : "Desactive" %></strong>
+          <%- t("settings.state.current", { state: leaderboardBlurEnabled ? t("settings.state.enabled") : t("settings.state.disabled") }) %>
         </div>
-      </div>
+        </div>
 
-      <div class="settings-card">
-        <h3 class="settings-card-title">Cartes supplementaires du dashboard</h3>
-        <p class="settings-card-sub">Ajoute une carte perso (texte, couleur, lien interne ou externe).</p>
+        <div class="settings-card">
+        <div class="settings-row">
+          <div>
+            <h3><%= t("settings.general.serverStats.title") %></h3>
+            <p><%= t("settings.general.serverStats.desc") %></p>
+          </div>
+          <label class="switch" aria-label="Activer ou desactiver la barre de stats serveur du dashboard">
+            <input id="dashboardServerStatsToggle" type="checkbox" <%= dashboardServerStatsEnabled ? "checked" : "" %>>
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="settings-state" id="dashboardServerStatsState">
+          <%- t("settings.state.current", { state: dashboardServerStatsEnabled ? t("settings.state.enabled") : t("settings.state.disabled") }) %>
+        </div>
+        </div>
+
+        <div class="settings-card">
+        <div class="settings-row">
+          <div>
+            <h3><%= t("settings.general.navPill.title") %></h3>
+            <p><%= t("settings.general.navPill.desc") %></p>
+          </div>
+          <label class="switch" aria-label="Activer ou desactiver la pastille abonnement dans la navbar">
+            <input id="navSubscriptionPillToggle" type="checkbox" <%= navSubscriptionPillEnabled ? "checked" : "" %>>
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="settings-state" id="navSubscriptionPillState">
+          <%- t("settings.state.current", { state: navSubscriptionPillEnabled ? t("settings.state.enabled") : t("settings.state.disabled") }) %>
+        </div>
+        </div>
+
+        <div class="settings-card">
+        <div class="settings-row">
+          <div>
+            <h3><%= t("settings.general.language.title") %></h3>
+            <p><%= t("settings.general.language.desc") %></p>
+          </div>
+          <div style="min-width: 180px;">
+            <select id="siteLanguageSelect" class="settings-inline-select">
+              <% (supportedLocales || []).forEach(function(lang) { %>
+                <option value="<%= lang %>" <%= siteLanguage === lang ? "selected" : "" %>><%= lang === "en" ? t("language.english") : t("language.french") %></option>
+              <% }) %>
+            </select>
+          </div>
+        </div>
+        <div class="settings-state" id="siteLanguageState">
+          <strong><%= siteLanguage === "en" ? t("language.english") : t("language.french") %></strong>
+        </div>
+        </div>
+
+        <div class="settings-card">
+        <h3 class="settings-card-title"><%= t("settings.dashboardBuiltins.title") %></h3>
+        <p class="settings-card-sub"><%= t("settings.dashboardBuiltins.desc") %></p>
+        <div class="builtin-cards-list" id="dashboardBuiltinList">
+          <% (dashboardBuiltinItems || []).forEach(function(item, index) { %>
+            <div class="builtin-card-row" data-builtin-key="<%= item.key %>">
+              <div class="dash-card-meta">
+                <div class="dash-card-main"><%= item.label %></div>
+                <div class="dash-card-sub"><%= item.description %></div>
+              </div>
+              <div class="builtin-card-actions">
+                <button class="builtin-card-order-btn" type="button" data-builtin-move="up" <%= index === 0 ? "disabled" : "" %>><%= t("settings.dashboardBuiltins.up") %></button>
+                <button class="builtin-card-order-btn" type="button" data-builtin-move="down" <%= index === (dashboardBuiltinItems || []).length - 1 ? "disabled" : "" %>><%= t("settings.dashboardBuiltins.down") %></button>
+                <label class="switch" aria-label="Activer ou desactiver <%= item.label %>">
+                  <input type="checkbox" data-builtin-enabled <%= item.enabled ? "checked" : "" %>>
+                  <span class="slider"></span>
+                </label>
+              </div>
+            </div>
+          <% }) %>
+        </div>
+        <div class="settings-inline-note" id="dashboardBuiltinState"><%= t("settings.dashboardBuiltins.note") %></div>
+        </div>
+
+        <div class="settings-card">
+        <h3 class="settings-card-title"><%= t("settings.dashboardCustom.title") %></h3>
+        <p class="settings-card-sub"><%= t("settings.dashboardCustom.desc") %></p>
 
         <form id="dashboardCardForm" class="settings-form">
           <div class="settings-field">
-            <label for="cardLabel">Label</label>
+            <label for="cardLabel"><%= t("settings.dashboardCustom.label") %></label>
             <input id="cardLabel" name="label" maxlength="40" placeholder="Ex: Services">
           </div>
           <div class="settings-field">
-            <label for="cardTitle">Titre</label>
+            <label for="cardTitle"><%= t("settings.dashboardCustom.cardTitle") %></label>
             <input id="cardTitle" name="title" maxlength="60" placeholder="Ex: Radarr">
           </div>
           <div class="settings-field settings-field--full">
-            <label for="cardDescription">Description</label>
+            <label for="cardDescription"><%= t("settings.dashboardCustom.description") %></label>
             <input id="cardDescription" name="description" maxlength="120" placeholder="Ex: Gestion films et sorties">
           </div>
           <div class="settings-field">
-            <label for="cardIcon">Icone (emoji)</label>
+            <label for="cardIcon"><%= t("settings.dashboardCustom.icon") %></label>
             <input id="cardIcon" name="icon" maxlength="4" placeholder="✨" value="✨">
           </div>
           <div class="settings-field">
-            <label for="cardColorKey">Couleur (uniquement libre)</label>
+            <label for="cardColorKey"><%= t("settings.dashboardCustom.color") %></label>
             <select id="cardColorKey" name="colorKey">
               <% (availableDashboardColors || []).forEach(function(color) { %>
                 <option value="<%= color.key %>"><%= color.name %></option>
@@ -384,7 +900,7 @@
             </select>
           </div>
           <div class="settings-field settings-field--full">
-            <label for="cardIntegrationKey">Schema preconfigure</label>
+            <label for="cardIntegrationKey"><%= t("settings.dashboardCustom.schema") %></label>
             <select id="cardIntegrationKey" name="integrationKey">
               <% (dashboardIntegrationOptions || []).forEach(function(item) { %>
                 <option value="<%= item.key %>" <%= item.available ? "" : "disabled" %>>
@@ -394,21 +910,21 @@
             </select>
           </div>
           <div class="settings-field settings-field--full" id="cardUrlField">
-            <label for="cardUrl">Lien (requis en mode custom)</label>
+            <label for="cardUrl"><%= t("settings.dashboardCustom.url") %></label>
             <input id="cardUrl" name="url" maxlength="220" placeholder="/seerr">
           </div>
           <div class="settings-field settings-field--full">
             <label style="display:flex;align-items:center;gap:8px;">
               <input id="cardOpenInIframe" name="openInIframe" type="checkbox" checked>
-              Ouvrir dans une page iframe avec bandeau retour (comme Seerr)
+              <%= t("settings.dashboardCustom.iframe") %>
             </label>
           </div>
         </form>
         <div class="settings-actions">
-          <button class="settings-btn" id="cancelDashboardCardEditBtn" type="button" style="display:none;">Annuler</button>
-          <button class="settings-btn" id="addDashboardCardBtn" type="button">Ajouter la carte</button>
+          <button class="settings-btn" id="cancelDashboardCardEditBtn" type="button" style="display:none;"><%= t("settings.dashboardCustom.cancel") %></button>
+          <button class="settings-btn" id="addDashboardCardBtn" type="button"><%= t("settings.dashboardCustom.add") %></button>
         </div>
-        <div class="settings-inline-note" id="dashCardState">Choisis une couleur disponible et remplis tous les champs.</div>
+        <div class="settings-inline-note" id="dashCardState"><%= t("settings.dashboardCustom.note") %></div>
 
         <div class="dash-cards-list" id="dashboardCardsList">
           <% (dashboardCustomCards || []).forEach(function(card) { %>
@@ -438,6 +954,158 @@
             </div>
           <% }) %>
         </div>
+        </div>
+      </div>
+
+      <div class="settings-panel" data-tab-panel="background">
+        <div class="settings-card">
+          <div class="settings-row">
+            <div>
+              <h3><%= t("settings.background.title") %></h3>
+              <p><%= t("settings.background.desc") %></p>
+            </div>
+          </div>
+          <div class="settings-form">
+            <div class="settings-field">
+              <label for="siteBackgroundModeSelect"><%= t("settings.background.mode") %></label>
+              <select id="siteBackgroundModeSelect" class="settings-inline-select">
+                <% (backgroundPresets || []).forEach(function(preset) { %>
+                  <option value="<%= preset.key %>" <%= siteBackground && siteBackground.mode === preset.key ? "selected" : "" %>>
+                    <%= t("settings.background.presets." + preset.key) %>
+                  </option>
+                <% }) %>
+              </select>
+            </div>
+            <div class="settings-field" id="siteBackgroundOpacityField">
+              <label for="siteBackgroundOpacity"><%= t("settings.background.customOpacity") %></label>
+              <div class="settings-range-row">
+                <input id="siteBackgroundOpacity" type="range" min="0.05" max="1" step="0.01" value="<%= siteBackground && siteBackground.customOpacity != null ? siteBackground.customOpacity : 0.34 %>">
+                <span class="settings-range-badge" id="siteBackgroundOpacityValue"><%= Math.round(((siteBackground && siteBackground.customOpacity != null ? siteBackground.customOpacity : 0.34) * 100)) %>%</span>
+              </div>
+              <div class="settings-inline-note"><%= t("settings.background.opacityHint") %></div>
+            </div>
+            <div class="settings-field settings-field--full" id="siteBackgroundCustomUrlField">
+              <label for="siteBackgroundCustomUrl"><%= t("settings.background.customUrl") %></label>
+              <input id="siteBackgroundCustomUrl" type="text" value="<%= (siteBackground && siteBackground.customUrl && !String(siteBackground.customUrl).startsWith('data:image/')) ? siteBackground.customUrl : '' %>" placeholder="https://...">
+            </div>
+            <div class="settings-field settings-field--full" id="siteBackgroundFileField">
+              <label for="siteBackgroundFile"><%= t("settings.background.customFile") %></label>
+              <input id="siteBackgroundFile" type="file" accept="image/*">
+            </div>
+          </div>
+          <div class="settings-actions">
+            <button class="settings-btn" id="saveSiteBackgroundBtn" type="button"><%= t("settings.background.save") %></button>
+          </div>
+          <div class="settings-inline-note" id="siteBackgroundState"><%= t("settings.background.note") %></div>
+          <div class="settings-preview-box">
+            <div class="settings-preview-meta">
+              <div id="siteBackgroundPreviewModeLabel"><strong><%= t("settings.background.previewMode", { mode: t("settings.background.presets." + ((siteBackground && siteBackground.mode) || "particles")) }) %></strong></div>
+              <div id="siteBackgroundPreviewOpacityLabel"><%= t("settings.background.previewOpacity", { percent: Math.round(((siteBackground && siteBackground.customOpacity != null ? siteBackground.customOpacity : 0.34) * 100)) }) %></div>
+            </div>
+            <div class="site-bg-preview-shell" id="siteBackgroundPreviewBox" data-mode="<%= (siteBackground && siteBackground.mode) || "particles" %>">
+              <div class="site-bg-preview" id="siteBackgroundPreview" style="--site-bg-preview-opacity:<%= siteBackground && siteBackground.customOpacity != null ? siteBackground.customOpacity : 0.34 %>;<% if (siteBackground && siteBackground.customUrl) { %>--site-bg-preview-image:url('<%= String(siteBackground.customUrl).replace(/'/g, "\\'") %>');<% } %>">
+                <div class="site-bg-preview-layer site-bg-preview-gradient"></div>
+                <div class="site-bg-preview-layer site-bg-preview-vignette"></div>
+                <div class="site-bg-preview-layer site-bg-preview-aurora"></div>
+                <div class="site-bg-preview-layer site-bg-preview-mesh"></div>
+                <div class="site-bg-preview-layer site-bg-preview-nebula"></div>
+                <div class="site-bg-preview-layer site-bg-preview-spotlight"></div>
+                <div class="site-bg-preview-layer site-bg-preview-waves"></div>
+                <div class="site-bg-preview-layer site-bg-preview-image"></div>
+                <div class="site-bg-preview-layer site-bg-preview-particles"></div>
+              </div>
+              <div class="site-bg-preview-ui">
+                <div class="site-bg-preview-topbar">
+                  <div class="site-bg-preview-pill"></div>
+                  <div class="site-bg-preview-pill"></div>
+                  <div class="site-bg-preview-pill"></div>
+                  <div class="site-bg-preview-chip"></div>
+                </div>
+                <div class="site-bg-preview-cards">
+                  <div class="site-bg-preview-card"></div>
+                  <div class="site-bg-preview-card"></div>
+                  <div class="site-bg-preview-card"></div>
+                </div>
+              </div>
+            </div>
+            <div class="settings-inline-note"><%= t("settings.background.previewDesc") %></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-panel" data-tab-panel="connections">
+        <div class="settings-card">
+          <h3 class="settings-card-title"><%= t("settings.connections.title") %></h3>
+          <p class="settings-card-sub"><%= t("settings.connections.desc") %></p>
+
+          <form id="configForm">
+            <div class="config-grid">
+              <% (configSections || []).forEach(function(section) { %>
+                <div class="config-section">
+                  <h4 class="config-section-title"><%= section.group %></h4>
+                  <div class="settings-form">
+                    <% (section.fields || []).forEach(function(field) { %>
+                      <div class="settings-field settings-field--full">
+                        <label for="config-<%= field.key %>">
+                          <%= field.label %>
+                          <% if (field.required) { %><span class="settings-required"><%= t("common.required") %></span><% } %>
+                          <% if (field.requiresRestart) { %><span class="settings-restart"><%= t("common.restartRequired") %></span><% } %>
+                        </label>
+                        <input
+                          id="config-<%= field.key %>"
+                          name="<%= field.key %>"
+                          type="<%= field.secret ? 'password' : 'text' %>"
+                          value="<%= field.value || '' %>"
+                          autocomplete="off"
+                          spellcheck="false"
+                        >
+                      </div>
+                    <% }) %>
+                  </div>
+                </div>
+              <% }) %>
+            </div>
+          </form>
+
+          <div class="settings-actions">
+            <button class="settings-btn" id="saveConfigBtn" type="button"><%= t("settings.connections.save") %></button>
+          </div>
+          <div class="settings-inline-note"><%= t("settings.connections.note") %></div>
+          <div class="settings-inline-note" id="configState"><%= t("settings.connections.helper") %></div>
+        </div>
+      </div>
+
+      <div class="settings-panel" data-tab-panel="dashboard-html">
+        <div class="settings-card">
+          <h3 class="settings-card-title"><%= t("settings.dashboardHtml.title") %></h3>
+          <p class="settings-card-sub"><%= t("settings.dashboardHtml.desc") %></p>
+
+          <div class="settings-field settings-field--full">
+            <label for="dashboardHtmlInput"><%= t("settings.dashboardHtml.code") %></label>
+            <textarea id="dashboardHtmlInput" spellcheck="false" autocomplete="off"><%= dashboardCustomHtmlRaw || "" %></textarea>
+          </div>
+
+          <div class="settings-row">
+            <div>
+              <h3><%= t("settings.dashboardHtml.rawMode.title") %></h3>
+              <p><%= t("settings.dashboardHtml.rawMode.desc") %></p>
+            </div>
+            <label class="switch" aria-label="Activer ou desactiver la compatibilite Organizr">
+              <input id="dashboardHtmlRawModeToggle" type="checkbox" <%= dashboardCustomHtmlRawMode ? "checked" : "" %>>
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="settings-actions">
+            <button class="settings-btn" id="saveDashboardHtmlBtn" type="button"><%= t("settings.dashboardHtml.save") %></button>
+          </div>
+          <div class="settings-inline-note" id="dashboardHtmlState"><%= dashboardCustomHtmlRawMode ? t("settings.dashboardHtml.rawNote") : t("settings.dashboardHtml.safeNote") %></div>
+
+          <div class="dashboard-html-preview">
+            <div class="dashboard-html-preview-title"><%= dashboardCustomHtmlRawMode ? t("settings.dashboardHtml.preview.raw") : t("settings.dashboardHtml.preview.safe") %></div>
+            <div class="dashboard-custom-html" id="dashboardHtmlPreview"><%- dashboardCustomHtmlPreview || "" %></div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -448,10 +1116,18 @@
     const bp = window.APP_BASE_PATH || "";
     const toggle = document.getElementById("leaderboardBlurToggle");
     const state = document.getElementById("settingsState");
+    const dashboardServerStatsToggle = document.getElementById("dashboardServerStatsToggle");
+    const dashboardServerStatsState = document.getElementById("dashboardServerStatsState");
+    const navSubscriptionPillToggle = document.getElementById("navSubscriptionPillToggle");
+    const navSubscriptionPillState = document.getElementById("navSubscriptionPillState");
+    const dashboardBuiltinList = document.getElementById("dashboardBuiltinList");
+    const dashboardBuiltinState = document.getElementById("dashboardBuiltinState");
     const addBtn = document.getElementById("addDashboardCardBtn");
     const dashCardState = document.getElementById("dashCardState");
     const dashCardsList = document.getElementById("dashboardCardsList");
     const form = document.getElementById("dashboardCardForm");
+    const settingsTabs = Array.from(document.querySelectorAll("[data-tab-target]"));
+    const settingsPanels = Array.from(document.querySelectorAll("[data-tab-panel]"));
     const colorSelect = document.getElementById("cardColorKey");
     const cancelEditBtn = document.getElementById("cancelDashboardCardEditBtn");
     const cardLabelInput = document.getElementById("cardLabel");
@@ -462,11 +1138,49 @@
     const cardUrlField = document.getElementById("cardUrlField");
     const cardIntegrationKeyInput = document.getElementById("cardIntegrationKey");
     const cardOpenInIframeInput = document.getElementById("cardOpenInIframe");
+    const configForm = document.getElementById("configForm");
+    const saveConfigBtn = document.getElementById("saveConfigBtn");
+    const configState = document.getElementById("configState");
+    const siteLanguageSelect = document.getElementById("siteLanguageSelect");
+    const siteLanguageState = document.getElementById("siteLanguageState");
+    const siteBackgroundModeSelect = document.getElementById("siteBackgroundModeSelect");
+    const siteBackgroundCustomUrl = document.getElementById("siteBackgroundCustomUrl");
+    const siteBackgroundFile = document.getElementById("siteBackgroundFile");
+    const siteBackgroundOpacity = document.getElementById("siteBackgroundOpacity");
+    const siteBackgroundOpacityField = document.getElementById("siteBackgroundOpacityField");
+    const siteBackgroundOpacityValue = document.getElementById("siteBackgroundOpacityValue");
+    const siteBackgroundCustomUrlField = document.getElementById("siteBackgroundCustomUrlField");
+    const siteBackgroundFileField = document.getElementById("siteBackgroundFileField");
+    const saveSiteBackgroundBtn = document.getElementById("saveSiteBackgroundBtn");
+    const siteBackgroundState = document.getElementById("siteBackgroundState");
+    const siteBackgroundPreviewBox = document.getElementById("siteBackgroundPreviewBox");
+    const siteBackgroundPreview = document.getElementById("siteBackgroundPreview");
+    const siteBackgroundPreviewModeLabel = document.getElementById("siteBackgroundPreviewModeLabel");
+    const siteBackgroundPreviewOpacityLabel = document.getElementById("siteBackgroundPreviewOpacityLabel");
+    const dashboardHtmlInput = document.getElementById("dashboardHtmlInput");
+    const saveDashboardHtmlBtn = document.getElementById("saveDashboardHtmlBtn");
+    const dashboardHtmlState = document.getElementById("dashboardHtmlState");
+    const dashboardHtmlPreview = document.getElementById("dashboardHtmlPreview");
+    const dashboardHtmlRawModeToggle = document.getElementById("dashboardHtmlRawModeToggle");
+    const dashboardHtmlPreviewTitle = document.querySelector(".dashboard-html-preview-title");
     if (!toggle || !state || !addBtn || !dashCardState || !dashCardsList || !form || !colorSelect || !cancelEditBtn) return;
 
     let cardBusy = false;
     let editingCardId = null;
     let canCreate = true;
+    let dashboardBuiltinsInFlight = false;
+    let siteBackgroundFileDataUrl = <%- JSON.stringify(siteBackground && String(siteBackground.customUrl || "").startsWith("data:image/") ? siteBackground.customUrl : "") %>;
+    let siteBackgroundCustomSource = siteBackgroundFileDataUrl ? "file" : "url";
+    let dashboardBuiltinItems = <%- JSON.stringify(dashboardBuiltinItems || []) %>;
+    const backgroundPresetLabels = {
+      particles: "<%= t('settings.background.presets.particles') %>",
+      aurora: "<%= t('settings.background.presets.aurora') %>",
+      mesh: "<%= t('settings.background.presets.mesh') %>",
+      nebula: "<%= t('settings.background.presets.nebula') %>",
+      spotlight: "<%= t('settings.background.presets.spotlight') %>",
+      waves: "<%= t('settings.background.presets.waves') %>",
+      custom: "<%= t('settings.background.presets.custom') %>"
+    };
 
     function escHtml(v) {
       return String(v == null ? "" : v)
@@ -477,6 +1191,121 @@
         .replace(/'/g, "&#39;");
     }
 
+    function setActiveTab(name) {
+      settingsTabs.forEach(function (tab) {
+        tab.classList.toggle("active", tab.getAttribute("data-tab-target") === name);
+      });
+      settingsPanels.forEach(function (panel) {
+        panel.classList.toggle("active", panel.getAttribute("data-tab-panel") === name);
+      });
+    }
+
+    function escAttr(v) {
+      return escHtml(v).replace(/`/g, "&#96;");
+    }
+
+    function updateSiteBackgroundUi() {
+      const mode = siteBackgroundModeSelect ? siteBackgroundModeSelect.value : "particles";
+      const isCustom = mode === "custom";
+      if (siteBackgroundCustomUrlField) siteBackgroundCustomUrlField.style.display = isCustom ? "" : "none";
+      if (siteBackgroundFileField) siteBackgroundFileField.style.display = isCustom ? "" : "none";
+      if (siteBackgroundOpacityField) siteBackgroundOpacityField.style.display = isCustom ? "" : "none";
+      renderSiteBackgroundPreview();
+    }
+
+    function getSiteBackgroundOpacity() {
+      const raw = Number.parseFloat(String((siteBackgroundOpacity && siteBackgroundOpacity.value) || "0.34"));
+      if (!Number.isFinite(raw)) return 0.34;
+      return Math.min(1, Math.max(0.05, raw));
+    }
+
+    function getSelectedSiteBackgroundUrl() {
+      const typedUrl = String((siteBackgroundCustomUrl && siteBackgroundCustomUrl.value) || "").trim();
+      if (siteBackgroundCustomSource === "file" && siteBackgroundFileDataUrl) return siteBackgroundFileDataUrl;
+      return typedUrl || siteBackgroundFileDataUrl || "";
+    }
+
+    function renderSiteBackgroundPreview() {
+      const mode = siteBackgroundModeSelect ? (siteBackgroundModeSelect.value || "particles") : "particles";
+      const opacityPercent = Math.round(getSiteBackgroundOpacity() * 100);
+      const presetLabel = backgroundPresetLabels[mode] || mode;
+
+      if (siteBackgroundOpacityValue) {
+        siteBackgroundOpacityValue.textContent = opacityPercent + "%";
+      }
+      if (siteBackgroundPreviewBox) {
+        siteBackgroundPreviewBox.setAttribute("data-mode", mode);
+      }
+      if (siteBackgroundPreview) {
+        siteBackgroundPreview.style.setProperty("--site-bg-preview-opacity", String(getSiteBackgroundOpacity()));
+        const selectedUrl = getSelectedSiteBackgroundUrl();
+        siteBackgroundPreview.style.setProperty("--site-bg-preview-image", selectedUrl ? "url('" + selectedUrl.replace(/'/g, "\\'") + "')" : "none");
+      }
+      if (siteBackgroundPreviewModeLabel) {
+        siteBackgroundPreviewModeLabel.innerHTML = "<strong><%= t('settings.background.previewMode', { mode: '__MODE__' }) %></strong>".replace("__MODE__", escHtml(presetLabel));
+      }
+      if (siteBackgroundPreviewOpacityLabel) {
+        siteBackgroundPreviewOpacityLabel.textContent = "<%= t('settings.background.previewOpacity', { percent: '__PERCENT__' }) %>".replace("__PERCENT__", String(opacityPercent));
+      }
+    }
+
+    function renderDashboardBuiltinList() {
+      if (!dashboardBuiltinList) return;
+
+      dashboardBuiltinList.innerHTML = dashboardBuiltinItems.map(function (item, index) {
+        const isFirst = index === 0;
+        const isLast = index === dashboardBuiltinItems.length - 1;
+        return `<div class="builtin-card-row" data-builtin-key="${escAttr(item.key)}">
+          <div class="dash-card-meta">
+            <div class="dash-card-main">${escHtml(item.label)}</div>
+            <div class="dash-card-sub">${escHtml(item.description)}</div>
+          </div>
+          <div class="builtin-card-actions">
+            <button class="builtin-card-order-btn" type="button" data-builtin-move="up" ${isFirst ? "disabled" : ""}><%= t("settings.dashboardBuiltins.up") %></button>
+            <button class="builtin-card-order-btn" type="button" data-builtin-move="down" ${isLast ? "disabled" : ""}><%= t("settings.dashboardBuiltins.down") %></button>
+            <label class="switch" aria-label="Activer ou desactiver ${escAttr(item.label)}">
+              <input type="checkbox" data-builtin-enabled ${item.enabled ? "checked" : ""}>
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>`;
+      }).join("");
+    }
+
+    async function saveDashboardBuiltins(previousItems) {
+      if (!dashboardBuiltinState) return;
+        dashboardBuiltinState.textContent = "<%= t('settings.dashboardBuiltins.note') %>";
+
+      try {
+        const payload = dashboardBuiltinItems.map(function (item, index) {
+          return { key: item.key, enabled: !!item.enabled, order: index };
+        });
+        const resp = await fetch(bp + "/api/admin/dashboard-builtins", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ items: payload })
+        });
+        if (!resp.ok) throw new Error("HTTP " + resp.status);
+        const data = await resp.json();
+        dashboardBuiltinItems = (data.items || []).map(function (item) {
+          const current = dashboardBuiltinItems.find(function (entry) { return entry.key === item.key; });
+          return {
+            key: item.key,
+            enabled: item.enabled !== false,
+            order: item.order,
+            label: current ? current.label : item.key,
+            description: current ? current.description : ""
+          };
+        }).sort(function (a, b) { return a.order - b.order; });
+        renderDashboardBuiltinList();
+        dashboardBuiltinState.textContent = "<%= t('settings.dashboardBuiltins.note') %>";
+      } catch (_) {
+        dashboardBuiltinItems = previousItems.map(function (item) { return { ...item }; });
+        renderDashboardBuiltinList();
+        dashboardBuiltinState.textContent = "<%= t('settings.dashboardBuiltins.note') %>";
+      }
+    }
+
     function updateActionAvailability() {
       const lockCreate = !editingCardId && !canCreate;
       addBtn.disabled = lockCreate;
@@ -485,7 +1314,7 @@
 
     function setFormModeCreate() {
       editingCardId = null;
-      addBtn.textContent = "Ajouter la carte";
+      addBtn.textContent = "<%= t('settings.dashboardCustom.add') %>";
       cancelEditBtn.style.display = "none";
       applyIntegrationUi(cardIntegrationKeyInput.value || "custom");
       updateActionAvailability();
@@ -493,7 +1322,7 @@
 
     function setFormModeEdit(card) {
       editingCardId = Number(card.id);
-      addBtn.textContent = "Enregistrer la modification";
+      addBtn.textContent = "<%= t('settings.dashboardCustom.saveEdit') %>";
       cancelEditBtn.style.display = "inline-flex";
       cardLabelInput.value = card.label || "";
       cardTitleInput.value = card.title || "";
@@ -505,7 +1334,7 @@
       if (!Array.from(colorSelect.options).some(opt => opt.value === (card.colorKey || ""))) {
         const opt = document.createElement("option");
         opt.value = card.colorKey || "";
-        opt.textContent = (card.colorKey || "").toUpperCase();
+          opt.textContent = (card.colorKey || "").toUpperCase();
         colorSelect.appendChild(opt);
       }
       colorSelect.value = card.colorKey || "";
@@ -594,7 +1423,7 @@
 
         if (!resp.ok) throw new Error("HTTP " + resp.status);
         const data = await resp.json();
-        state.innerHTML = "Etat actuel: <strong>" + (data.enabled ? "Active" : "Desactive") + "</strong>";
+        state.innerHTML = `<%- t("settings.state.current", { state: "__STATE__" }) %>`.replace("__STATE__", data.enabled ? "<%= t('settings.state.enabled') %>" : "<%= t('settings.state.disabled') %>");
       } catch (_) {
         toggle.checked = !enabled;
       } finally {
@@ -602,6 +1431,274 @@
         inFlight = false;
       }
     });
+
+    let dashboardServerStatsInFlight = false;
+    if (dashboardServerStatsToggle && dashboardServerStatsState) {
+      dashboardServerStatsToggle.addEventListener("change", async function () {
+        if (dashboardServerStatsInFlight) return;
+        dashboardServerStatsInFlight = true;
+        dashboardServerStatsToggle.disabled = true;
+        const enabled = !!dashboardServerStatsToggle.checked;
+
+        try {
+          const resp = await fetch(bp + "/api/admin/settings/dashboard-server-stats", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ enabled })
+          });
+
+          if (!resp.ok) throw new Error("HTTP " + resp.status);
+          const data = await resp.json();
+          dashboardServerStatsState.innerHTML = `<%- t("settings.state.current", { state: "__STATE__" }) %>`.replace("__STATE__", data.enabled ? "<%= t('settings.state.enabled') %>" : "<%= t('settings.state.disabled') %>");
+        } catch (_) {
+          dashboardServerStatsToggle.checked = !enabled;
+        } finally {
+          dashboardServerStatsToggle.disabled = false;
+          dashboardServerStatsInFlight = false;
+        }
+      });
+    }
+
+    let navSubscriptionPillInFlight = false;
+    if (navSubscriptionPillToggle && navSubscriptionPillState) {
+      navSubscriptionPillToggle.addEventListener("change", async function () {
+        if (navSubscriptionPillInFlight) return;
+        navSubscriptionPillInFlight = true;
+        navSubscriptionPillToggle.disabled = true;
+        const enabled = !!navSubscriptionPillToggle.checked;
+
+        try {
+          const resp = await fetch(bp + "/api/admin/settings/nav-subscription-pill", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ enabled })
+          });
+
+          if (!resp.ok) throw new Error("HTTP " + resp.status);
+          const data = await resp.json();
+          navSubscriptionPillState.innerHTML = `<%- t("settings.state.current", { state: "__STATE__" }) %>`.replace("__STATE__", data.enabled ? "<%= t('settings.state.enabled') %>" : "<%= t('settings.state.disabled') %>");
+        } catch (_) {
+          navSubscriptionPillToggle.checked = !enabled;
+        } finally {
+          navSubscriptionPillToggle.disabled = false;
+          navSubscriptionPillInFlight = false;
+        }
+      });
+    }
+
+    if (dashboardBuiltinList && dashboardBuiltinState) {
+      renderDashboardBuiltinList();
+
+      dashboardBuiltinList.addEventListener("click", async function (event) {
+        const button = event.target.closest("[data-builtin-move]");
+        if (!button || dashboardBuiltinsInFlight) return;
+
+        const row = button.closest("[data-builtin-key]");
+        if (!row) return;
+
+        const key = row.getAttribute("data-builtin-key");
+        const index = dashboardBuiltinItems.findIndex(function (item) { return item.key === key; });
+        if (index === -1) return;
+
+        const direction = button.getAttribute("data-builtin-move");
+        const targetIndex = direction === "up" ? index - 1 : index + 1;
+        if (targetIndex < 0 || targetIndex >= dashboardBuiltinItems.length) return;
+
+        const previousItems = dashboardBuiltinItems.map(function (item) { return { ...item }; });
+        const moved = dashboardBuiltinItems[index];
+        dashboardBuiltinItems.splice(index, 1);
+        dashboardBuiltinItems.splice(targetIndex, 0, moved);
+        renderDashboardBuiltinList();
+
+        dashboardBuiltinsInFlight = true;
+        await saveDashboardBuiltins(previousItems);
+        dashboardBuiltinsInFlight = false;
+      });
+
+      dashboardBuiltinList.addEventListener("change", async function (event) {
+        const input = event.target.closest("[data-builtin-enabled]");
+        if (!input || dashboardBuiltinsInFlight) return;
+
+        const row = input.closest("[data-builtin-key]");
+        if (!row) return;
+
+        const key = row.getAttribute("data-builtin-key");
+        const index = dashboardBuiltinItems.findIndex(function (item) { return item.key === key; });
+        if (index === -1) return;
+
+        const previousItems = dashboardBuiltinItems.map(function (item) { return { ...item }; });
+        dashboardBuiltinItems[index].enabled = !!input.checked;
+
+        dashboardBuiltinsInFlight = true;
+        await saveDashboardBuiltins(previousItems);
+        dashboardBuiltinsInFlight = false;
+      });
+    }
+
+    settingsTabs.forEach(function (tab) {
+      tab.addEventListener("click", function () {
+        setActiveTab(tab.getAttribute("data-tab-target"));
+      });
+    });
+
+    if (saveConfigBtn && configForm && configState) {
+      saveConfigBtn.addEventListener("click", async function () {
+        const payload = {};
+        new FormData(configForm).forEach(function (value, key) {
+          payload[key] = String(value || "").trim();
+        });
+
+        saveConfigBtn.disabled = true;
+        configState.textContent = "Enregistrement des connexions...";
+        try {
+          const resp = await fetch(bp + "/api/admin/config", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+          });
+          const data = await resp.json();
+          if (!resp.ok) throw new Error(data.error || ("HTTP " + resp.status));
+          configState.textContent = "Connexions enregistrees avec succes.";
+        } catch (err) {
+          configState.textContent = err.message || "Impossible d'enregistrer les connexions.";
+        } finally {
+          saveConfigBtn.disabled = false;
+        }
+      });
+    }
+
+    if (siteLanguageSelect && siteLanguageState) {
+      siteLanguageSelect.addEventListener("change", async function () {
+        const language = siteLanguageSelect.value || "fr";
+        siteLanguageSelect.disabled = true;
+        siteLanguageState.textContent = "<%= t('settings.general.language.saving') %>";
+        try {
+          const resp = await fetch(bp + "/api/admin/settings/site-language", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ language })
+          });
+          const data = await resp.json();
+          if (!resp.ok) throw new Error(data.error || ("HTTP " + resp.status));
+          siteLanguageState.textContent = "<%= t('settings.general.language.saved') %>";
+        } catch (err) {
+          siteLanguageState.textContent = err.message || "<%= t('settings.general.language.error') %>";
+        } finally {
+          siteLanguageSelect.disabled = false;
+        }
+      });
+    }
+
+    if (siteBackgroundModeSelect) {
+      siteBackgroundModeSelect.addEventListener("change", updateSiteBackgroundUi);
+      updateSiteBackgroundUi();
+    }
+
+    if (siteBackgroundCustomUrl) {
+      siteBackgroundCustomUrl.addEventListener("input", function () {
+        siteBackgroundCustomSource = "url";
+        renderSiteBackgroundPreview();
+      });
+    }
+
+    if (siteBackgroundOpacity) {
+      siteBackgroundOpacity.addEventListener("input", renderSiteBackgroundPreview);
+      siteBackgroundOpacity.addEventListener("change", renderSiteBackgroundPreview);
+    }
+
+    if (siteBackgroundFile) {
+      siteBackgroundFile.addEventListener("change", function () {
+        const file = siteBackgroundFile.files && siteBackgroundFile.files[0];
+        if (!file) {
+          siteBackgroundFileDataUrl = "";
+          siteBackgroundCustomSource = "url";
+          renderSiteBackgroundPreview();
+          return;
+        }
+        const reader = new FileReader();
+        reader.onload = function () {
+          siteBackgroundFileDataUrl = String(reader.result || "");
+          siteBackgroundCustomSource = "file";
+          if (siteBackgroundState) {
+            siteBackgroundState.textContent = "<%= t('settings.background.fileLoaded') %>";
+          }
+          renderSiteBackgroundPreview();
+        };
+        reader.onerror = function () {
+          siteBackgroundFileDataUrl = "";
+          siteBackgroundCustomSource = "url";
+          if (siteBackgroundState) {
+            siteBackgroundState.textContent = "<%= t('settings.background.fileError') %>";
+          }
+          renderSiteBackgroundPreview();
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    if (saveSiteBackgroundBtn && siteBackgroundModeSelect && siteBackgroundState && siteBackgroundPreviewBox) {
+      saveSiteBackgroundBtn.addEventListener("click", async function () {
+        const mode = siteBackgroundModeSelect.value || "particles";
+        const customUrl = mode === "custom"
+          ? getSelectedSiteBackgroundUrl()
+          : "";
+        const customOpacity = getSiteBackgroundOpacity();
+
+        saveSiteBackgroundBtn.disabled = true;
+        siteBackgroundState.textContent = "<%= t('settings.background.saving') %>";
+        try {
+          const resp = await fetch(bp + "/api/admin/settings/site-background", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ mode, customUrl, customOpacity })
+          });
+          const data = await resp.json();
+          if (!resp.ok) throw new Error(data.error || ("HTTP " + resp.status));
+          if (siteBackgroundOpacity) {
+            siteBackgroundOpacity.value = String(data.background.customOpacity != null ? data.background.customOpacity : customOpacity);
+          }
+          renderSiteBackgroundPreview();
+          siteBackgroundState.textContent = "<%= t('settings.background.saved') %>";
+        } catch (err) {
+          siteBackgroundState.textContent = err.message || "<%= t('settings.background.error') %>";
+        } finally {
+          saveSiteBackgroundBtn.disabled = false;
+        }
+      });
+    }
+
+    if (saveDashboardHtmlBtn && dashboardHtmlInput && dashboardHtmlState && dashboardHtmlPreview) {
+      saveDashboardHtmlBtn.addEventListener("click", async function () {
+        const html = dashboardHtmlInput.value || "";
+        const mode = dashboardHtmlRawModeToggle && dashboardHtmlRawModeToggle.checked ? "raw" : "safe";
+
+        saveDashboardHtmlBtn.disabled = true;
+        dashboardHtmlState.textContent = mode === "raw"
+          ? "<%= t('settings.dashboardHtml.savingRaw') %>"
+          : "<%= t('settings.dashboardHtml.saving') %>";
+        try {
+          const resp = await fetch(bp + "/api/admin/dashboard-html", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ html, mode })
+          });
+          const data = await resp.json();
+          if (!resp.ok) throw new Error(data.error || ("HTTP " + resp.status));
+          dashboardHtmlInput.value = data.raw || "";
+          dashboardHtmlPreview.innerHTML = data.rendered || "";
+          if (dashboardHtmlPreviewTitle) {
+            dashboardHtmlPreviewTitle.textContent = data.mode === "raw" ? "<%= t('settings.dashboardHtml.preview.raw') %>" : "<%= t('settings.dashboardHtml.preview.safe') %>";
+          }
+          dashboardHtmlState.textContent = data.mode === "raw"
+            ? "<%= t('settings.dashboardHtml.savedRaw') %>"
+            : "<%= t('settings.dashboardHtml.saved') %>";
+        } catch (err) {
+          dashboardHtmlState.textContent = err.message || "<%= t('settings.dashboardHtml.error') %>";
+        } finally {
+          saveDashboardHtmlBtn.disabled = false;
+        }
+      });
+    }
 
     addBtn.addEventListener("click", async function () {
       if (cardBusy) return;
@@ -714,6 +1811,7 @@
     });
 
     setFormModeCreate();
+    setActiveTab("general");
     applyIntegrationUi(cardIntegrationKeyInput.value || "custom");
     refreshCardData().catch(() => {});
   })();

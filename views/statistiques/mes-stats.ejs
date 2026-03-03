@@ -8,13 +8,13 @@
   <div class="ms-header">
     <div class="ms-header-top">
       <div class="ms-header-main">
-    <h1 class="ms-title">Mes Statistiques&nbsp;📊</h1>
-    <p class="ms-subtitle" id="msSubtitle">Votre résumé de visionnage complet</p>
+    <h1 class="ms-title"><%= t("stats.page.title") %></h1>
+    <p class="ms-subtitle" id="msSubtitle"><%= t("stats.page.subtitle.personal") %></p>
       </div>
     </div>
     <div class="ms-tabs">
-      <button class="ms-tab ms-tab--active" id="msTabPersonal" type="button">Mes stats</button>
-      <button class="ms-tab" id="msTabGlobal" type="button">Stats globales</button>
+      <button class="ms-tab ms-tab--active" id="msTabPersonal" type="button"><%= t("stats.page.tab.personal") %></button>
+      <button class="ms-tab" id="msTabGlobal" type="button"><%= t("stats.page.tab.global") %></button>
     </div>
   </div>
 
@@ -41,7 +41,7 @@
 
       <!-- Donut -->
       <div class="ms-card">
-        <div class="ms-card-title">Répartition du temps</div>
+        <div class="ms-card-title"><%= t("stats.page.timeBreakdown") %></div>
         <div class="ms-donut-wrap">
           <canvas id="donutChart" width="160" height="160"></canvas>
           <div class="ms-donut-legend" id="donutLegend"></div>
@@ -50,7 +50,7 @@
 
       <!-- Mode de lecture -->
       <div class="ms-card">
-        <div class="ms-card-title">🖥️ Mode de lecture</div>
+        <div class="ms-card-title"><%= t("stats.page.playMode") %></div>
         <div class="ms-play-methods" id="playMethodList"></div>
       </div>
 
@@ -58,25 +58,25 @@
 
     <!-- TOP 10 ────────────────────────────────────────────────── -->
     <div class="ms-card">
-      <div class="ms-card-title">🏆 Temps passé devant…</div>
+      <div class="ms-card-title"><%= t("stats.page.top10") %></div>
       <div class="ms-top10" id="top10List"></div>
     </div>
 
     <!-- GENRES ────────────────────────────────────────────────── -->
     <div class="ms-row-2col">
       <div class="ms-card">
-        <div class="ms-card-title">🎬 Genres Films préférés</div>
+        <div class="ms-card-title"><%= t("stats.page.movieGenres") %></div>
         <div class="ms-genres" id="movieGenresList"></div>
       </div>
       <div class="ms-card">
-        <div class="ms-card-title">📺 Genres Séries préférés</div>
+        <div class="ms-card-title"><%= t("stats.page.seriesGenres") %></div>
         <div class="ms-genres" id="seriesGenresList"></div>
       </div>
     </div>
 
     <!-- HEURE DU JOUR ─────────────────────────────────────────── -->
     <div class="ms-card">
-      <div class="ms-card-title">⏰ Activité par heure du jour <span class="ms-card-subtitle">moyenne par jour actif</span></div>
+      <div class="ms-card-title"><%= t("stats.page.activityByHour") %> <span class="ms-card-subtitle"><%= t("stats.page.activityByHour.subtitle") %></span></div>
       <div class="ms-chart-wrap">
         <canvas id="hourChart"></canvas>
       </div>
@@ -84,7 +84,7 @@
 
     <!-- JOUR DE LA SEMAINE ────────────────────────────────────── -->
     <div class="ms-card">
-      <div class="ms-card-title">📅 Activité par jour de la semaine <span class="ms-card-subtitle">moyenne par semaine</span></div>
+      <div class="ms-card-title"><%= t("stats.page.activityByDay") %> <span class="ms-card-subtitle"><%= t("stats.page.activityByDay.subtitle") %></span></div>
       <div class="ms-chart-wrap">
         <canvas id="dayChart"></canvas>
       </div>
@@ -95,8 +95,8 @@
   <!-- UNAVAILABLE ───────────────────────────────────────────────── -->
   <div id="msUnavailable" style="display:none" class="ms-unavailable">
     <div class="ms-unavail-icon">📡</div>
-    <p>Statistiques indisponibles</p>
-    <span>Tautulli n'est pas connecté ou vous n'avez pas encore de données.</span>
+    <p><%= t("stats.page.unavailable.title") %></p>
+    <span><%= t("stats.page.unavailable.desc") %></span>
   </div>
 
 </div>
@@ -501,6 +501,27 @@
 <script>
 (function () {
   const bp = '<%= basePath %>';
+  const isEnglish = '<%= locale || "fr" %>' === 'en';
+  const I18N = {
+    noData: '<%= t("stats.page.noData") %>',
+    noContent: '<%= t("stats.page.noContent") %>',
+    noGenre: '<%= t("stats.page.noGenre") %>',
+    series: '<%= t("stats.page.series") %>',
+    movies: '<%= t("stats.page.movies") %>',
+    music: '<%= t("stats.page.music") %>',
+    avgTotal: '<%= t("stats.page.avgTotal", { value: "__VALUE__" }) %>',
+    subtitlePersonal: '<%= t("stats.page.subtitle.personal") %>',
+    subtitleGlobal: '<%= t("stats.page.subtitle.global") %>',
+    dayNames: [
+      '<%= t("stats.page.days.sun") %>',
+      '<%= t("stats.page.days.mon") %>',
+      '<%= t("stats.page.days.tue") %>',
+      '<%= t("stats.page.days.wed") %>',
+      '<%= t("stats.page.days.thu") %>',
+      '<%= t("stats.page.days.fri") %>',
+      '<%= t("stats.page.days.sat") %>'
+    ]
+  };
   let currentMode = 'personal';
   let donutChartInstance = null;
   let hourChartInstance = null;
@@ -554,13 +575,13 @@
     const el = document.getElementById('playMethodList');
     if (!el) return;
     if (!pm || pm.total === 0) {
-      el.innerHTML = '<div class="ms-genres-empty">Aucune donnée disponible</div>';
+      el.innerHTML = '<div class="ms-genres-empty">' + I18N.noData + '</div>';
       return;
     }
     const methods = [
       { label: 'Direct Play',   key: 'directPlay',   color: '#22c55e', icon: '⚡', desc: 'Lecture native' },
       { label: 'Direct Stream', key: 'directStream', color: '#3B82F6', icon: '💧', desc: 'Recontenant' },
-      { label: 'Transcodage',   key: 'transcode',    color: '#f97316', icon: '⚙️', desc: 'Conversion vidéo' },
+      { label: isEnglish ? 'Transcode' : 'Transcodage', key: 'transcode', color: '#f97316', icon: '⚙️', desc: 'Conversion vidéo' },
     ];
     el.innerHTML = methods.map(m => {
       const d = pm[m.key] || { count: 0, pct: 0 };
@@ -570,7 +591,7 @@
             <div class="ms-play-method-left">
               <div class="ms-play-method-dot" style="background:${m.color}"></div>
               <span>${m.icon} ${m.label}</span>
-              <span class="ms-play-method-count">${d.count.toLocaleString('fr-FR')} lectures</span>
+              <span class="ms-play-method-count">${d.count.toLocaleString(isEnglish ? 'en-US' : 'fr-FR')} ${isEnglish ? 'plays' : 'lectures'}</span>
             </div>
             <span style="font-size:13px;font-weight:700;color:${m.color}">${d.pct}%</span>
           </div>
@@ -592,9 +613,9 @@
   ───────────────────────────────────────────────────────────────── */
   function renderDonut(seriesH, moviesH, musicH) {
     const labels = [], data = [], colors = [];
-    if (seriesH > 0) { labels.push('Séries'); data.push(seriesH); colors.push(C.series); }
-    if (moviesH > 0) { labels.push('Films');  data.push(moviesH); colors.push(C.movies); }
-    if (musicH > 0)  { labels.push('Musique');data.push(musicH);  colors.push(C.music);  }
+    if (seriesH > 0) { labels.push(I18N.series); data.push(seriesH); colors.push(C.series); }
+    if (moviesH > 0) { labels.push(I18N.movies); data.push(moviesH); colors.push(C.movies); }
+    if (musicH > 0)  { labels.push(I18N.music); data.push(musicH); colors.push(C.music);  }
 
     const total = data.reduce((s, v) => s + v, 0);
     const ctx = document.getElementById('donutChart').getContext('2d');
@@ -633,7 +654,7 @@
   function renderTop10(topContent) {
     const el = document.getElementById('top10List');
     if (!topContent.length) {
-      el.innerHTML = '<div class="ms-genres-empty">Aucun contenu trouvé</div>';
+      el.innerHTML = '<div class="ms-genres-empty">' + I18N.noContent + '</div>';
       return;
     }
     const medals = ['gold', 'silver', 'bronze'];
@@ -672,7 +693,7 @@
   function renderGenres(genres, elId) {
     const el = document.getElementById(elId);
     if (!genres.length) {
-      el.innerHTML = '<div class="ms-genres-empty">Aucun genre trouvé</div>';
+      el.innerHTML = '<div class="ms-genres-empty">' + I18N.noGenre + '</div>';
       return;
     }
     const maxH = genres[0]?.hours || 1;
@@ -732,14 +753,14 @@
         labels,
         datasets: [
           {
-            label: 'Films',
+            label: I18N.movies,
             data: hoursM,
             backgroundColor: C.movies + 'cc',
             borderRadius: 3,
             stack: 'a',
           },
           {
-            label: 'Séries',
+            label: I18N.series,
             data: hoursS,
             backgroundColor: C.series + 'cc',
             borderRadius: 3,
@@ -760,7 +781,7 @@
               label: c => c.raw > 0 ? ` ${c.dataset.label} : ${fmtAvg(c.raw)}` : null,
               footer: items => {
                 const total = items.reduce((s, i) => s + i.raw, 0);
-                return total > 0 ? 'Total moyen : ' + fmtAvg(total) : '';
+                return total > 0 ? I18N.avgTotal.replace('__VALUE__', fmtAvg(total)) : '';
               }
             }
           }
@@ -789,7 +810,7 @@
      RENDER DAY CHART
   ───────────────────────────────────────────────────────────────── */
   function renderDayChart(dayActivity) {
-    const DAY_NAMES = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+    const DAY_NAMES = I18N.dayNames;
     const hoursM = Array(7).fill(0);
     const hoursS = Array(7).fill(0);
     for (const r of dayActivity) {
@@ -804,14 +825,14 @@
         labels: DAY_NAMES,
         datasets: [
           {
-            label: 'Films',
+            label: I18N.movies,
             data: hoursM,
             backgroundColor: C.movies + 'cc',
             borderRadius: 4,
             stack: 'a',
           },
           {
-            label: 'Séries',
+            label: I18N.series,
             data: hoursS,
             backgroundColor: C.series + 'cc',
             borderRadius: 4,
@@ -832,7 +853,7 @@
               label: c => c.raw > 0 ? ` ${c.dataset.label}\u00a0: ${fmtAvg(c.raw)}` : null,
               footer: items => {
                 const total = items.reduce((s, i) => s + i.raw, 0);
-                return total > 0 ? 'Total moyen\u00a0: ' + fmtAvg(total) : '';
+                return total > 0 ? I18N.avgTotal.replace('__VALUE__', fmtAvg(total)) : '';
               }
             }
           }
@@ -869,8 +890,8 @@
     if (btnGlobal) btnGlobal.classList.toggle('ms-tab--active', mode === 'global');
     if (subtitle) {
       subtitle.textContent = mode === 'personal'
-        ? 'Votre résumé de visionnage complet'
-        : 'Résumé consolidé de tous les utilisateurs';
+        ? I18N.subtitlePersonal
+        : I18N.subtitleGlobal;
     }
   }
 

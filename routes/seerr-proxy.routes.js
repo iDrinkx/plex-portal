@@ -18,6 +18,7 @@ const express = require("express");
 const fetch   = require("node-fetch");
 const router  = express.Router();
 const log = require("../utils/logger");
+const { getConfigValue } = require("../utils/config");
 const logSSO = log.create('[Seerr SSO]');
 
 function requireAuth(req, res, next) {
@@ -28,7 +29,7 @@ function requireAuth(req, res, next) {
 }
 
 function getSeerrCookieDomain() {
-  const publicUrl = process.env.SEERR_PUBLIC_URL || "";
+  const publicUrl = getConfigValue("SEERR_PUBLIC_URL", "");
   if (!publicUrl) return null;
   try {
     const hostname = new URL(publicUrl).hostname;
@@ -39,7 +40,7 @@ function getSeerrCookieDomain() {
 }
 
 async function grabSeerrCookie(authToken, res, username) {
-  const seerrUrl = (process.env.SEERR_URL || "").replace(/\/$/, "");
+  const seerrUrl = getConfigValue("SEERR_URL", "").replace(/\/$/, "");
   if (!seerrUrl) { logSSO.warn('SEERR_URL non configuré'); return false; }
   if (!authToken) { logSSO.warn(`Token absent pour ${username} — reconnexion requise`); return false; }
   try {
@@ -72,9 +73,8 @@ async function grabSeerrCookie(authToken, res, username) {
   }
 }
 
-const seerrPublicUrl = (process.env.SEERR_PUBLIC_URL || "").replace(/\/$/, "");
-
 router.get("/seerr", requireAuth, async (req, res) => {
+  const seerrPublicUrl = getConfigValue("SEERR_PUBLIC_URL", "").replace(/\/$/, "");
   if (!seerrPublicUrl) {
     return res.status(503).send(`
       <html><body style="background:#0f1117;color:#e2e8f0;font-family:sans-serif;
@@ -82,8 +82,8 @@ router.get("/seerr", requireAuth, async (req, res) => {
         <div style="text-align:center">
           <div style="font-size:3rem"></div>
           <h2>SEERR_PUBLIC_URL non configuré</h2>
-          <p style="color:#94a3b8">Ajoutez cette variable d'env dans votre docker-compose.yml</p>
-          <code style="color:#64748b">SEERR_PUBLIC_URL: "https://seerr.votredomaine.com"</code>
+          <p style="color:#94a3b8">Renseignez l'URL publique Seerr dans Parametres &gt; Connexions</p>
+          <code style="color:#64748b">Champ attendu : URL Seerr publique</code>
         </div>
       </body></html>
     `);
@@ -97,7 +97,12 @@ router.get("/seerr", requireAuth, async (req, res) => {
   await grabSeerrCookie(plexToken, res, username);
 
   // Rendu sans layout (page standalone full-screen)
-  res.render("seerr/index", { layout: false, seerrPublicUrl });
+  res.render("seerr/index", {
+    layout: false,
+    seerrPublicUrl,
+    locale: res.locals.locale || "fr",
+    basePath: req.basePath || ""
+  });
 });
 
 module.exports = router;

@@ -1,96 +1,43 @@
 ﻿<!-- DASHBOARD HEADER -->
 <div class="dashboard-header">
   <div class="header-text">
-    <h1 class="dashboard-title">Bienvenue</h1>
+    <h1 class="dashboard-title"><%= t("dashboard.welcome") %></h1>
   </div>
 </div>
 
 <!-- HERO CARDS -->
 <div class="hero-cards">
 
-  <!-- Carte Profil -->
-  <a href="<%= basePath %>/profil" class="hero-card hero-card-profil">
-    <div class="hero-card-content">
-      <div class="hero-card-icon-wrap">
-        <% if (user.thumb) { %>
-          <div class="hero-avatar-ring" id="heroAvatarRing">
-            <div class="rank-ring" id="heroRankRing"></div>
-            <img src="<%= user.thumb %>" class="hero-avatar" id="heroAvatar" alt="<%= user.username %>" />
-          </div>
-        <% } else { %>
-          <div class="hero-avatar-placeholder">👤</div>
-        <% } %>
-      </div>
-      <div class="hero-card-info">
-        <p class="hero-card-label">Mon Profil</p>
-        <h2 class="hero-card-title"><%= user.username %></h2>
-        <p class="hero-card-desc">Statistiques · Badges · Historique</p>
-      </div>
-      <div class="hero-card-arrow">→</div>
-    </div>
-  </a>
-
-  <!-- Carte Classement -->
-  <a href="<%= basePath %>/classement" class="hero-card hero-card-classement">
-    <div class="hero-card-content">
-      <div class="hero-card-icon-wrap">
-        <div class="hero-icon hero-icon--classement">🏆</div>
-      </div>
-      <div class="hero-card-info">
-        <p class="hero-card-label">Communauté</p>
-        <h2 class="hero-card-title">Classement</h2>
-        <p class="hero-card-desc">Membres · Niveaux · Heures</p>
-      </div>
-      <div class="hero-card-arrow">→</div>
-    </div>
-  </a>
-
-  <!-- Carte Mes Statistiques -->
-  <a href="<%= basePath %>/mes-stats" class="hero-card hero-card-stats">
-    <div class="hero-card-content">
-      <div class="hero-card-icon-wrap">
-        <div class="hero-icon hero-icon--stats">📊</div>
-      </div>
-      <div class="hero-card-info">
-        <p class="hero-card-label">Visionnage</p>
-        <h2 class="hero-card-title">Statistiques</h2>
-        <p class="hero-card-desc">Genres · Top contenus · Activité</p>
-      </div>
-      <div class="hero-card-arrow">→</div>
-    </div>
-  </a>
-
-  <!-- Carte Demandes de Contenu -->
-  <a href="<%= basePath %>/seerr" class="hero-card hero-card-demandes">
-    <div class="hero-card-content">
-      <div class="hero-card-icon-wrap">
-        <div class="hero-icon hero-icon--seerr">
-          <img src="<%= basePath %>/img/seerr-icon.png" alt="Seerr" class="hero-icon-logo">
+  <% (dashboardBuiltinCards || []).forEach(function(card) { %>
+    <a href="<%= card.href %>" class="hero-card <%= card.className %>">
+      <div class="hero-card-content">
+        <div class="hero-card-icon-wrap">
+          <% if (card.kind === "profile") { %>
+            <% if (user.thumb) { %>
+              <div class="hero-avatar-ring" id="heroAvatarRing">
+                <div class="rank-ring" id="heroRankRing"></div>
+                <img src="<%= user.thumb %>" class="hero-avatar" id="heroAvatar" alt="<%= user.username %>" />
+              </div>
+            <% } else { %>
+              <div class="hero-avatar-placeholder">👤</div>
+            <% } %>
+          <% } else if (card.kind === "image") { %>
+            <div class="hero-icon <%= card.iconClass %>">
+              <img src="<%= card.iconSrc %>" alt="<%= card.iconAlt %>" class="hero-icon-logo">
+            </div>
+          <% } else { %>
+            <div class="hero-icon <%= card.iconClass %>"><%= card.icon %></div>
+          <% } %>
         </div>
+        <div class="hero-card-info">
+          <p class="hero-card-label"><%= card.label %></p>
+          <h2 class="hero-card-title"><%= card.title %></h2>
+          <p class="hero-card-desc"><%= card.description %></p>
+        </div>
+        <div class="hero-card-arrow">→</div>
       </div>
-      <div class="hero-card-info">
-        <p class="hero-card-label">Demandes de Contenu</p>
-        <h2 class="hero-card-title">Seerr</h2>
-        <p class="hero-card-desc">Demander films &amp; séries</p>
-      </div>
-      <div class="hero-card-arrow">→</div>
-    </div>
-  </a>
-
-  <!-- Carte Calendrier -->
-  <a href="<%= basePath %>/calendrier" class="hero-card hero-card-calendrier">
-    <div class="hero-card-content">
-      <div class="hero-card-icon-wrap">
-        <div class="hero-icon hero-icon--calendrier">📅</div>
-      </div>
-      <div class="hero-card-info">
-        <p class="hero-card-label">Sorties à Venir</p>
-        <h2 class="hero-card-title">Calendrier</h2>
-        <p class="hero-card-desc">Films · Séries · Disponibilité</p>
-      </div>
-      <div class="hero-card-arrow">→</div>
-    </div>
-  </a>
+    </a>
+  <% }) %>
 
   <% (dashboardCustomCards || []).forEach(function(card) { %>
     <a
@@ -136,45 +83,57 @@
 
 </div>
 
-<!-- SERVER STATS BAR -->
-<div class="server-stats-bar" id="serverStatsBar">
-  <div class="ssb-item" id="ssb-movies">
-    <span class="ssb-icon">🎬</span>
-    <span class="ssb-num skel" id="ssb-movies-num"></span>
-    <span class="ssb-label">Films</span>
-    <span class="ssb-sub"></span>
+<% if (dashboardCustomHtml) { %>
+  <div class="dashboard-custom-html">
+    <%- dashboardCustomHtml %>
   </div>
-  <div class="ssb-divider"></div>
-  <div class="ssb-item" id="ssb-shows">
-    <span class="ssb-icon">📺</span>
-    <span class="ssb-num skel" id="ssb-shows-num"></span>
-    <span class="ssb-label">Séries</span>
-    <span class="ssb-sub" id="ssb-episodes"></span>
-  </div>
-  <div class="ssb-divider"></div>
-  <div class="ssb-item" id="ssb-music">
-    <span class="ssb-icon">🎵</span>
-    <span class="ssb-num skel" id="ssb-music-num"></span>
-    <span class="ssb-label">Musiques</span>
-    <span class="ssb-sub"></span>
-  </div>
-  <div class="ssb-divider" id="ssb-div-audio"></div>
-  <div class="ssb-item" id="ssb-audio">
-    <span class="ssb-icon">🎧</span>
-    <span class="ssb-num skel" id="ssb-audio-num"></span>
-    <span class="ssb-label">Livres<br>audio</span>
-    <span class="ssb-sub"></span>
-  </div>
+<% } %>
+
+<% if (dashboardServerStatsEnabled) { %>
+  <!-- SERVER STATS BAR -->
+  <div class="server-stats-bar" id="serverStatsBar">
+    <div class="ssb-item" id="ssb-movies">
+      <span class="ssb-icon">🎬</span>
+      <span class="ssb-num skel" id="ssb-movies-num"></span>
+      <span class="ssb-label"><%= t("dashboard.serverStats.movies") %></span>
+      <span class="ssb-sub"></span>
+    </div>
+    <div class="ssb-divider"></div>
+    <div class="ssb-item" id="ssb-shows">
+      <span class="ssb-icon">📺</span>
+      <span class="ssb-num skel" id="ssb-shows-num"></span>
+      <span class="ssb-label"><%= t("dashboard.serverStats.shows") %></span>
+      <span class="ssb-sub" id="ssb-episodes"></span>
+    </div>
+    <div class="ssb-divider"></div>
+    <div class="ssb-item" id="ssb-music">
+      <span class="ssb-icon">🎵</span>
+      <span class="ssb-num skel" id="ssb-music-num"></span>
+      <span class="ssb-label"><%= t("dashboard.serverStats.music") %></span>
+      <span class="ssb-sub"></span>
+    </div>
+    <div class="ssb-divider" id="ssb-div-audio"></div>
+    <div class="ssb-item" id="ssb-audio">
+      <span class="ssb-icon">🎧</span>
+      <span class="ssb-num skel" id="ssb-audio-num"></span>
+      <span class="ssb-label"><%- t("dashboard.serverStats.audio").replace(" ", "<br>") %></span>
+      <span class="ssb-sub"></span>
+    </div>
 </div>
+<% } %>
 
 <script src="<%= basePath %>/js/dashboard.js"></script>
+<script>
+  window.DASHBOARD_SERVER_STATS_ENABLED = <%= dashboardServerStatsEnabled ? "true" : "false" %>;
+</script>
+<% if (dashboardServerStatsEnabled) { %>
 <script>
 (function () {
   const bp      = '<%= basePath %>';
   const userId  = document.body.getAttribute('data-user-id') || 'guest';
   const SSB_KEY = 'ssb_snap:' + userId;
   const SSB_TTL = 10 * 60 * 1000; // 10 min (aligné avec le cache serveur)
-  const fmt     = n => n.toLocaleString('fr-FR');
+  const fmt     = n => n.toLocaleString('<%= locale === "en" ? "en-US" : "fr-FR" %>');
 
   function applyStats(d) {
     if (!d.available) return;
@@ -189,7 +148,7 @@
     set('ssb-shows-num',  fmt(d.shows));
     set('ssb-music-num',  fmt(d.musicTracks));
     set('ssb-audio-num',  fmt(d.audiobookCount));
-    if (d.episodes > 0) set('ssb-episodes', fmt(d.episodes) + ' épisodes');
+    if (d.episodes > 0) set('ssb-episodes', '<%= t("dashboard.serverStats.episodes", { count: "__COUNT__" }) %>'.replace('__COUNT__', fmt(d.episodes)));
     if (d.audiobookCount === 0) {
       const div  = document.getElementById('ssb-div-audio');
       const item = document.getElementById('ssb-audio');
@@ -219,6 +178,7 @@
     .catch(() => {});
 })();
 </script>
+<% } %>
 
 <script>
 // ─── XP Rank Ring (même logique que la page profil) ───────────────────
@@ -283,8 +243,7 @@
   const endpoints = [
     '/api/subscription',
     '/api/seerr',
-    '/api/xp-snapshot',
-    '/api/stats'
+    '/api/xp-snapshot'
   ];
 
   function prefetchOne(path, timeoutMs) {
@@ -329,11 +288,11 @@
 <div class="changelog-modal" id="changelogModal">
   <div class="changelog-modal-content">
     <div class="changelog-header">
-      <h2>Changelog - v<span id="changelogVersion">--</span></h2>
+      <h2><%= t("dashboard.html.footer.title") %><span id="changelogVersion">--</span></h2>
       <button class="changelog-close" id="changelogClose">✕</button>
     </div>
     <div class="changelog-body" id="changelogBody">
-      <p style="text-align: center; color: #888;">Chargement du changelog...</p>
+      <p style="text-align: center; color: #888;" data-loading="1"><%= t("dashboard.html.footer.loading") %></p>
     </div>
   </div>
 </div>
@@ -371,13 +330,13 @@
                                   markdown.replace(/</g, '&lt;').replace(/>/g, '&gt;') +
                                   '</pre>';
       } catch (err) {
-        changelogBody.innerHTML = '<p style="color: #e74c3c;">Impossible de charger le changelog.</p>';
+        changelogBody.innerHTML = '<p style="color: #e74c3c;"><%= t("dashboard.html.footer.error") %></p>';
       }
     }
 
     // Open modal on footer click
     versionFooter.addEventListener('click', () => {
-      if (!changelogBody.textContent.includes('Chargement')) {
+      if (!changelogBody.querySelector('[data-loading="1"]')) {
         // Already loaded, just show
         changelogModal.classList.add('active');
       } else {
