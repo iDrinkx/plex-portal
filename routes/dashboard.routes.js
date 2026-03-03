@@ -872,9 +872,10 @@ router.get("/dashboard", requireAuth, (req, res) => {
         ...card,
         color,
         openInIframe: !!card.openInIframe,
+        openInNewTab: !!card.openInNewTab,
         integrationKey: card.integrationKey || "custom",
         href: toCardHref(card, req.basePath || ""),
-        external: String(card.integrationKey || "custom") === "romm_auto"
+        external: String(card.integrationKey || "custom") === "romm_auto" || !!card.openInNewTab
       };
     })
     .filter(Boolean);
@@ -1052,6 +1053,7 @@ router.get("/parametres", requireAuth, requireAdmin, (req, res) => {
   const customCardsResolved = customCards.map(card => ({
     ...card,
     openInIframe: !!card.openInIframe,
+    openInNewTab: !!card.openInNewTab,
     integrationKey: card.integrationKey || "custom",
     colorName: colorMap.get(card.colorKey)?.name || card.colorKey
   }));
@@ -1673,6 +1675,7 @@ router.post("/api/admin/dashboard-cards", requireAuth, requireAdmin, (req, res) 
   const url = String(payload.url || "").trim();
   const colorKey = String(payload.colorKey || "").trim();
   const openInIframe = !!payload.openInIframe;
+  const openInNewTab = !!payload.openInNewTab;
   const integrationKey = String(payload.integrationKey || "custom").trim();
   const icon = String(payload.icon || "?").trim();
 
@@ -1702,7 +1705,7 @@ router.post("/api/admin/dashboard-cards", requireAuth, requireAdmin, (req, res) 
     return res.status(400).json({ error: "Couleur non disponible" });
   }
 
-  DashboardCardQueries.create({ label, title, description, url, colorKey, openInIframe, integrationKey, icon });
+  DashboardCardQueries.create({ label, title, description, url, colorKey, openInIframe, openInNewTab, integrationKey, icon });
   log.create("[Admin]").info(`Carte dashboard ajoutée par ${req.session.user.username}: ${title} (${colorKey})`);
   res.json({ success: true });
 });
@@ -1720,6 +1723,7 @@ router.put("/api/admin/dashboard-cards/:id", requireAuth, requireAdmin, (req, re
   const url = String(payload.url || "").trim();
   const colorKey = String(payload.colorKey || "").trim();
   const openInIframe = !!payload.openInIframe;
+  const openInNewTab = !!payload.openInNewTab;
   const integrationKey = String(payload.integrationKey || "custom").trim();
   const icon = String(payload.icon || "?").trim();
 
@@ -1759,7 +1763,7 @@ router.put("/api/admin/dashboard-cards/:id", requireAuth, requireAdmin, (req, re
     }
   }
 
-  DashboardCardQueries.update(id, { label, title, description, url, colorKey, openInIframe, integrationKey, icon });
+  DashboardCardQueries.update(id, { label, title, description, url, colorKey, openInIframe, openInNewTab, integrationKey, icon });
   log.create("[Admin]").info(`Carte dashboard modifiée par ${req.session.user.username}: id=${id}`);
   res.json({ success: true });
 });

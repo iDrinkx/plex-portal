@@ -8,11 +8,36 @@
     <% if (typeof error !== 'undefined' && error === 'unauthorized') { %>
     <div class="login-error"><%= t("login.unauthorized", { serverName: plexServerName }) %></div>
     <% } %>
-    <a class="plex-btn" href="<%= basePath %>/login"><%= t("login.withPlex") %></a>
+    <a class="plex-btn plex-btn--logo" href="<%= basePath %>/login" aria-label="<%= t('login.withPlex') %>">
+      <img src="<%= basePath %>/img/plex-alt-light.svg" alt="Plex" class="plex-btn-logo" />
+      <span class="sr-only"><%= t("login.withPlex") %></span>
+    </a>
   </div>
 </div>
 
 <style>
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .plex-btn--logo {
+    min-width: 240px;
+  }
+
+  .plex-btn-logo {
+    width: 110px;
+    height: auto;
+    display: block;
+  }
+
   .login-error {
     background: rgba(239, 68, 68, 0.12);
     border: 1px solid rgba(239, 68, 68, 0.4);

@@ -1010,6 +1010,12 @@
               <%= t("settings.dashboardCustom.iframe") %>
             </label>
           </div>
+          <div class="settings-field settings-field--full">
+            <label style="display:flex;align-items:center;gap:8px;">
+              <input id="cardOpenInNewTab" name="openInNewTab" type="checkbox">
+              Ouvrir dans un nouvel onglet
+            </label>
+          </div>
         </form>
         <div class="settings-actions">
           <button class="settings-btn" id="cancelDashboardCardEditBtn" type="button" style="display:none;"><%= t("settings.dashboardCustom.cancel") %></button>
@@ -1037,6 +1043,7 @@
                   data-edit-color-key="<%= card.colorKey %>"
                   data-edit-integration-key="<%= card.integrationKey || 'custom' %>"
                   data-edit-open-in-iframe="<%= card.openInIframe ? '1' : '0' %>"
+                  data-edit-open-in-new-tab="<%= card.openInNewTab ? '1' : '0' %>"
                   data-edit-icon="<%= card.icon || '✨' %>"
                   type="button"
                 >Modifier</button>
@@ -1224,6 +1231,7 @@
     const cardUrlField = document.getElementById("cardUrlField");
     const cardIntegrationKeyInput = document.getElementById("cardIntegrationKey");
     const cardOpenInIframeInput = document.getElementById("cardOpenInIframe");
+    const cardOpenInNewTabInput = document.getElementById("cardOpenInNewTab");
     const configForm = document.getElementById("configForm");
     const saveConfigBtn = document.getElementById("saveConfigBtn");
     const configState = document.getElementById("configState");
@@ -1450,6 +1458,7 @@
       editingCardId = null;
       addBtn.textContent = "<%= t('settings.dashboardCustom.add') %>";
       cancelEditBtn.style.display = "none";
+      if (cardOpenInNewTabInput) cardOpenInNewTabInput.checked = false;
       applyIntegrationUi(cardIntegrationKeyInput.value || "custom");
       updateActionAvailability();
     }
@@ -1465,6 +1474,7 @@
       cardIconInput.value = card.icon || "✨";
       cardIntegrationKeyInput.value = card.integrationKey || "custom";
       cardOpenInIframeInput.checked = !!card.openInIframe;
+      if (cardOpenInNewTabInput) cardOpenInNewTabInput.checked = !!card.openInNewTab;
       if (!Array.from(colorSelect.options).some(opt => opt.value === (card.colorKey || ""))) {
         const opt = document.createElement("option");
         opt.value = card.colorKey || "";
@@ -1532,6 +1542,7 @@
               data-edit-color-key="${escHtml(card.colorKey)}"
               data-edit-integration-key="${escHtml(card.integrationKey || "custom")}"
               data-edit-open-in-iframe="${card.openInIframe ? "1" : "0"}"
+              data-edit-open-in-new-tab="${card.openInNewTab ? "1" : "0"}"
               data-edit-icon="${escHtml(card.icon || "✨")}"
               type="button"
             >Modifier</button>
@@ -1921,6 +1932,7 @@
         colorKey: colorSelect.value,
         integrationKey: cardIntegrationKeyInput.value || "custom",
         openInIframe: !!cardOpenInIframeInput.checked,
+        openInNewTab: !!(cardOpenInNewTabInput && cardOpenInNewTabInput.checked),
         icon: cardIconInput.value.trim() || "✨"
       };
 
@@ -2026,6 +2038,7 @@
           colorKey: editBtn.getAttribute("data-edit-color-key"),
           integrationKey: editBtn.getAttribute("data-edit-integration-key") || "custom",
           openInIframe: editBtn.getAttribute("data-edit-open-in-iframe") === "1",
+          openInNewTab: editBtn.getAttribute("data-edit-open-in-new-tab") === "1",
           icon: editBtn.getAttribute("data-edit-icon")
         });
         dashCardState.textContent = "Edition de la carte en cours.";

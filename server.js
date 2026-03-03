@@ -213,6 +213,7 @@ app.use(async (req, res, next) => {
 
       res.locals.customNavCards = cards.map(card => {
         const openInIframe = !!card.openInIframe;
+        const openInNewTab = !!card.openInNewTab;
         const integrationKey = String(card.integrationKey || "custom");
         const rawUrl = String(card.url || "");
         const navColors = navColorMap[card.colorKey] || { base: "rgba(226, 246, 255, 0.9)", hover: "#e8f6ff", accent: "#62b2ff" };
@@ -228,7 +229,7 @@ app.use(async (req, res, next) => {
           icon: card.icon || "✨",
           integrationKey,
           href,
-          external: integrationKey === "romm_auto" || (integrationKey === "custom" && !openInIframe && /^https?:\/\//i.test(rawUrl)),
+          external: integrationKey === "romm_auto" || openInNewTab || (integrationKey === "custom" && !openInIframe && /^https?:\/\//i.test(rawUrl)),
           navColorBase: navColors.base,
           navColorHover: navColors.hover,
           navColorAccent: navColors.accent

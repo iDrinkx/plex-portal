@@ -61,6 +61,7 @@ function runMigrations() {
     attemptAddColumn('tautulli_sessions', 'session_hash', 'TEXT');
     attemptAddColumn('dashboard_custom_cards', 'open_in_iframe', 'INTEGER NOT NULL DEFAULT 1');
     attemptAddColumn('dashboard_custom_cards', 'integration_key', "TEXT NOT NULL DEFAULT 'custom'");
+    attemptAddColumn('dashboard_custom_cards', 'open_in_new_tab', 'INTEGER NOT NULL DEFAULT 0');
     
     // Table: users
     db.exec(`
@@ -220,6 +221,7 @@ function runMigrations() {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `);  // dashboard_custom_cards
+    attemptAddColumn('dashboard_custom_cards', 'open_in_new_tab', 'INTEGER NOT NULL DEFAULT 0');
 
     // Table: user_service_credentials - Credentials chiffrés par utilisateur/service
     db.exec(`
@@ -751,6 +753,7 @@ const DashboardCardQueries = {
         color_key as colorKey,
         open_in_iframe as openInIframe,
         integration_key as integrationKey,
+        open_in_new_tab as openInNewTab,
         icon,
         created_at as createdAt
       FROM dashboard_custom_cards
@@ -788,6 +791,7 @@ const DashboardCardQueries = {
         color_key as colorKey,
         open_in_iframe as openInIframe,
         integration_key as integrationKey,
+        open_in_new_tab as openInNewTab,
         icon,
         created_at as createdAt
       FROM dashboard_custom_cards
@@ -795,11 +799,11 @@ const DashboardCardQueries = {
     `).get(id);
   },
 
-  create({ label, title, description, url, colorKey, openInIframe, integrationKey, icon }) {
+  create({ label, title, description, url, colorKey, openInIframe, openInNewTab, integrationKey, icon }) {
     const db = getDb();
     const stmt = db.prepare(`
-      INSERT INTO dashboard_custom_cards (label, title, description, url, color_key, open_in_iframe, integration_key, icon)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO dashboard_custom_cards (label, title, description, url, color_key, open_in_iframe, integration_key, open_in_new_tab, icon)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     const result = stmt.run(
       String(label || "").trim(),
@@ -809,12 +813,13 @@ const DashboardCardQueries = {
       String(colorKey || "").trim(),
       openInIframe ? 1 : 0,
       String(integrationKey || "custom").trim(),
+      openInNewTab ? 1 : 0,
       String(icon || "✨").trim()
     );
     return result.lastInsertRowid;
   },
 
-  update(id, { label, title, description, url, colorKey, openInIframe, integrationKey, icon }) {
+  update(id, { label, title, description, url, colorKey, openInIframe, openInNewTab, integrationKey, icon }) {
     const db = getDb();
     return db.prepare(`
       UPDATE dashboard_custom_cards
@@ -826,7 +831,8 @@ const DashboardCardQueries = {
         color_key = ?,
         open_in_iframe = ?,
         integration_key = ?,
-        icon = ?
+        icon = ?,
+        open_in_new_tab = ?
       WHERE id = ?
     `).run(
       String(label || "").trim(),
@@ -837,6 +843,7 @@ const DashboardCardQueries = {
       openInIframe ? 1 : 0,
       String(integrationKey || "custom").trim(),
       String(icon || "✨").trim(),
+      openInNewTab ? 1 : 0,
       id
     );
   },
