@@ -486,6 +486,28 @@ body.site-bg-mode-custom .site-bg-image {
   transform: translateY(0);
 }
 
+.logout-btn,
+.logout-mobile {
+  color: #f4f1ec;
+  background: #533f2b;
+  border: 1px solid #a66822;
+  box-shadow: none;
+  font-weight: 700;
+}
+
+.logout-btn::before,
+.logout-mobile::before {
+  display: none;
+}
+
+.logout-btn:hover,
+.logout-mobile:hover {
+  background: #a66822;
+  border-color: #a66822;
+  box-shadow: none;
+  filter: none;
+}
+
 /* =========================
    CONTENT
 ========================= */
