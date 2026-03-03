@@ -346,12 +346,13 @@
     padding: 9px 10px;
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
     gap: 10px;
   }
 
   .dash-card-meta {
     min-width: 0;
+    flex: 1 1 auto;
   }
 
   .dash-card-main {
@@ -366,9 +367,9 @@
   .dash-card-sub {
     color: #9fb0cd;
     font-size: 12px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
   }
 
   .dash-card-delete {
@@ -385,6 +386,9 @@
 
   .dash-card-actions {
     display: flex;
+    align-items: flex-start;
+    justify-content: flex-end;
+    flex-wrap: wrap;
     gap: 6px;
     flex-shrink: 0;
   }
@@ -1506,14 +1510,18 @@
       canCreate = (data.availableColors || []).length > 0;
       updateActionAvailability();
 
-      dashCardsList.innerHTML = (data.cards || []).map(card => {
+      dashCardsList.innerHTML = (data.cards || []).map((card, index) => {
         const colorName = colorsByKey[card.colorKey] || card.colorKey;
+        const isFirst = index === 0;
+        const isLast = index === (data.cards || []).length - 1;
         return `<div class="dash-card-row" data-card-id="${card.id}">
           <div class="dash-card-meta">
             <div class="dash-card-main">${escHtml(card.icon || "✨")} ${escHtml(card.title)} · ${escHtml(colorName)}</div>
             <div class="dash-card-sub">${escHtml(card.label)} · ${escHtml(card.description)}${(card.integrationKey || "custom") === "custom" && card.url ? " · " + escHtml(card.url) : ""}</div>
           </div>
           <div class="dash-card-actions">
+            <button class="builtin-card-order-btn" data-custom-move="up" type="button" ${isFirst ? "disabled" : ""}><%= t("settings.dashboardBuiltins.up") %></button>
+            <button class="builtin-card-order-btn" data-custom-move="down" type="button" ${isLast ? "disabled" : ""}><%= t("settings.dashboardBuiltins.down") %></button>
             <button
               class="dash-card-edit"
               data-edit-card-id="${card.id}"
@@ -1968,6 +1976,45 @@
     });
 
     dashCardsList.addEventListener("click", async function (e) {
+      const moveBtn = e.target.closest("[data-custom-move]");
+      if (moveBtn && !cardBusy) {
+        const row = moveBtn.closest("[data-card-id]");
+        if (!row) return;
+
+        const rows = Array.from(dashCardsList.querySelectorAll("[data-card-id]"));
+        const ids = rows.map(function (item) {
+          return Number(item.getAttribute("data-card-id"));
+        });
+        const id = Number(row.getAttribute("data-card-id"));
+        const currentIndex = ids.indexOf(id);
+        if (currentIndex === -1) return;
+
+        const targetIndex = moveBtn.getAttribute("data-custom-move") === "up" ? currentIndex - 1 : currentIndex + 1;
+        if (targetIndex < 0 || targetIndex >= ids.length) return;
+
+        const moved = ids[currentIndex];
+        ids.splice(currentIndex, 1);
+        ids.splice(targetIndex, 0, moved);
+
+        cardBusy = true;
+        try {
+          const resp = await fetch(bp + "/api/admin/dashboard-cards/order", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ids })
+          });
+          const data = await resp.json();
+          if (!resp.ok) throw new Error(data.error || ("HTTP " + resp.status));
+          dashCardState.textContent = "Ordre des cartes mis a jour.";
+          await refreshCardData();
+        } catch (err) {
+          dashCardState.textContent = err.message || "Impossible de reordonner les cartes.";
+        } finally {
+          cardBusy = false;
+        }
+        return;
+      }
+
       const editBtn = e.target.closest("[data-edit-card-id]");
       if (editBtn && !cardBusy) {
         setFormModeEdit({

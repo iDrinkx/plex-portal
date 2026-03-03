@@ -745,7 +745,7 @@ const AppSettingQueries = {
 const DashboardCardQueries = {
   list() {
     const db = getDb();
-    return db.prepare(`
+    const cards = db.prepare(`
       SELECT
         id, label, title, description, url,
         color_key as colorKey,
@@ -756,6 +756,28 @@ const DashboardCardQueries = {
       FROM dashboard_custom_cards
       ORDER BY id ASC
     `).all();
+
+    let orderedIds = [];
+    try {
+      orderedIds = JSON.parse(AppSettingQueries.get("dashboard_custom_card_order", "[]") || "[]");
+    } catch (_) {
+      orderedIds = [];
+    }
+
+    const rankById = new Map();
+    orderedIds.forEach((id, index) => {
+      const num = Number(id);
+      if (Number.isInteger(num) && num > 0) {
+        rankById.set(num, index);
+      }
+    });
+
+    return cards.sort((a, b) => {
+      const aRank = rankById.has(Number(a.id)) ? rankById.get(Number(a.id)) : Number.MAX_SAFE_INTEGER;
+      const bRank = rankById.has(Number(b.id)) ? rankById.get(Number(b.id)) : Number.MAX_SAFE_INTEGER;
+      if (aRank !== bRank) return aRank - bRank;
+      return Number(a.id) - Number(b.id);
+    });
   },
 
   getById(id) {
@@ -821,7 +843,26 @@ const DashboardCardQueries = {
 
   remove(id) {
     const db = getDb();
-    return db.prepare(`DELETE FROM dashboard_custom_cards WHERE id = ?`).run(id);
+    const result = db.prepare(`DELETE FROM dashboard_custom_cards WHERE id = ?`).run(id);
+    try {
+      const raw = AppSettingQueries.get("dashboard_custom_card_order", "[]") || "[]";
+      const ids = JSON.parse(raw);
+      if (Array.isArray(ids)) {
+        AppSettingQueries.set(
+          "dashboard_custom_card_order",
+          JSON.stringify(ids.filter(entry => Number(entry) !== Number(id)))
+        );
+      }
+    } catch (_) {}
+    return result;
+  },
+
+  saveOrder(ids = []) {
+    const normalized = ids
+      .map(id => Number(id))
+      .filter(id => Number.isInteger(id) && id > 0);
+    AppSettingQueries.set("dashboard_custom_card_order", JSON.stringify(normalized));
+    return normalized;
   }
 };
 

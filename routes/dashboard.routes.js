@@ -1764,6 +1764,24 @@ router.put("/api/admin/dashboard-cards/:id", requireAuth, requireAdmin, (req, re
   res.json({ success: true });
 });
 
+router.post("/api/admin/dashboard-cards/order", requireAuth, requireAdmin, (req, res) => {
+  const ids = Array.isArray(req.body?.ids) ? req.body.ids : [];
+  const cards = DashboardCardQueries.list();
+  const existingIds = new Set(cards.map(card => Number(card.id)));
+  const orderedIds = ids
+    .map(id => Number(id))
+    .filter(id => Number.isInteger(id) && existingIds.has(id));
+
+  cards.forEach(card => {
+    const id = Number(card.id);
+    if (!orderedIds.includes(id)) orderedIds.push(id);
+  });
+
+  DashboardCardQueries.saveOrder(orderedIds);
+  log.create("[Admin]").info(`Ordre des cartes custom mis a jour par ${req.session.user.username}`);
+  res.json({ success: true, ids: orderedIds });
+});
+
 router.get("/app-card/:id", requireAuth, async (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (!Number.isInteger(id) || id <= 0) {
