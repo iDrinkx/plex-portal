@@ -1,6 +1,7 @@
 ﻿const express = require("express");
 const session = require("express-session");
 const expressLayouts = require("express-ejs-layouts");
+const fetch = require("node-fetch");
 const path = require("path");
 
 const authRoutes = require("./routes/auth.routes");
@@ -16,6 +17,38 @@ const { initTautulliDatabase, getAllUserStatsFromTautulli } = require("./utils/t
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+let cachedPlexServerName = undefined;
+
+async function getPlexServerName() {
+  if (cachedPlexServerName !== undefined) return cachedPlexServerName;
+
+  const plexUrl = (process.env.PLEX_URL || "").replace(/\/$/, "");
+  const plexToken = process.env.PLEX_TOKEN || "";
+  if (!plexUrl || !plexToken) {
+    cachedPlexServerName = null;
+    return null;
+  }
+
+  try {
+    const response = await fetch(`${plexUrl}/identity`, {
+      headers: {
+        "X-Plex-Token": plexToken,
+        "Accept": "application/json"
+      }
+    });
+    if (!response.ok) {
+      cachedPlexServerName = null;
+      return null;
+    }
+
+    const data = await response.json();
+    cachedPlexServerName = String(data?.MediaContainer?.friendlyName || "").trim() || null;
+    return cachedPlexServerName;
+  } catch (_) {
+    cachedPlexServerName = null;
+    return null;
+  }
+}
 
 // Indispensable derrière un reverse proxy (NPM, Traefik, etc.)
 // Permet à Express de faire confiance aux headers X-Forwarded-Proto/Host
@@ -79,10 +112,11 @@ app.use(express.static("/config"));
    GLOBAL USER (IMPORTANT)
 ========================= */
 
-app.use((req, res, next) => {
+app.use(async (req, res, next) => {
   res.locals.user = req.session.user || null;
   res.locals.basePath = req.basePath || "";
   res.locals.customNavCards = [];
+  res.locals.plexServerName = await getPlexServerName() || "votre serveur Plex";
 
   if (req.session.user) {
     try {

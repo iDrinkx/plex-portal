@@ -7,7 +7,7 @@
     <h1>Connexion</h1>
     <% if (typeof error !== 'undefined' && error === 'unauthorized') { %>
     <div class="login-error">
-      ⛔ Votre compte Plex n'a pas accès au serveur Dark TV.
+      ⛔ Votre compte Plex n'a pas accès au serveur <%= plexServerName %>.
     </div>
     <% } %>
     <a class="plex-btn" href="<%= basePath %>/login">Se connecter avec Plex</a>

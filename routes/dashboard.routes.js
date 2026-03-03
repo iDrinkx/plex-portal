@@ -11,7 +11,7 @@ const { getSeerrStats } = require("../utils/seerr");
 const { getPlexJoinDate, getServerOwnerId } = require("../utils/plex");
 const { getRadarrCalendar, getSonarrCalendar } = require("../utils/radarr-sonarr");
 const { XP_SYSTEM } = require("../utils/xp-system");
-const { ACHIEVEMENTS } = require("../utils/achievements");
+const { ACHIEVEMENTS, hydrateAchievementTexts } = require("../utils/achievements");
 const {
   UserAchievementQueries,
   UserQueries,
@@ -862,7 +862,7 @@ router.get("/succes", requireAuth, async (req, res) => {
     // Construire les cards depuis l'état DB courant
     for (const category in achievementsByCategory) {
       achievementsByCategory[category].achievements = achievementsByCategory[category].achievements.map(a => ({
-        ...a,
+        ...hydrateAchievementTexts(a, res.locals.plexServerName),
         unlocked:     !!userUnlockedMap[a.id],
         unlockedDate: userUnlockedMap[a.id] || null
       }));

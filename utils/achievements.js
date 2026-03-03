@@ -8,7 +8,7 @@ const ACHIEVEMENTS = {
       icon: "🎂",
       description: "Un an déjà ! Merci de la fidélité",
       condition: (data) => data.daysSince >= 365,
-      conditionText: "1 an d'ancienneté sur Dark TV",
+      conditionText: "1 an d'ancienneté sur {{SERVER_NAME}}",
       getProgress: (data) => ({
         current: Math.min(data.daysSince, 365),
         total: 365,
@@ -22,9 +22,9 @@ const ACHIEVEMENTS = {
       id: "veteran",
       name: "Vétéran",
       icon: "🛡️",
-      description: "Plus de 2 ans d'ancienneté sur Dark TV",
+      description: "Plus de 2 ans d'ancienneté sur {{SERVER_NAME}}",
       condition: (data) => data.daysSince >= 730,
-      conditionText: "Plus de 2 ans d'ancienneté sur Dark TV",
+      conditionText: "Plus de 2 ans d'ancienneté sur {{SERVER_NAME}}",
       getProgress: (data) => ({
         current: Math.min(data.daysSince, 730),
         total: 730,
@@ -38,9 +38,9 @@ const ACHIEVEMENTS = {
       id: "old-timer",
       name: "Vieux de la Veille",
       icon: "👴",
-      description: "Plus de 5 ans d'ancienneté sur Dark TV",
+      description: "Plus de 5 ans d'ancienneté sur {{SERVER_NAME}}",
       condition: (data) => data.daysSince >= 1825,
-      conditionText: "Plus de 5 ans d'ancienneté sur Dark TV",
+      conditionText: "Plus de 5 ans d'ancienneté sur {{SERVER_NAME}}",
       getProgress: (data) => ({
         current: Math.min(data.daysSince, 1825),
         total: 1825,
@@ -58,7 +58,7 @@ const ACHIEVEMENTS = {
       id: "first-watch",
       name: "Premier Pas",
       icon: "🎬",
-      description: "Ton premier visionnage sur Dark TV",
+      description: "Ton premier visionnage sur {{SERVER_NAME}}",
       condition: (data) => data.sessionCount >= 1,
       conditionText: "Regardez votre premier visionnage",
       getProgress: (data) => ({
@@ -672,4 +672,15 @@ const ACHIEVEMENTS = {
   }
 };
 
-module.exports = { ACHIEVEMENTS };
+function replaceServerName(text, serverName) {
+  if (typeof text !== "string") return text;
+  return text.replace(/\{\{SERVER_NAME\}\}/g, serverName || "votre serveur Plex");
+}
+function hydrateAchievementTexts(achievement, serverName) {
+  return {
+    ...achievement,
+    description: replaceServerName(achievement.description, serverName),
+    conditionText: replaceServerName(achievement.conditionText, serverName)
+  };
+}
+module.exports = { ACHIEVEMENTS, hydrateAchievementTexts };
