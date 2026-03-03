@@ -6,6 +6,7 @@ const logAuth = log.create('[Auth]');
 
 const { isUserAuthorized, getAuthorizedServerUsers, getServerOwnerId, getServerMachineId } = require("../utils/plex");
 const { checkWizarrAccess } = require("../utils/wizarr");
+const { getConfigSections, getMissingRequiredConfigKeys, isSetupComplete, saveEditableConfig } = require("../utils/config");
 
 /**
  * Grab le cookie connect.sid de Seerr via le token Plex.
@@ -66,7 +67,43 @@ async function grabSeerrCookie(authToken, res) {
   }
 }
 
-router.get("/login", async (req, res) => {
+function ensureSetupComplete(req, res, next) {
+  if (isSetupComplete()) return next();
+  return res.redirect((req.basePath || "") + "/setup");
+}
+
+router.get("/setup", (req, res) => {
+  if (isSetupComplete()) {
+    return res.redirect((req.basePath || "") + "/");
+  }
+
+  res.render("setup", {
+    layout: false,
+    basePath: req.basePath || "",
+    configSections: getConfigSections(),
+    missingKeys: getMissingRequiredConfigKeys(),
+    error: req.query.error || null
+  });
+});
+
+router.post("/api/setup", (req, res) => {
+  if (isSetupComplete()) {
+    return res.status(403).json({ error: "Setup déjà terminé" });
+  }
+
+  saveEditableConfig(req.body || {}, { markSetupComplete: true });
+  const missingKeys = getMissingRequiredConfigKeys();
+  if (missingKeys.length > 0) {
+    return res.status(400).json({
+      error: "Configuration incomplète",
+      missingKeys
+    });
+  }
+
+  return res.json({ success: true, redirectTo: (req.basePath || "") + "/" });
+});
+
+router.get("/login", ensureSetupComplete, async (req, res) => {
   try {
     const ctrl = new AbortController();
     const timeout = setTimeout(() => ctrl.abort(), 8000);
@@ -94,7 +131,7 @@ router.get("/login", async (req, res) => {
   }
 });
 
-router.get("/auth-complete", async (req, res) => {
+router.get("/auth-complete", ensureSetupComplete, async (req, res) => {
 
   if (!req.session.pinId) return res.redirect(req.basePath + "/");
 

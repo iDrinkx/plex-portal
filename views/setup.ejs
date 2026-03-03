@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Configuration initiale</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg-1: #07111f;
+      --bg-2: #0d1b2f;
+      --panel: rgba(8, 16, 28, 0.84);
+      --panel-border: rgba(124, 178, 255, 0.2);
+      --text: #edf4ff;
+      --muted: #9ab0cc;
+      --accent: #79c0ff;
+      --accent-2: #38bdf8;
+      --danger: #fca5a5;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Segoe UI", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(56, 189, 248, 0.12), transparent 34%),
+        radial-gradient(circle at bottom right, rgba(59, 130, 246, 0.14), transparent 28%),
+        linear-gradient(160deg, var(--bg-1), var(--bg-2));
+      padding: 32px 18px;
+    }
+
+    .setup-shell {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: grid;
+      gap: 18px;
+    }
+
+    .setup-hero,
+    .setup-card {
+      background: var(--panel);
+      border: 1px solid var(--panel-border);
+      border-radius: 20px;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.32);
+    }
+
+    .setup-hero {
+      padding: 26px;
+    }
+
+    .setup-hero h1 {
+      margin: 0 0 8px;
+      font-size: 34px;
+    }
+
+    .setup-hero p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.55;
+      max-width: 760px;
+    }
+
+    .setup-card {
+      padding: 22px;
+    }
+
+    .setup-alert {
+      margin-top: 14px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      background: rgba(248, 113, 113, 0.12);
+      border: 1px solid rgba(248, 113, 113, 0.3);
+      color: var(--danger);
+    }
+
+    .setup-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+    }
+
+    .setup-section {
+      padding: 16px;
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .setup-section h2 {
+      margin: 0 0 12px;
+      font-size: 18px;
+    }
+
+    .setup-field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+
+    .setup-field:last-child {
+      margin-bottom: 0;
+    }
+
+    .setup-field label {
+      font-size: 13px;
+      color: #d8e6fb;
+    }
+
+    .setup-required {
+      color: #fbbf24;
+      font-size: 12px;
+      margin-left: 6px;
+    }
+
+    .setup-field input {
+      width: 100%;
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      border-radius: 12px;
+      background: rgba(2, 6, 23, 0.5);
+      color: var(--text);
+      padding: 11px 12px;
+      font-size: 14px;
+      outline: none;
+    }
+
+    .setup-field input:focus {
+      border-color: rgba(121, 192, 255, 0.75);
+      box-shadow: 0 0 0 3px rgba(121, 192, 255, 0.15);
+    }
+
+    .setup-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+      margin-top: 18px;
+    }
+
+    .setup-note {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .setup-btn {
+      border: none;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      color: #031120;
+      font-weight: 800;
+      font-size: 14px;
+      padding: 12px 18px;
+      cursor: pointer;
+    }
+
+    .setup-state {
+      margin-top: 14px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    @media (max-width: 720px) {
+      .setup-actions {
+        flex-direction: column;
+        align-items: stretch;
+      }
+    }
+  </style>
+</head>
+<body>
+  <section class="setup-shell">
+    <div class="setup-hero">
+      <h1>Configuration initiale</h1>
+      <p>Renseigne ici les connexions de ton portail. Les valeurs seront stockées en base et appliquées au runtime sans dépendre exclusivement du fichier <code>.env</code>.</p>
+      <% if (error) { %>
+        <div class="setup-alert"><%= error %></div>
+      <% } %>
+      <% if (missingKeys && missingKeys.length) { %>
+        <div class="setup-alert">Champs obligatoires manquants : <%= missingKeys.join(", ") %></div>
+      <% } %>
+    </div>
+
+    <div class="setup-card">
+      <form id="setupForm">
+        <div class="setup-grid">
+          <% (configSections || []).forEach(function(section) { %>
+            <div class="setup-section">
+              <h2><%= section.group %></h2>
+              <% (section.fields || []).forEach(function(field) { %>
+                <div class="setup-field">
+                  <label for="setup-<%= field.key %>">
+                    <%= field.label %>
+                    <% if (field.required) { %><span class="setup-required">requis</span><% } %>
+                  </label>
+                  <input
+                    id="setup-<%= field.key %>"
+                    name="<%= field.key %>"
+                    type="<%= field.secret ? 'password' : 'text' %>"
+                    value="<%= field.value || '' %>"
+                    autocomplete="off"
+                    spellcheck="false"
+                  >
+                </div>
+              <% }) %>
+            </div>
+          <% }) %>
+        </div>
+
+        <div class="setup-actions">
+          <div class="setup-note">Tu pourras ensuite modifier ces connexions dans les paramètres admin.</div>
+          <button class="setup-btn" type="submit">Enregistrer la configuration</button>
+        </div>
+        <div class="setup-state" id="setupState">Aucune configuration enregistrée.</div>
+      </form>
+    </div>
+  </section>
+
+  <script>
+    (function () {
+      const form = document.getElementById("setupForm");
+      const state = document.getElementById("setupState");
+      if (!form || !state) return;
+
+      form.addEventListener("submit", async function (event) {
+        event.preventDefault();
+        state.textContent = "Enregistrement en cours...";
+
+        const payload = {};
+        new FormData(form).forEach((value, key) => {
+          payload[key] = String(value || "").trim();
+        });
+
+        try {
+          const response = await fetch("<%= basePath %>/api/setup", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+          });
+          const data = await response.json();
+          if (!response.ok) {
+            throw new Error(data.error || ("HTTP " + response.status));
+          }
+
+          state.textContent = "Configuration enregistrée. Redirection...";
+          window.location.href = data.redirectTo || "<%= basePath %>/";
+        } catch (error) {
+          state.textContent = error.message || "Impossible d'enregistrer la configuration.";
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

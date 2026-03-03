@@ -13,18 +13,23 @@ const { startDatabaseMaintenanceJob } = require("./utils/cron-maintenance-job");
 const { startClassementRefreshJob } = require("./utils/cron-classement-refresh");  // 🏆 Classement refresh
 const { runHealthCheck } = require("./utils/health-check");  // 🏥 Health check au boot
 const { initDatabase, DashboardCardQueries } = require("./utils/database");  // 🗄️  Database initialization
+const { applyRuntimeConfig, isSetupComplete } = require("./utils/config");
 const { initTautulliDatabase, getAllUserStatsFromTautulli } = require("./utils/tautulli-direct");  // 📊 Tautulli direct DB
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 let cachedPlexServerName = undefined;
+let cachedPlexServerKey = null;
 
 async function getPlexServerName() {
-  if (cachedPlexServerName !== undefined) return cachedPlexServerName;
-
   const plexUrl = (process.env.PLEX_URL || "").replace(/\/$/, "");
   const plexToken = process.env.PLEX_TOKEN || "";
+  const cacheKey = `${plexUrl}::${plexToken}`;
+  if (cachedPlexServerKey === cacheKey && cachedPlexServerName !== undefined) {
+    return cachedPlexServerName;
+  }
   if (!plexUrl || !plexToken) {
+    cachedPlexServerKey = cacheKey;
     cachedPlexServerName = null;
     return null;
   }
@@ -37,17 +42,29 @@ async function getPlexServerName() {
       }
     });
     if (!response.ok) {
+      cachedPlexServerKey = cacheKey;
       cachedPlexServerName = null;
       return null;
     }
 
     const data = await response.json();
+    cachedPlexServerKey = cacheKey;
     cachedPlexServerName = String(data?.MediaContainer?.friendlyName || "").trim() || null;
     return cachedPlexServerName;
   } catch (_) {
+    cachedPlexServerKey = cacheKey;
     cachedPlexServerName = null;
     return null;
   }
+}
+
+try {
+  initDatabase();
+  applyRuntimeConfig();
+  console.log("[SETUP] ✅ Base de données SQLite initialisée");
+} catch (err) {
+  console.error("[SETUP] ❌ Erreur initialisation DB:", err.message);
+  process.exit(1);
 }
 
 // Indispensable derrière un reverse proxy (NPM, Traefik, etc.)
@@ -107,6 +124,15 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use(express.static(path.join(__dirname, "public")));
 app.use(express.static("/config"));
+
+app.use((req, res, next) => {
+  res.locals.setupComplete = isSetupComplete();
+
+  if (res.locals.setupComplete) return next();
+  if (req.path === "/setup" || req.path === "/api/setup") return next();
+
+  return res.redirect((req.basePath || "") + "/setup");
+});
 
 /* =========================
    GLOBAL USER (IMPORTANT)
@@ -179,6 +205,9 @@ app.use("/", authRoutes);
 app.use("/", dashboardRoutes);
 
 app.get("/", (req, res) => {
+  if (!isSetupComplete()) {
+    return res.redirect((req.basePath || "") + "/setup");
+  }
   if (req.session.user) {
     const redirectUrl = req.basePath ? `${req.basePath}/dashboard` : "/dashboard";
     return res.redirect(redirectUrl);
@@ -289,15 +318,6 @@ async function initializeAllUsersForCron() {
 // Démarrer le serveur et initialiser le cron job
 app.listen(PORT, async () => {
   console.log("\n🚀 Server running on port", PORT);
-  
-  // 🗄️  INITIALISER LA BASE DE DONNÉES LOCALE
-  try {
-    initDatabase();
-    console.log("[SETUP] ✅ Base de données SQLite initialisée");
-  } catch (err) {
-    console.error("[SETUP] ❌ Erreur initialisation DB:", err.message);
-    process.exit(1);
-  }
   
   // 📊 INITIALISER LA CONNEXION TAUTULLI DIRECTE
   const tautulliReady = initTautulliDatabase();

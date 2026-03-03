@@ -168,6 +168,38 @@
     gap: 14px;
   }
 
+  .settings-tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .settings-tab {
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.05);
+    color: #d6e4fb;
+    border-radius: 999px;
+    padding: 9px 14px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .settings-tab.active {
+    background: rgba(86, 186, 255, 0.18);
+    border-color: rgba(86, 186, 255, 0.45);
+    color: #f2f8ff;
+  }
+
+  .settings-panel {
+    display: none;
+  }
+
+  .settings-panel.active {
+    display: grid;
+    gap: 14px;
+  }
+
   .settings-card-title {
     margin: 0 0 4px;
     font-size: 16px;
@@ -315,6 +347,31 @@
     flex-shrink: 0;
   }
 
+  .config-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 12px;
+  }
+
+  .config-section {
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    background: rgba(8, 12, 18, 0.24);
+    padding: 14px;
+  }
+
+  .config-section-title {
+    margin: 0 0 12px;
+    font-size: 15px;
+    color: #eef3ff;
+  }
+
+  .settings-required {
+    color: #f6c453;
+    font-size: 11px;
+    margin-left: 6px;
+  }
+
   @media (max-width: 640px) {
     .settings-shell {
       padding: 16px;
@@ -337,8 +394,14 @@
       <p>Reglages globaux visibles sur tout le portail.</p>
     </div>
 
+    <div class="settings-tabs" id="settingsTabs">
+      <button class="settings-tab active" type="button" data-tab-target="general">General</button>
+      <button class="settings-tab" type="button" data-tab-target="connections">Connexions</button>
+    </div>
+
     <div class="settings-stack">
-      <div class="settings-card">
+      <div class="settings-panel active" data-tab-panel="general">
+        <div class="settings-card">
         <div class="settings-row">
           <div>
             <h3>Blur des pseudos dans le classement</h3>
@@ -352,9 +415,9 @@
         <div class="settings-state" id="settingsState">
           Etat actuel: <strong><%= leaderboardBlurEnabled ? "Active" : "Desactive" %></strong>
         </div>
-      </div>
+        </div>
 
-      <div class="settings-card">
+        <div class="settings-card">
         <h3 class="settings-card-title">Cartes supplementaires du dashboard</h3>
         <p class="settings-card-sub">Ajoute une carte perso (texte, couleur, lien interne ou externe).</p>
 
@@ -438,6 +501,47 @@
             </div>
           <% }) %>
         </div>
+        </div>
+      </div>
+
+      <div class="settings-panel" data-tab-panel="connections">
+        <div class="settings-card">
+          <h3 class="settings-card-title">Connexions des services</h3>
+          <p class="settings-card-sub">Les valeurs enregistrees ici surchargent les variables du .env pour cette instance.</p>
+
+          <form id="configForm">
+            <div class="config-grid">
+              <% (configSections || []).forEach(function(section) { %>
+                <div class="config-section">
+                  <h4 class="config-section-title"><%= section.group %></h4>
+                  <div class="settings-form">
+                    <% (section.fields || []).forEach(function(field) { %>
+                      <div class="settings-field settings-field--full">
+                        <label for="config-<%= field.key %>">
+                          <%= field.label %>
+                          <% if (field.required) { %><span class="settings-required">requis</span><% } %>
+                        </label>
+                        <input
+                          id="config-<%= field.key %>"
+                          name="<%= field.key %>"
+                          type="<%= field.secret ? 'password' : 'text' %>"
+                          value="<%= field.value || '' %>"
+                          autocomplete="off"
+                          spellcheck="false"
+                        >
+                      </div>
+                    <% }) %>
+                  </div>
+                </div>
+              <% }) %>
+            </div>
+          </form>
+
+          <div class="settings-actions">
+            <button class="settings-btn" id="saveConfigBtn" type="button">Enregistrer les connexions</button>
+          </div>
+          <div class="settings-inline-note" id="configState">Modifie ici les URL et tokens utilises par le portail.</div>
+        </div>
       </div>
     </div>
   </div>
@@ -452,6 +556,8 @@
     const dashCardState = document.getElementById("dashCardState");
     const dashCardsList = document.getElementById("dashboardCardsList");
     const form = document.getElementById("dashboardCardForm");
+    const settingsTabs = Array.from(document.querySelectorAll("[data-tab-target]"));
+    const settingsPanels = Array.from(document.querySelectorAll("[data-tab-panel]"));
     const colorSelect = document.getElementById("cardColorKey");
     const cancelEditBtn = document.getElementById("cancelDashboardCardEditBtn");
     const cardLabelInput = document.getElementById("cardLabel");
@@ -462,6 +568,9 @@
     const cardUrlField = document.getElementById("cardUrlField");
     const cardIntegrationKeyInput = document.getElementById("cardIntegrationKey");
     const cardOpenInIframeInput = document.getElementById("cardOpenInIframe");
+    const configForm = document.getElementById("configForm");
+    const saveConfigBtn = document.getElementById("saveConfigBtn");
+    const configState = document.getElementById("configState");
     if (!toggle || !state || !addBtn || !dashCardState || !dashCardsList || !form || !colorSelect || !cancelEditBtn) return;
 
     let cardBusy = false;
@@ -475,6 +584,15 @@
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#39;");
+    }
+
+    function setActiveTab(name) {
+      settingsTabs.forEach(function (tab) {
+        tab.classList.toggle("active", tab.getAttribute("data-tab-target") === name);
+      });
+      settingsPanels.forEach(function (panel) {
+        panel.classList.toggle("active", panel.getAttribute("data-tab-panel") === name);
+      });
     }
 
     function updateActionAvailability() {
@@ -603,6 +721,38 @@
       }
     });
 
+    settingsTabs.forEach(function (tab) {
+      tab.addEventListener("click", function () {
+        setActiveTab(tab.getAttribute("data-tab-target"));
+      });
+    });
+
+    if (saveConfigBtn && configForm && configState) {
+      saveConfigBtn.addEventListener("click", async function () {
+        const payload = {};
+        new FormData(configForm).forEach(function (value, key) {
+          payload[key] = String(value || "").trim();
+        });
+
+        saveConfigBtn.disabled = true;
+        configState.textContent = "Enregistrement des connexions...";
+        try {
+          const resp = await fetch(bp + "/api/admin/config", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+          });
+          const data = await resp.json();
+          if (!resp.ok) throw new Error(data.error || ("HTTP " + resp.status));
+          configState.textContent = "Connexions enregistrees avec succes.";
+        } catch (err) {
+          configState.textContent = err.message || "Impossible d'enregistrer les connexions.";
+        } finally {
+          saveConfigBtn.disabled = false;
+        }
+      });
+    }
+
     addBtn.addEventListener("click", async function () {
       if (cardBusy) return;
 
@@ -714,6 +864,7 @@
     });
 
     setFormModeCreate();
+    setActiveTab("general");
     applyIntegrationUi(cardIntegrationKeyInput.value || "custom");
     refreshCardData().catch(() => {});
   })();

@@ -25,6 +25,7 @@ const { getAchievementUnlockDates, evaluateSecretAchievements, isTautulliReady, 
 const CacheManager = require("../utils/cache");
 const TautulliEvents = require("../utils/tautulli-events");  // ?? Import EventEmitter
 const { calculateUserXp } = require("../utils/xp-calculator");  // ?? Fonction centralisée XP
+const { getConfigSections, getEditableConfigValues, saveEditableConfig } = require("../utils/config");
 
 /* ===============================
    ?? AUTH
@@ -932,6 +933,7 @@ router.get("/parametres", requireAuth, requireAdmin, (req, res) => {
     user: req.session.user,
     basePath: req.basePath,
     leaderboardBlurEnabled,
+    configSections: getConfigSections(),
     dashboardCustomCards: customCardsResolved,
     availableDashboardColors: availableColors,
     dashboardIntegrationOptions: integrations
@@ -1386,6 +1388,23 @@ router.post("/api/admin/settings/leaderboard-blur", requireAuth, requireAdmin, (
   AppSettingQueries.setBool("leaderboard_blur_enabled", enabled);
   log.create("[Admin]").info(`Leaderboard blur ${enabled ? "activé" : "désactivé"} par ${req.session.user.username}`);
   res.json({ success: true, enabled });
+});
+
+router.get("/api/admin/config", requireAuth, requireAdmin, (req, res) => {
+  res.json({
+    sections: getConfigSections(),
+    values: getEditableConfigValues()
+  });
+});
+
+router.post("/api/admin/config", requireAuth, requireAdmin, (req, res) => {
+  saveEditableConfig(req.body || {});
+  log.create("[Admin]").info(`Connexions mises à jour par ${req.session.user.username}`);
+  res.json({
+    success: true,
+    sections: getConfigSections(),
+    values: getEditableConfigValues()
+  });
 });
 
 router.get("/api/admin/dashboard-cards", requireAuth, requireAdmin, (req, res) => {
