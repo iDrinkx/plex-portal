@@ -2,6 +2,11 @@
 
 Toutes les modifications notables de ce projet sont documentées dans ce fichier.
 
+## <small>1.31.2 (2026-03-03)</small>
+
+* Merge pull request #30 from iDrinkx/develop ([0d5a9f6](https://github.com/iDrinkx/plex-portal/commit/0d5a9f6)), closes [#30](https://github.com/iDrinkx/plex-portal/issues/30)
+* fix: implement admin user persistence logic in authentication and dashboard routes ([5c40d2b](https://github.com/iDrinkx/plex-portal/commit/5c40d2b))
+
 ## <small>1.31.1 (2026-03-03)</small>
 
 * Merge pull request #29 from iDrinkx/develop ([e03125e](https://github.com/iDrinkx/plex-portal/commit/e03125e)), closes [#29](https://github.com/iDrinkx/plex-portal/issues/29)
