@@ -6,7 +6,7 @@ const logAuth = log.create('[Auth]');
 
 const { isUserAuthorized, getAuthorizedServerUsers, getServerOwnerId, getServerMachineId } = require("../utils/plex");
 const { checkWizarrAccess } = require("../utils/wizarr");
-const { getConfigSections, getMissingRequiredConfigKeys, isSetupComplete, saveEditableConfig } = require("../utils/config");
+const { getConfigSections, getConfigValue, getMissingRequiredConfigKeys, isSetupComplete, saveEditableConfig } = require("../utils/config");
 
 /**
  * Grab le cookie connect.sid de Seerr via le token Plex.
@@ -17,7 +17,7 @@ const { getConfigSections, getMissingRequiredConfigKeys, isSetupComplete, saveEd
  * automatiquement quand l'iframe charge seerr.votredomaine.com.
  */
 function getSeerrCookieDomain() {
-  const publicUrl = process.env.SEERR_PUBLIC_URL || "";
+  const publicUrl = getConfigValue("SEERR_PUBLIC_URL", "");
   if (!publicUrl) return null;
   try {
     const hostname = new URL(publicUrl).hostname; // ex: seerr.votredomaine.com
@@ -28,7 +28,7 @@ function getSeerrCookieDomain() {
 }
 
 async function grabSeerrCookie(authToken, res) {
-  const seerrUrl = (process.env.SEERR_URL || "").replace(/\/$/, "");
+  const seerrUrl = getConfigValue("SEERR_URL", "").replace(/\/$/, "");
   if (!seerrUrl || !authToken) return;
   if (res.headersSent) return;
   try {
