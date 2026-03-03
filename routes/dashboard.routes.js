@@ -26,6 +26,11 @@ const CacheManager = require("../utils/cache");
 const TautulliEvents = require("../utils/tautulli-events");  // ?? Import EventEmitter
 const { calculateUserXp } = require("../utils/xp-calculator");  // ?? Fonction centralisée XP
 const { getConfigSections, getEditableConfigValues, saveEditableConfig } = require("../utils/config");
+const {
+  getDashboardBuiltinAdminItems,
+  saveDashboardBuiltinConfig,
+  buildDashboardBuiltinCards
+} = require("../utils/dashboard-builtins");
 
 /* ===============================
    ?? AUTH
@@ -748,6 +753,7 @@ async function getWizarrSubscription(user) {
 router.get("/dashboard", requireAuth, (req, res) => {
   const colorMap = getColorMap();
   const dashboardServerStatsEnabled = AppSettingQueries.getBool("dashboard_server_stats_enabled", true);
+  const dashboardBuiltinCards = buildDashboardBuiltinCards(req.session.user, req.basePath || "");
   const dashboardCustomCards = DashboardCardQueries.list()
     .map(card => {
       const color = colorMap.get(card.colorKey);
@@ -765,6 +771,7 @@ router.get("/dashboard", requireAuth, (req, res) => {
   res.render("dashboard/index", {
     user: req.session.user,
     basePath: req.basePath,
+    dashboardBuiltinCards,
     dashboardCustomCards,
     dashboardServerStatsEnabled
   });
@@ -912,6 +919,7 @@ router.get("/calendrier", requireAuth, (req, res) => {
 router.get("/parametres", requireAuth, requireAdmin, (req, res) => {
   const leaderboardBlurEnabled = AppSettingQueries.getBool("leaderboard_blur_enabled", true);
   const dashboardServerStatsEnabled = AppSettingQueries.getBool("dashboard_server_stats_enabled", true);
+  const dashboardBuiltinItems = getDashboardBuiltinAdminItems();
   const customCards = DashboardCardQueries.list();
   const availableColorKeys = getAvailableColorKeys(customCards);
   const availableColors = DASHBOARD_CARD_PALETTE.filter(c => availableColorKeys.includes(c.key));
@@ -937,6 +945,7 @@ router.get("/parametres", requireAuth, requireAdmin, (req, res) => {
     basePath: req.basePath,
     leaderboardBlurEnabled,
     dashboardServerStatsEnabled,
+    dashboardBuiltinItems,
     configSections: getConfigSections(),
     dashboardCustomCards: customCardsResolved,
     availableDashboardColors: availableColors,
@@ -1404,6 +1413,17 @@ router.post("/api/admin/settings/dashboard-server-stats", requireAuth, requireAd
   AppSettingQueries.setBool("dashboard_server_stats_enabled", enabled);
   log.create("[Admin]").info(`Barre stats dashboard ${enabled ? "activée" : "désactivée"} par ${req.session.user.username}`);
   res.json({ success: true, enabled });
+});
+
+router.get("/api/admin/dashboard-builtins", requireAuth, requireAdmin, (req, res) => {
+  res.json({ items: getDashboardBuiltinAdminItems() });
+});
+
+router.post("/api/admin/dashboard-builtins", requireAuth, requireAdmin, (req, res) => {
+  const items = Array.isArray(req.body?.items) ? req.body.items : [];
+  const savedItems = saveDashboardBuiltinConfig(items);
+  log.create("[Admin]").info(`Ordre des cartes dashboard mis a jour par ${req.session.user.username}`);
+  res.json({ success: true, items: savedItems });
 });
 
 router.get("/api/admin/config", requireAuth, requireAdmin, (req, res) => {

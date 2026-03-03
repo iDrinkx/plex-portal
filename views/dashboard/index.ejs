@@ -8,89 +8,36 @@
 <!-- HERO CARDS -->
 <div class="hero-cards">
 
-  <!-- Carte Profil -->
-  <a href="<%= basePath %>/profil" class="hero-card hero-card-profil">
-    <div class="hero-card-content">
-      <div class="hero-card-icon-wrap">
-        <% if (user.thumb) { %>
-          <div class="hero-avatar-ring" id="heroAvatarRing">
-            <div class="rank-ring" id="heroRankRing"></div>
-            <img src="<%= user.thumb %>" class="hero-avatar" id="heroAvatar" alt="<%= user.username %>" />
-          </div>
-        <% } else { %>
-          <div class="hero-avatar-placeholder">👤</div>
-        <% } %>
-      </div>
-      <div class="hero-card-info">
-        <p class="hero-card-label">Mon Profil</p>
-        <h2 class="hero-card-title"><%= user.username %></h2>
-        <p class="hero-card-desc">Statistiques · Badges · Historique</p>
-      </div>
-      <div class="hero-card-arrow">→</div>
-    </div>
-  </a>
-
-  <!-- Carte Classement -->
-  <a href="<%= basePath %>/classement" class="hero-card hero-card-classement">
-    <div class="hero-card-content">
-      <div class="hero-card-icon-wrap">
-        <div class="hero-icon hero-icon--classement">🏆</div>
-      </div>
-      <div class="hero-card-info">
-        <p class="hero-card-label">Communauté</p>
-        <h2 class="hero-card-title">Classement</h2>
-        <p class="hero-card-desc">Membres · Niveaux · Heures</p>
-      </div>
-      <div class="hero-card-arrow">→</div>
-    </div>
-  </a>
-
-  <!-- Carte Mes Statistiques -->
-  <a href="<%= basePath %>/mes-stats" class="hero-card hero-card-stats">
-    <div class="hero-card-content">
-      <div class="hero-card-icon-wrap">
-        <div class="hero-icon hero-icon--stats">📊</div>
-      </div>
-      <div class="hero-card-info">
-        <p class="hero-card-label">Visionnage</p>
-        <h2 class="hero-card-title">Statistiques</h2>
-        <p class="hero-card-desc">Genres · Top contenus · Activité</p>
-      </div>
-      <div class="hero-card-arrow">→</div>
-    </div>
-  </a>
-
-  <!-- Carte Demandes de Contenu -->
-  <a href="<%= basePath %>/seerr" class="hero-card hero-card-demandes">
-    <div class="hero-card-content">
-      <div class="hero-card-icon-wrap">
-        <div class="hero-icon hero-icon--seerr">
-          <img src="<%= basePath %>/img/seerr-icon.png" alt="Seerr" class="hero-icon-logo">
+  <% (dashboardBuiltinCards || []).forEach(function(card) { %>
+    <a href="<%= card.href %>" class="hero-card <%= card.className %>">
+      <div class="hero-card-content">
+        <div class="hero-card-icon-wrap">
+          <% if (card.kind === "profile") { %>
+            <% if (user.thumb) { %>
+              <div class="hero-avatar-ring" id="heroAvatarRing">
+                <div class="rank-ring" id="heroRankRing"></div>
+                <img src="<%= user.thumb %>" class="hero-avatar" id="heroAvatar" alt="<%= user.username %>" />
+              </div>
+            <% } else { %>
+              <div class="hero-avatar-placeholder">👤</div>
+            <% } %>
+          <% } else if (card.kind === "image") { %>
+            <div class="hero-icon <%= card.iconClass %>">
+              <img src="<%= card.iconSrc %>" alt="<%= card.iconAlt %>" class="hero-icon-logo">
+            </div>
+          <% } else { %>
+            <div class="hero-icon <%= card.iconClass %>"><%= card.icon %></div>
+          <% } %>
         </div>
+        <div class="hero-card-info">
+          <p class="hero-card-label"><%= card.label %></p>
+          <h2 class="hero-card-title"><%= card.title %></h2>
+          <p class="hero-card-desc"><%= card.description %></p>
+        </div>
+        <div class="hero-card-arrow">→</div>
       </div>
-      <div class="hero-card-info">
-        <p class="hero-card-label">Demandes de Contenu</p>
-        <h2 class="hero-card-title">Seerr</h2>
-        <p class="hero-card-desc">Demander films &amp; séries</p>
-      </div>
-      <div class="hero-card-arrow">→</div>
-    </div>
-  </a>
-
-  <!-- Carte Calendrier -->
-  <a href="<%= basePath %>/calendrier" class="hero-card hero-card-calendrier">
-    <div class="hero-card-content">
-      <div class="hero-card-icon-wrap">
-        <div class="hero-icon hero-icon--calendrier">📅</div>
-      </div>
-      <div class="hero-card-info">
-        <p class="hero-card-label">Sorties à Venir</p>
-        <h2 class="hero-card-title">Calendrier</h2>
-        <p class="hero-card-desc">Films · Séries · Disponibilité</p>
-      </div>
-      <div class="hero-card-arrow">→</div>
-    </div>
-  </a>
+    </a>
+  <% }) %>
 
   <% (dashboardCustomCards || []).forEach(function(card) { %>
     <a

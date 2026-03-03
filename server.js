@@ -15,6 +15,7 @@ const { runHealthCheck } = require("./utils/health-check");  // 🏥 Health chec
 const { initDatabase, DashboardCardQueries } = require("./utils/database");  // 🗄️  Database initialization
 const { applyRuntimeConfig, isSetupComplete } = require("./utils/config");
 const { initTautulliDatabase, getAllUserStatsFromTautulli } = require("./utils/tautulli-direct");  // 📊 Tautulli direct DB
+const { buildDashboardNavItems } = require("./utils/dashboard-builtins");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -142,10 +143,12 @@ app.use(async (req, res, next) => {
   res.locals.user = req.session.user || null;
   res.locals.basePath = req.basePath || "";
   res.locals.customNavCards = [];
+  res.locals.dashboardNavItems = [];
   res.locals.plexServerName = await getPlexServerName() || "votre serveur Plex";
 
   if (req.session.user) {
     try {
+      res.locals.dashboardNavItems = buildDashboardNavItems(req.basePath || "");
       const cards = DashboardCardQueries.list();
       const basePath = req.basePath || "";
       const navColorMap = {

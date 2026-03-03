@@ -29,11 +29,9 @@
     <!-- Desktop Menu -->
     <div class="nav-center desktop-menu">
       <a href="<%= basePath %>/dashboard" class="nav-link nav-link-dashboard">Dashboard&nbsp;🏠</a>
-      <a href="<%= basePath %>/profil" class="nav-link nav-link-profil">Profil&nbsp;👤</a>
-      <a href="<%= basePath %>/classement" class="nav-link nav-link-classement">Classement&nbsp;🏆</a>
-      <a href="<%= basePath %>/mes-stats" class="nav-link nav-link-stats">Statistiques&nbsp;📊</a>
-      <a href="<%= basePath %>/seerr" class="nav-link nav-link-demandes">Demandes&nbsp;<img src="<%= basePath %>/img/seerr-icon.png" alt="Seerr" class="nav-seerr-logo"></a>
-      <a href="<%= basePath %>/calendrier" class="nav-link nav-link-calendrier">Calendrier&nbsp;📅</a>
+      <% (dashboardNavItems || []).forEach(function(item) { %>
+        <a href="<%= item.href %>" class="nav-link <%= item.className %>"><%= item.label %>&nbsp;<% if (item.kind === "image") { %><img src="<%= item.iconSrc %>" alt="<%= item.iconAlt %>" class="nav-seerr-logo"><% } else if (item.kind === "profile") { %>👤<% } else { %><%= item.icon %><% } %></a>
+      <% }) %>
       <% (customNavCards || []).forEach(function(card) { %>
         <a
           href="<%= card.href %>"
@@ -66,11 +64,9 @@
   <!-- Mobile Menu -->
   <div class="mobile-menu" id="mobileMenu">
     <a href="<%= basePath %>/dashboard" class="nav-link-dashboard">Dashboard&nbsp;🏠</a>
-    <a href="<%= basePath %>/profil" class="nav-link-profil">Profil&nbsp;👤</a>
-    <a href="<%= basePath %>/classement" class="nav-link-classement">Classement&nbsp;🏆</a>
-    <a href="<%= basePath %>/mes-stats" class="nav-link-stats">Statistiques&nbsp;📊</a>
-    <a href="<%= basePath %>/seerr" class="nav-link-demandes">Demandes <img src="<%= basePath %>/img/seerr-icon.png" alt="Seerr" class="nav-seerr-logo"></a>
-    <a href="<%= basePath %>/calendrier" class="nav-link-calendrier">Calendrier 📅</a>
+    <% (dashboardNavItems || []).forEach(function(item) { %>
+      <a href="<%= item.href %>" class="<%= item.className %>"><%= item.label %>&nbsp;<% if (item.kind === "image") { %><img src="<%= item.iconSrc %>" alt="<%= item.iconAlt %>" class="nav-seerr-logo"><% } else if (item.kind === "profile") { %>👤<% } else { %><%= item.icon %><% } %></a>
+    <% }) %>
     <% (customNavCards || []).forEach(function(card) { %>
       <a
         href="<%= card.href %>"
