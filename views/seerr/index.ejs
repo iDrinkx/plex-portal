@@ -1,11 +1,11 @@
-﻿<!DOCTYPE html>
-<html lang="fr">
+<!DOCTYPE html>
+<html lang="<%= locale || 'fr' %>">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="icon" type="image/png" href="/logo.png" />
   <link rel="apple-touch-icon" href="/logo.png" />
-  <title>Seerr — Plex Portal</title>
+  <title>Seerr - Plex Portal</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body {
@@ -14,15 +14,12 @@
       background: #0f1117;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
-
     #page-wrap {
       display: flex;
       flex-direction: column;
       height: 100vh;
       height: 100dvh;
     }
-
-    /* ── Barre de navigation ── */
     #topbar {
       display: flex;
       align-items: center;
@@ -33,7 +30,6 @@
       border-bottom: 1px solid #30363d;
       flex-shrink: 0;
     }
-
     #topbar a {
       display: inline-flex;
       align-items: center;
@@ -53,18 +49,7 @@
       border-color: #8b949e;
       color: #f0f6fc;
     }
-    #topbar a svg {
-      flex-shrink: 0;
-    }
-
-    #topbar .title {
-      color: #8b949e;
-      font-size: 0.82rem;
-      margin-left: 4px;
-      letter-spacing: 0.02em;
-    }
-
-    /* ── Iframe ── */
+    #topbar a svg { flex-shrink: 0; }
     #seerr-frame {
       display: block;
       width: 100%;
@@ -72,33 +57,20 @@
       min-height: 0;
       border: none;
     }
-
-    /* Sur mobile : topbar plus compacte */
     @media (max-width: 768px) {
-      #topbar {
-        height: 36px;
-        padding: 0 10px;
-      }
-      #topbar a {
-        font-size: 0.78rem;
-        padding: 4px 9px;
-      }
-      #topbar .title {
-        font-size: 0.75rem;
-      }
+      #topbar { height: 36px; padding: 0 10px; }
+      #topbar a { font-size: 0.78rem; padding: 4px 9px; }
     }
   </style>
 </head>
 <body>
 <div id="page-wrap">
-
   <div id="topbar">
     <a href="/dashboard">
-      <!-- flèche gauche -->
       <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
         <path fill-rule="evenodd" d="M9.78 12.78a.75.75 0 0 1-1.06 0L4.47 8.53a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 1.06L6.06 8l3.72 3.72a.75.75 0 0 1 0 1.06z"/>
       </svg>
-      Retour au portail 🏠
+      <%= locale === "en" ? "Back to portal 🏠" : "Retour au portail 🏠" %>
     </a>
   </div>
 
@@ -108,7 +80,6 @@
     allow="fullscreen"
     title="Seerr"
   ></iframe>
-
 </div>
 </body>
 </html>

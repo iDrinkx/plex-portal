@@ -1,5 +1,5 @@
 ﻿<!doctype html>
-<html lang="fr">
+<html lang="<%= locale || 'fr' %>">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -9,6 +9,8 @@
   <title>Plex-Portal</title>
   <script>
     window.APP_BASE_PATH = "<%= basePath %>";
+    window.APP_LOCALE = "<%= locale || 'fr' %>";
+    window.APP_RUNTIME_TEXT_MAP = <%- JSON.stringify(runtimeTextMap || {}) %>;
   </script>
 </head>
 <body <% if (user) { %>data-user-id="<%= user.id %>"<% } %>>
@@ -28,7 +30,7 @@
 
     <!-- Desktop Menu -->
     <div class="nav-center desktop-menu">
-      <a href="<%= basePath %>/dashboard" class="nav-link nav-link-dashboard">Dashboard&nbsp;🏠</a>
+      <a href="<%= basePath %>/dashboard" class="nav-link nav-link-dashboard"><%= t("nav.dashboard") %>&nbsp;🏠</a>
       <% (dashboardNavItems || []).forEach(function(item) { %>
         <a href="<%= item.href %>" class="nav-link <%= item.className %>"><%= item.label %>&nbsp;<% if (item.kind === "image") { %><img src="<%= item.iconSrc %>" alt="<%= item.iconAlt %>" class="nav-seerr-logo"><% } else if (item.kind === "profile") { %>👤<% } else { %><%= item.icon %><% } %></a>
       <% }) %>
@@ -41,7 +43,7 @@
         ><%= card.label %>&nbsp;<span class="nav-custom-icon"><% if ((card.integrationKey || "") === "komga_auto") { %><img src="<%= basePath %>/img/komga-icon.svg" alt="Komga" class="nav-custom-icon-logo"><% } else if ((card.integrationKey || "") === "jellyfin_auto") { %><img src="<%= basePath %>/img/jellyfin-icon.svg" alt="Jellyfin" class="nav-custom-icon-logo"><% } else if ((card.integrationKey || "") === "romm_auto") { %><img src="<%= basePath %>/img/romm-icon.svg" alt="RomM" class="nav-custom-icon-logo"><% } else { %><%= card.icon %><% } %></span></a>
       <% }) %>
       <% if (user.isAdmin) { %>
-        <a href="<%= basePath %>/parametres" class="nav-link nav-link-settings">Parametres&nbsp;⚙️</a>
+        <a href="<%= basePath %>/parametres" class="nav-link nav-link-settings"><%= t("nav.settings") %>&nbsp;⚙️</a>
       <% } %>
     </div>
 
@@ -50,7 +52,7 @@
       <% if (navSubscriptionPillEnabled) { %>
         <a href="<%= basePath %>/profil" class="nav-sub-pill" id="navSubPill">&#x2014;</a>
       <% } %>
-      <a class="logout-btn" href="<%= basePath %>/logout">Déconnexion</a>
+      <a class="logout-btn" href="<%= basePath %>/logout"><%= t("nav.logout") %></a>
     </div>
 
     <!-- Pill abonnement mobile -->
@@ -67,7 +69,7 @@
 
   <!-- Mobile Menu -->
   <div class="mobile-menu" id="mobileMenu">
-    <a href="<%= basePath %>/dashboard" class="nav-link-dashboard">Dashboard&nbsp;🏠</a>
+    <a href="<%= basePath %>/dashboard" class="nav-link-dashboard"><%= t("nav.dashboard") %>&nbsp;🏠</a>
     <% (dashboardNavItems || []).forEach(function(item) { %>
       <a href="<%= item.href %>" class="<%= item.className %>"><%= item.label %>&nbsp;<% if (item.kind === "image") { %><img src="<%= item.iconSrc %>" alt="<%= item.iconAlt %>" class="nav-seerr-logo"><% } else if (item.kind === "profile") { %>👤<% } else { %><%= item.icon %><% } %></a>
     <% }) %>
@@ -80,9 +82,9 @@
       ><%= card.label %>&nbsp;<span class="nav-custom-icon"><% if ((card.integrationKey || "") === "komga_auto") { %><img src="<%= basePath %>/img/komga-icon.svg" alt="Komga" class="nav-custom-icon-logo"><% } else if ((card.integrationKey || "") === "jellyfin_auto") { %><img src="<%= basePath %>/img/jellyfin-icon.svg" alt="Jellyfin" class="nav-custom-icon-logo"><% } else if ((card.integrationKey || "") === "romm_auto") { %><img src="<%= basePath %>/img/romm-icon.svg" alt="RomM" class="nav-custom-icon-logo"><% } else { %><%= card.icon %><% } %></span></a>
     <% }) %>
     <% if (user.isAdmin) { %>
-      <a href="<%= basePath %>/parametres" class="nav-link-settings">Parametres ⚙️</a>
+      <a href="<%= basePath %>/parametres" class="nav-link-settings"><%= t("nav.settings") %> ⚙️</a>
     <% } %>
-    <a href="<%= basePath %>/logout" class="logout-mobile">Déconnexion</a>
+    <a href="<%= basePath %>/logout" class="logout-mobile"><%= t("nav.logout") %></a>
   </div>
 
 <% } %>
@@ -90,6 +92,67 @@
 <main class="content">
   <%- body %>
 </main>
+
+<script>
+  (function () {
+    if ((window.APP_LOCALE || "fr") === "fr") return;
+    const textMap = window.APP_RUNTIME_TEXT_MAP || {};
+    const replacers = Object.keys(textMap);
+    if (!replacers.length) return;
+
+    function translateText(value) {
+      const original = String(value == null ? "" : value);
+      const trimmed = original.trim();
+      if (!trimmed || !Object.prototype.hasOwnProperty.call(textMap, trimmed)) return original;
+      const leading = original.match(/^\s*/)?.[0] || "";
+      const trailing = original.match(/\s*$/)?.[0] || "";
+      return leading + textMap[trimmed] + trailing;
+    }
+
+    function translateNode(root) {
+      if (!root) return;
+      if (root.nodeType === Node.TEXT_NODE) {
+        const next = translateText(root.nodeValue);
+        if (next !== root.nodeValue) root.nodeValue = next;
+        return;
+      }
+      if (root.nodeType !== Node.ELEMENT_NODE) return;
+
+      ["placeholder", "title", "aria-label", "value"].forEach(function (attr) {
+        if (!root.hasAttribute(attr)) return;
+        const current = root.getAttribute(attr);
+        const next = translateText(current);
+        if (next !== current) root.setAttribute(attr, next);
+      });
+
+      Array.from(root.childNodes).forEach(translateNode);
+    }
+
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", function () {
+        translateNode(document.body);
+      });
+    } else {
+      translateNode(document.body);
+    }
+
+    const observer = new MutationObserver(function (mutations) {
+      mutations.forEach(function (mutation) {
+        if (mutation.type === "characterData") {
+          translateNode(mutation.target);
+          return;
+        }
+        mutation.addedNodes.forEach(translateNode);
+      });
+    });
+
+    observer.observe(document.body, {
+      subtree: true,
+      childList: true,
+      characterData: true
+    });
+  })();
+</script>
 
 <script>
   document.addEventListener("DOMContentLoaded", () => {

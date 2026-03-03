@@ -1,9 +1,13 @@
 <!doctype html>
-<html lang="fr">
+<html lang="<%= locale || 'fr' %>">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Configuration initiale</title>
+  <title><%= t("setup.title") %></title>
+  <script>
+    window.APP_LOCALE = "<%= locale || 'fr' %>";
+    window.APP_RUNTIME_TEXT_MAP = <%- JSON.stringify(runtimeTextMap || {}) %>;
+  </script>
   <style>
     :root {
       color-scheme: dark;
@@ -218,6 +222,45 @@
       </form>
     </div>
   </section>
+
+  <script>
+    (function () {
+      if ((window.APP_LOCALE || "fr") === "fr") return;
+      const textMap = window.APP_RUNTIME_TEXT_MAP || {};
+      const keys = Object.keys(textMap);
+      if (!keys.length) return;
+
+      function translateText(value) {
+        const original = String(value == null ? "" : value);
+        const trimmed = original.trim();
+        if (!trimmed || !Object.prototype.hasOwnProperty.call(textMap, trimmed)) return original;
+        const leading = original.match(/^\s*/)?.[0] || "";
+        const trailing = original.match(/\s*$/)?.[0] || "";
+        return leading + textMap[trimmed] + trailing;
+      }
+
+      function walk(node) {
+        if (!node) return;
+        if (node.nodeType === Node.TEXT_NODE) {
+          const next = translateText(node.nodeValue);
+          if (next !== node.nodeValue) node.nodeValue = next;
+          return;
+        }
+        if (node.nodeType !== Node.ELEMENT_NODE) return;
+        ["placeholder", "title", "aria-label", "value"].forEach(function (attr) {
+          if (!node.hasAttribute(attr)) return;
+          const current = node.getAttribute(attr);
+          const next = translateText(current);
+          if (next !== current) node.setAttribute(attr, next);
+        });
+        Array.from(node.childNodes).forEach(walk);
+      }
+
+      document.addEventListener("DOMContentLoaded", function () {
+        walk(document.body);
+      });
+    })();
+  </script>
 
   <script>
     (function () {

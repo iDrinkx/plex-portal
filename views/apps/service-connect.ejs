@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="<%= locale || 'fr' %>">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Connexion <%= serviceName %></title>
+  <title><%= locale === "en" ? "Connect" : "Connexion" %> <%= serviceName %></title>
   <style>
     body {
       margin: 0;
@@ -22,22 +22,9 @@
       padding: 22px;
       box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
     }
-    h1 {
-      margin: 0 0 8px;
-      font-size: 1.2rem;
-    }
-    p {
-      margin: 0 0 14px;
-      color: #94a3b8;
-      font-size: 0.95rem;
-    }
-    label {
-      display: block;
-      margin-top: 10px;
-      margin-bottom: 6px;
-      font-size: 0.9rem;
-      color: #cbd5e1;
-    }
+    h1 { margin: 0 0 8px; font-size: 1.2rem; }
+    p { margin: 0 0 14px; color: #94a3b8; font-size: 0.95rem; }
+    label { display: block; margin-top: 10px; margin-bottom: 6px; font-size: 0.9rem; color: #cbd5e1; }
     input {
       width: 100%;
       border: 1px solid rgba(148, 163, 184, 0.35);
@@ -47,11 +34,7 @@
       padding: 10px 12px;
       box-sizing: border-box;
     }
-    .row {
-      display: flex;
-      gap: 10px;
-      margin-top: 16px;
-    }
+    .row { display: flex; gap: 10px; margin-top: 16px; }
     button, a {
       border-radius: 10px;
       padding: 10px 12px;
@@ -82,19 +65,19 @@
 </head>
 <body>
   <div class="card">
-    <h1><%= serviceName %> requis pour <%= cardTitle %></h1>
-    <p>Connecte ton compte une seule fois. Plex Portal le réutilisera automatiquement ensuite.</p>
+    <h1><%= serviceName %> <%= locale === "en" ? "required for" : "requis pour" %> <%= cardTitle %></h1>
+    <p><%= locale === "en" ? "Connect your account once. Plex Portal will reuse it automatically afterwards." : "Connecte ton compte une seule fois. Plex Portal le reutilisera automatiquement ensuite." %></p>
 
     <form id="connectForm">
-      <label for="username"><%= serviceKey === "komga" ? "Email Komga" : "Username" %></label>
+      <label for="username"><%= serviceKey === "komga" ? (locale === "en" ? "Komga email" : "Email Komga") : "Username" %></label>
       <input id="username" name="username" maxlength="120" autocomplete="username" required>
 
-      <label for="password">Mot de passe</label>
+      <label for="password"><%= locale === "en" ? "Password" : "Mot de passe" %></label>
       <input id="password" name="password" type="password" maxlength="300" autocomplete="current-password" required>
 
       <div class="row">
-        <button type="submit">Connecter</button>
-        <a href="<%= basePath %>/dashboard">Retour dashboard</a>
+        <button type="submit"><%= locale === "en" ? "Connect" : "Connecter" %></button>
+        <a href="<%= basePath %>/dashboard"><%= locale === "en" ? "Back to dashboard" : "Retour dashboard" %></a>
       </div>
       <div class="state" id="state"><%= errorMessage || "" %></div>
     </form>
@@ -108,7 +91,7 @@
 
       form.addEventListener("submit", async function (e) {
         e.preventDefault();
-        state.textContent = "Connexion en cours...";
+        state.textContent = "<%= locale === 'en' ? 'Connecting...' : 'Connexion en cours...' %>";
         const payload = {
           username: form.username.value.trim(),
           password: form.password.value
@@ -124,7 +107,7 @@
           if (!resp.ok) throw new Error(data.error || ("HTTP " + resp.status));
           window.location.href = "<%= returnPath %>";
         } catch (err) {
-          state.textContent = err.message || "Connexion impossible";
+          state.textContent = err.message || "<%= locale === 'en' ? 'Connection failed' : 'Connexion impossible' %>";
         }
       });
     })();

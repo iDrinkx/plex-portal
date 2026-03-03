@@ -16,6 +16,7 @@ const { initDatabase, DashboardCardQueries, AppSettingQueries } = require("./uti
 const { applyRuntimeConfig, isSetupComplete } = require("./utils/config");
 const { initTautulliDatabase, getAllUserStatsFromTautulli } = require("./utils/tautulli-direct");  // 📊 Tautulli direct DB
 const { buildDashboardNavItems } = require("./utils/dashboard-builtins");
+const { getSiteLanguage, createTranslator, getRuntimeTextMap } = require("./utils/i18n");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -142,6 +143,9 @@ app.use((req, res, next) => {
 app.use(async (req, res, next) => {
   res.locals.user = req.session.user || null;
   res.locals.basePath = req.basePath || "";
+  res.locals.locale = getSiteLanguage();
+  res.locals.t = createTranslator(res.locals.locale);
+  res.locals.runtimeTextMap = getRuntimeTextMap(res.locals.locale);
   res.locals.customNavCards = [];
   res.locals.dashboardNavItems = [];
   res.locals.navSubscriptionPillEnabled = AppSettingQueries.getBool("nav_subscription_pill_enabled", true);
@@ -149,7 +153,7 @@ app.use(async (req, res, next) => {
 
   if (req.session.user) {
     try {
-      res.locals.dashboardNavItems = buildDashboardNavItems(req.basePath || "");
+      res.locals.dashboardNavItems = buildDashboardNavItems(req.basePath || "", res.locals.t);
       const cards = DashboardCardQueries.list();
       const basePath = req.basePath || "";
       const navColorMap = {

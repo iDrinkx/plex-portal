@@ -4,13 +4,11 @@
   </div>
 
   <div class="login-card">
-    <h1>Connexion</h1>
+    <h1><%= t("login.title") %></h1>
     <% if (typeof error !== 'undefined' && error === 'unauthorized') { %>
-    <div class="login-error">
-      ⛔ Votre compte Plex n'a pas accès au serveur <%= plexServerName %>.
-    </div>
+    <div class="login-error"><%= t("login.unauthorized", { serverName: plexServerName }) %></div>
     <% } %>
-    <a class="plex-btn" href="<%= basePath %>/login">Se connecter avec Plex</a>
+    <a class="plex-btn" href="<%= basePath %>/login"><%= t("login.withPlex") %></a>
   </div>
 </div>
 

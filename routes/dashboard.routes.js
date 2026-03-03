@@ -38,6 +38,7 @@ const {
   isDashboardCustomHtmlRawMode,
   saveDashboardCustomHtml
 } = require("../utils/dashboard-custom-html");
+const { SUPPORTED_LOCALES, getSiteLanguage } = require("../utils/i18n");
 
 /* ===============================
    ?? AUTH
@@ -760,7 +761,7 @@ async function getWizarrSubscription(user) {
 router.get("/dashboard", requireAuth, (req, res) => {
   const colorMap = getColorMap();
   const dashboardServerStatsEnabled = AppSettingQueries.getBool("dashboard_server_stats_enabled", true);
-  const dashboardBuiltinCards = buildDashboardBuiltinCards(req.session.user, req.basePath || "");
+  const dashboardBuiltinCards = buildDashboardBuiltinCards(req.session.user, req.basePath || "", res.locals.t);
   const dashboardCustomCards = DashboardCardQueries.list()
     .map(card => {
       const color = colorMap.get(card.colorKey);
@@ -929,7 +930,7 @@ router.get("/parametres", requireAuth, requireAdmin, (req, res) => {
   const leaderboardBlurEnabled = AppSettingQueries.getBool("leaderboard_blur_enabled", true);
   const dashboardServerStatsEnabled = AppSettingQueries.getBool("dashboard_server_stats_enabled", true);
   const navSubscriptionPillEnabled = AppSettingQueries.getBool("nav_subscription_pill_enabled", true);
-  const dashboardBuiltinItems = getDashboardBuiltinAdminItems();
+  const dashboardBuiltinItems = getDashboardBuiltinAdminItems(res.locals.t);
   const customCards = DashboardCardQueries.list();
   const availableColorKeys = getAvailableColorKeys(customCards);
   const availableColors = DASHBOARD_CARD_PALETTE.filter(c => availableColorKeys.includes(c.key));
@@ -956,6 +957,8 @@ router.get("/parametres", requireAuth, requireAdmin, (req, res) => {
     leaderboardBlurEnabled,
     dashboardServerStatsEnabled,
     navSubscriptionPillEnabled,
+    supportedLocales: SUPPORTED_LOCALES,
+    siteLanguage: getSiteLanguage(),
     dashboardBuiltinItems,
     dashboardCustomHtmlRaw: getDashboardCustomHtmlRaw(),
     dashboardCustomHtmlPreview: getDashboardCustomHtml(),
@@ -1440,6 +1443,18 @@ router.post("/api/admin/settings/nav-subscription-pill", requireAuth, requireAdm
   AppSettingQueries.setBool("nav_subscription_pill_enabled", enabled);
   log.create("[Admin]").info(`Pastille abonnement navbar ${enabled ? "activée" : "désactivée"} par ${req.session.user.username}`);
   res.json({ success: true, enabled });
+});
+
+router.get("/api/admin/settings/site-language", requireAuth, requireAdmin, (req, res) => {
+  res.json({ language: getSiteLanguage(), supportedLocales: SUPPORTED_LOCALES });
+});
+
+router.post("/api/admin/settings/site-language", requireAuth, requireAdmin, (req, res) => {
+  const raw = String(req.body?.language || "").trim().toLowerCase();
+  const language = SUPPORTED_LOCALES.includes(raw) ? raw : "fr";
+  AppSettingQueries.set("site_language", language);
+  log.create("[Admin]").info(`Langue du site ${language} par ${req.session.user.username}`);
+  res.json({ success: true, language });
 });
 
 router.get("/api/admin/dashboard-builtins", requireAuth, requireAdmin, (req, res) => {

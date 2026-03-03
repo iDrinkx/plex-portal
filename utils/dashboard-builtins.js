@@ -124,16 +124,17 @@ function saveDashboardBuiltinConfig(items) {
   return normalized;
 }
 
-function getDashboardBuiltinAdminItems() {
+function getDashboardBuiltinAdminItems(t = null) {
   const configMap = new Map(getDashboardBuiltinConfig().map(item => [item.key, item]));
+  const translate = typeof t === "function" ? t : (key => key);
 
   return DASHBOARD_BUILTIN_DEFINITIONS
     .map((definition, index) => {
       const config = configMap.get(definition.key) || { enabled: true, order: index };
       return {
         key: definition.key,
-        label: definition.navLabel,
-        description: definition.cardDescription,
+        label: translate(`dashboardBuiltins.${definition.key}.label`),
+        description: translate(`dashboardBuiltins.${definition.key}.description`),
         enabled: config.enabled !== false,
         order: Number.isFinite(config.order) ? config.order : index
       };
@@ -142,8 +143,9 @@ function getDashboardBuiltinAdminItems() {
     .map((item, index) => ({ ...item, order: index }));
 }
 
-function buildDashboardBuiltinCards(user, basePath = "") {
+function buildDashboardBuiltinCards(user, basePath = "", t = null) {
   const configMap = new Map(getDashboardBuiltinConfig().map(item => [item.key, item]));
+  const translate = typeof t === "function" ? t : (key => key);
 
   return DASHBOARD_BUILTIN_DEFINITIONS
     .map((definition, index) => {
@@ -160,9 +162,9 @@ function buildDashboardBuiltinCards(user, basePath = "") {
       key: item.key,
       href: `${basePath}${item.route}`,
       className: item.cardClass,
-      label: item.cardLabel,
-      title: item.cardKind === "profile" ? (user?.username || item.cardTitle) : item.cardTitle,
-      description: item.cardDescription,
+      label: translate(`dashboardBuiltins.${item.key}.cardLabel`),
+      title: item.cardKind === "profile" ? (user?.username || translate(`dashboardBuiltins.${item.key}.title`)) : translate(`dashboardBuiltins.${item.key}.title`),
+      description: translate(`dashboardBuiltins.${item.key}.description`),
       kind: item.cardKind,
       iconClass: item.iconClass || "",
       icon: item.icon || "",
@@ -171,8 +173,9 @@ function buildDashboardBuiltinCards(user, basePath = "") {
     }));
 }
 
-function buildDashboardNavItems(basePath = "") {
+function buildDashboardNavItems(basePath = "", t = null) {
   const configMap = new Map(getDashboardBuiltinConfig().map(item => [item.key, item]));
+  const translate = typeof t === "function" ? t : (key => key);
 
   return DASHBOARD_BUILTIN_DEFINITIONS
     .map((definition, index) => {
@@ -188,7 +191,7 @@ function buildDashboardNavItems(basePath = "") {
     .map(item => ({
       key: item.key,
       href: `${basePath}${item.route}`,
-      label: item.navLabel,
+      label: translate(`dashboardBuiltins.${item.key}.label`),
       className: item.navClass,
       kind: item.cardKind,
       icon: item.icon || "",
