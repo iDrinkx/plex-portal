@@ -83,6 +83,12 @@
 
 </div>
 
+<% if (dashboardCustomHtml) { %>
+  <div class="dashboard-custom-html">
+    <%- dashboardCustomHtml %>
+  </div>
+<% } %>
+
 <% if (dashboardServerStatsEnabled) { %>
   <!-- SERVER STATS BAR -->
   <div class="server-stats-bar" id="serverStatsBar">

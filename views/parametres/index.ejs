@@ -234,7 +234,8 @@
   }
 
   .settings-field input,
-  .settings-field select {
+  .settings-field select,
+  .settings-field textarea {
     border: 1px solid rgba(255, 255, 255, 0.18);
     border-radius: 10px;
     background: rgba(8, 12, 18, 0.36);
@@ -245,9 +246,17 @@
   }
 
   .settings-field input:focus,
-  .settings-field select:focus {
+  .settings-field select:focus,
+  .settings-field textarea:focus {
     border-color: rgba(86, 186, 255, 0.9);
     box-shadow: 0 0 0 2px rgba(86, 186, 255, 0.18);
+  }
+
+  .settings-field textarea {
+    min-height: 260px;
+    resize: vertical;
+    font-family: Consolas, monospace;
+    line-height: 1.5;
   }
 
   .settings-actions {
@@ -418,6 +427,21 @@
     margin-left: 6px;
   }
 
+  .dashboard-html-preview {
+    margin-top: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    background: rgba(8, 12, 18, 0.24);
+    padding: 14px;
+  }
+
+  .dashboard-html-preview-title {
+    margin: 0 0 10px;
+    font-size: 13px;
+    color: #cfe0ff;
+    font-weight: 700;
+  }
+
   @media (max-width: 640px) {
     .settings-shell {
       padding: 16px;
@@ -443,6 +467,7 @@
     <div class="settings-tabs" id="settingsTabs">
       <button class="settings-tab active" type="button" data-tab-target="general">General</button>
       <button class="settings-tab" type="button" data-tab-target="connections">Connexions</button>
+      <button class="settings-tab" type="button" data-tab-target="dashboard-html">Dashboard HTML</button>
     </div>
 
     <div class="settings-stack">
@@ -631,6 +656,28 @@
           <div class="settings-inline-note" id="configState">Modifie ici les URL et tokens utilises par le portail.</div>
         </div>
       </div>
+
+      <div class="settings-panel" data-tab-panel="dashboard-html">
+        <div class="settings-card">
+          <h3 class="settings-card-title">HTML personnalise du dashboard</h3>
+          <p class="settings-card-sub">Ce contenu est affiche juste sous les cartes du dashboard. Les scripts, iframes et attributs dangereux sont retires automatiquement.</p>
+
+          <div class="settings-field settings-field--full">
+            <label for="dashboardHtmlInput">Code HTML</label>
+            <textarea id="dashboardHtmlInput" spellcheck="false" autocomplete="off"><%= dashboardCustomHtmlRaw || "" %></textarea>
+          </div>
+
+          <div class="settings-actions">
+            <button class="settings-btn" id="saveDashboardHtmlBtn" type="button">Enregistrer le HTML</button>
+          </div>
+          <div class="settings-inline-note" id="dashboardHtmlState">Le rendu est nettoye avant affichage sur le dashboard.</div>
+
+          <div class="dashboard-html-preview">
+            <div class="dashboard-html-preview-title">Apercu nettoye</div>
+            <div class="dashboard-custom-html" id="dashboardHtmlPreview"><%- dashboardCustomHtmlPreview || "" %></div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </section>
@@ -663,6 +710,10 @@
     const configForm = document.getElementById("configForm");
     const saveConfigBtn = document.getElementById("saveConfigBtn");
     const configState = document.getElementById("configState");
+    const dashboardHtmlInput = document.getElementById("dashboardHtmlInput");
+    const saveDashboardHtmlBtn = document.getElementById("saveDashboardHtmlBtn");
+    const dashboardHtmlState = document.getElementById("dashboardHtmlState");
+    const dashboardHtmlPreview = document.getElementById("dashboardHtmlPreview");
     if (!toggle || !state || !addBtn || !dashCardState || !dashCardsList || !form || !colorSelect || !cancelEditBtn) return;
 
     let cardBusy = false;
@@ -980,6 +1031,31 @@
           configState.textContent = err.message || "Impossible d'enregistrer les connexions.";
         } finally {
           saveConfigBtn.disabled = false;
+        }
+      });
+    }
+
+    if (saveDashboardHtmlBtn && dashboardHtmlInput && dashboardHtmlState && dashboardHtmlPreview) {
+      saveDashboardHtmlBtn.addEventListener("click", async function () {
+        const html = dashboardHtmlInput.value || "";
+
+        saveDashboardHtmlBtn.disabled = true;
+        dashboardHtmlState.textContent = "Enregistrement du HTML du dashboard...";
+        try {
+          const resp = await fetch(bp + "/api/admin/dashboard-html", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ html })
+          });
+          const data = await resp.json();
+          if (!resp.ok) throw new Error(data.error || ("HTTP " + resp.status));
+          dashboardHtmlInput.value = data.raw || "";
+          dashboardHtmlPreview.innerHTML = data.sanitized || "";
+          dashboardHtmlState.textContent = "HTML du dashboard enregistre avec succes.";
+        } catch (err) {
+          dashboardHtmlState.textContent = err.message || "Impossible d'enregistrer le HTML du dashboard.";
+        } finally {
+          saveDashboardHtmlBtn.disabled = false;
         }
       });
     }

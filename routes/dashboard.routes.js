@@ -31,6 +31,11 @@ const {
   saveDashboardBuiltinConfig,
   buildDashboardBuiltinCards
 } = require("../utils/dashboard-builtins");
+const {
+  getDashboardCustomHtml,
+  getDashboardCustomHtmlRaw,
+  saveDashboardCustomHtml
+} = require("../utils/dashboard-custom-html");
 
 /* ===============================
    ?? AUTH
@@ -773,6 +778,7 @@ router.get("/dashboard", requireAuth, (req, res) => {
     basePath: req.basePath,
     dashboardBuiltinCards,
     dashboardCustomCards,
+    dashboardCustomHtml: getDashboardCustomHtml(),
     dashboardServerStatsEnabled
   });
 });
@@ -946,6 +952,8 @@ router.get("/parametres", requireAuth, requireAdmin, (req, res) => {
     leaderboardBlurEnabled,
     dashboardServerStatsEnabled,
     dashboardBuiltinItems,
+    dashboardCustomHtmlRaw: getDashboardCustomHtmlRaw(),
+    dashboardCustomHtmlPreview: getDashboardCustomHtml(),
     configSections: getConfigSections(),
     dashboardCustomCards: customCardsResolved,
     availableDashboardColors: availableColors,
@@ -1424,6 +1432,23 @@ router.post("/api/admin/dashboard-builtins", requireAuth, requireAdmin, (req, re
   const savedItems = saveDashboardBuiltinConfig(items);
   log.create("[Admin]").info(`Ordre des cartes dashboard mis a jour par ${req.session.user.username}`);
   res.json({ success: true, items: savedItems });
+});
+
+router.get("/api/admin/dashboard-html", requireAuth, requireAdmin, (req, res) => {
+  res.json({
+    raw: getDashboardCustomHtmlRaw(),
+    sanitized: getDashboardCustomHtml()
+  });
+});
+
+router.post("/api/admin/dashboard-html", requireAuth, requireAdmin, (req, res) => {
+  const result = saveDashboardCustomHtml(req.body?.html || "");
+  log.create("[Admin]").info(`HTML dashboard mis a jour par ${req.session.user.username}`);
+  res.json({
+    success: true,
+    raw: result.raw,
+    sanitized: result.sanitized
+  });
 });
 
 router.get("/api/admin/config", requireAuth, requireAdmin, (req, res) => {

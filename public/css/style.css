@@ -739,6 +739,23 @@ body {
   transform: translateX(5px);
 }
 
+.dashboard-custom-html {
+  margin: 18px 0 22px;
+  border: 1px solid rgba(226, 246, 255, 0.22);
+  border-radius: 18px;
+  background: rgba(8, 12, 18, 0.22);
+  padding: 18px;
+  box-shadow: 0 14px 34px rgba(0,0,0,.12);
+}
+
+.dashboard-custom-html > :first-child {
+  margin-top: 0;
+}
+
+.dashboard-custom-html > :last-child {
+  margin-bottom: 0;
+}
+
 .hero-icon--custom {
   position: relative;
   display: grid;
