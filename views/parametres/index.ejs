@@ -424,6 +424,22 @@
         </div>
 
         <div class="settings-card">
+        <div class="settings-row">
+          <div>
+            <h3>Barre de stats serveur</h3>
+            <p>Affiche ou masque uniquement la barre de stats serveur en haut du dashboard.</p>
+          </div>
+          <label class="switch" aria-label="Activer ou desactiver la barre de stats serveur du dashboard">
+            <input id="dashboardServerStatsToggle" type="checkbox" <%= dashboardServerStatsEnabled ? "checked" : "" %>>
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="settings-state" id="dashboardServerStatsState">
+          Etat actuel: <strong><%= dashboardServerStatsEnabled ? "Active" : "Desactive" %></strong>
+        </div>
+        </div>
+
+        <div class="settings-card">
         <h3 class="settings-card-title">Cartes supplementaires du dashboard</h3>
         <p class="settings-card-sub">Ajoute une carte perso (texte, couleur, lien interne ou externe).</p>
 
@@ -560,6 +576,8 @@
     const bp = window.APP_BASE_PATH || "";
     const toggle = document.getElementById("leaderboardBlurToggle");
     const state = document.getElementById("settingsState");
+    const dashboardServerStatsToggle = document.getElementById("dashboardServerStatsToggle");
+    const dashboardServerStatsState = document.getElementById("dashboardServerStatsState");
     const addBtn = document.getElementById("addDashboardCardBtn");
     const dashCardState = document.getElementById("dashCardState");
     const dashCardsList = document.getElementById("dashboardCardsList");
@@ -728,6 +746,33 @@
         inFlight = false;
       }
     });
+
+    let dashboardServerStatsInFlight = false;
+    if (dashboardServerStatsToggle && dashboardServerStatsState) {
+      dashboardServerStatsToggle.addEventListener("change", async function () {
+        if (dashboardServerStatsInFlight) return;
+        dashboardServerStatsInFlight = true;
+        dashboardServerStatsToggle.disabled = true;
+        const enabled = !!dashboardServerStatsToggle.checked;
+
+        try {
+          const resp = await fetch(bp + "/api/admin/settings/dashboard-server-stats", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ enabled })
+          });
+
+          if (!resp.ok) throw new Error("HTTP " + resp.status);
+          const data = await resp.json();
+          dashboardServerStatsState.innerHTML = "Etat actuel: <strong>" + (data.enabled ? "Active" : "Desactive") + "</strong>";
+        } catch (_) {
+          dashboardServerStatsToggle.checked = !enabled;
+        } finally {
+          dashboardServerStatsToggle.disabled = false;
+          dashboardServerStatsInFlight = false;
+        }
+      });
+    }
 
     settingsTabs.forEach(function (tab) {
       tab.addEventListener("click", function () {

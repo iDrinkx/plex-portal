@@ -136,38 +136,44 @@
 
 </div>
 
-<!-- SERVER STATS BAR -->
-<div class="server-stats-bar" id="serverStatsBar">
-  <div class="ssb-item" id="ssb-movies">
-    <span class="ssb-icon">🎬</span>
-    <span class="ssb-num skel" id="ssb-movies-num"></span>
-    <span class="ssb-label">Films</span>
-    <span class="ssb-sub"></span>
-  </div>
-  <div class="ssb-divider"></div>
-  <div class="ssb-item" id="ssb-shows">
-    <span class="ssb-icon">📺</span>
-    <span class="ssb-num skel" id="ssb-shows-num"></span>
-    <span class="ssb-label">Séries</span>
-    <span class="ssb-sub" id="ssb-episodes"></span>
-  </div>
-  <div class="ssb-divider"></div>
-  <div class="ssb-item" id="ssb-music">
-    <span class="ssb-icon">🎵</span>
-    <span class="ssb-num skel" id="ssb-music-num"></span>
-    <span class="ssb-label">Musiques</span>
-    <span class="ssb-sub"></span>
-  </div>
-  <div class="ssb-divider" id="ssb-div-audio"></div>
-  <div class="ssb-item" id="ssb-audio">
-    <span class="ssb-icon">🎧</span>
-    <span class="ssb-num skel" id="ssb-audio-num"></span>
-    <span class="ssb-label">Livres<br>audio</span>
-    <span class="ssb-sub"></span>
-  </div>
+<% if (dashboardServerStatsEnabled) { %>
+  <!-- SERVER STATS BAR -->
+  <div class="server-stats-bar" id="serverStatsBar">
+    <div class="ssb-item" id="ssb-movies">
+      <span class="ssb-icon">🎬</span>
+      <span class="ssb-num skel" id="ssb-movies-num"></span>
+      <span class="ssb-label">Films</span>
+      <span class="ssb-sub"></span>
+    </div>
+    <div class="ssb-divider"></div>
+    <div class="ssb-item" id="ssb-shows">
+      <span class="ssb-icon">📺</span>
+      <span class="ssb-num skel" id="ssb-shows-num"></span>
+      <span class="ssb-label">Séries</span>
+      <span class="ssb-sub" id="ssb-episodes"></span>
+    </div>
+    <div class="ssb-divider"></div>
+    <div class="ssb-item" id="ssb-music">
+      <span class="ssb-icon">🎵</span>
+      <span class="ssb-num skel" id="ssb-music-num"></span>
+      <span class="ssb-label">Musiques</span>
+      <span class="ssb-sub"></span>
+    </div>
+    <div class="ssb-divider" id="ssb-div-audio"></div>
+    <div class="ssb-item" id="ssb-audio">
+      <span class="ssb-icon">🎧</span>
+      <span class="ssb-num skel" id="ssb-audio-num"></span>
+      <span class="ssb-label">Livres<br>audio</span>
+      <span class="ssb-sub"></span>
+    </div>
 </div>
+<% } %>
 
 <script src="<%= basePath %>/js/dashboard.js"></script>
+<script>
+  window.DASHBOARD_SERVER_STATS_ENABLED = <%= dashboardServerStatsEnabled ? "true" : "false" %>;
+</script>
+<% if (dashboardServerStatsEnabled) { %>
 <script>
 (function () {
   const bp      = '<%= basePath %>';
@@ -219,6 +225,7 @@
     .catch(() => {});
 })();
 </script>
+<% } %>
 
 <script>
 // ─── XP Rank Ring (même logique que la page profil) ───────────────────
@@ -283,8 +290,7 @@
   const endpoints = [
     '/api/subscription',
     '/api/seerr',
-    '/api/xp-snapshot',
-    '/api/stats'
+    '/api/xp-snapshot'
   ];
 
   function prefetchOne(path, timeoutMs) {

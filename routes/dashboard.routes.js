@@ -747,6 +747,7 @@ async function getWizarrSubscription(user) {
 
 router.get("/dashboard", requireAuth, (req, res) => {
   const colorMap = getColorMap();
+  const dashboardServerStatsEnabled = AppSettingQueries.getBool("dashboard_server_stats_enabled", true);
   const dashboardCustomCards = DashboardCardQueries.list()
     .map(card => {
       const color = colorMap.get(card.colorKey);
@@ -764,7 +765,8 @@ router.get("/dashboard", requireAuth, (req, res) => {
   res.render("dashboard/index", {
     user: req.session.user,
     basePath: req.basePath,
-    dashboardCustomCards
+    dashboardCustomCards,
+    dashboardServerStatsEnabled
   });
 });
 
@@ -909,6 +911,7 @@ router.get("/calendrier", requireAuth, (req, res) => {
 
 router.get("/parametres", requireAuth, requireAdmin, (req, res) => {
   const leaderboardBlurEnabled = AppSettingQueries.getBool("leaderboard_blur_enabled", true);
+  const dashboardServerStatsEnabled = AppSettingQueries.getBool("dashboard_server_stats_enabled", true);
   const customCards = DashboardCardQueries.list();
   const availableColorKeys = getAvailableColorKeys(customCards);
   const availableColors = DASHBOARD_CARD_PALETTE.filter(c => availableColorKeys.includes(c.key));
@@ -933,6 +936,7 @@ router.get("/parametres", requireAuth, requireAdmin, (req, res) => {
     user: req.session.user,
     basePath: req.basePath,
     leaderboardBlurEnabled,
+    dashboardServerStatsEnabled,
     configSections: getConfigSections(),
     dashboardCustomCards: customCardsResolved,
     availableDashboardColors: availableColors,
@@ -1387,6 +1391,18 @@ router.post("/api/admin/settings/leaderboard-blur", requireAuth, requireAdmin, (
   const enabled = !!req.body?.enabled;
   AppSettingQueries.setBool("leaderboard_blur_enabled", enabled);
   log.create("[Admin]").info(`Leaderboard blur ${enabled ? "activé" : "désactivé"} par ${req.session.user.username}`);
+  res.json({ success: true, enabled });
+});
+
+router.get("/api/admin/settings/dashboard-server-stats", requireAuth, requireAdmin, (req, res) => {
+  const enabled = AppSettingQueries.getBool("dashboard_server_stats_enabled", true);
+  res.json({ enabled });
+});
+
+router.post("/api/admin/settings/dashboard-server-stats", requireAuth, requireAdmin, (req, res) => {
+  const enabled = !!req.body?.enabled;
+  AppSettingQueries.setBool("dashboard_server_stats_enabled", enabled);
+  log.create("[Admin]").info(`Barre stats dashboard ${enabled ? "activée" : "désactivée"} par ${req.session.user.username}`);
   res.json({ success: true, enabled });
 });
 
