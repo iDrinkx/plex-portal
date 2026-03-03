@@ -986,7 +986,7 @@ router.get("/succes", requireAuth, async (req, res) => {
     // Construire les cards depuis l'état DB courant
     for (const category in achievementsByCategory) {
       achievementsByCategory[category].achievements = achievementsByCategory[category].achievements.map(a => ({
-        ...hydrateAchievementTexts(a, res.locals.plexServerName),
+        ...hydrateAchievementTexts(a, res.locals.siteTitle),
         unlocked:     !!userUnlockedMap[a.id],
         unlockedDate: userUnlockedMap[a.id] || null
       }));
@@ -1570,6 +1570,17 @@ router.post("/api/admin/settings/site-language", requireAuth, requireAdmin, (req
   AppSettingQueries.set("site_language", language);
   log.create("[Admin]").info(`Langue du site ${language} par ${req.session.user.username}`);
   res.json({ success: true, language });
+});
+
+router.get("/api/admin/settings/site-title", requireAuth, requireAdmin, (req, res) => {
+  res.json({ siteTitle: String(AppSettingQueries.get("site_title", "Plex-Portal") || "Plex-Portal") });
+});
+
+router.post("/api/admin/settings/site-title", requireAuth, requireAdmin, (req, res) => {
+  const siteTitle = String(req.body?.siteTitle || "").trim() || "Plex-Portal";
+  AppSettingQueries.set("site_title", siteTitle);
+  log.create("[Admin]").info(`Nom du site mis a jour par ${req.session.user.username}: ${siteTitle}`);
+  res.json({ success: true, siteTitle });
 });
 
 router.get("/api/admin/settings/site-background", requireAuth, requireAdmin, (req, res) => {

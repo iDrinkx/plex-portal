@@ -25,6 +25,10 @@ const PORT = process.env.PORT || 3000;
 let cachedPlexServerName = undefined;
 let cachedPlexServerKey = null;
 
+function getSiteTitle() {
+  return String(AppSettingQueries.get("site_title", "Plex-Portal") || "Plex-Portal").trim() || "Plex-Portal";
+}
+
 function getCustomFaviconAsset() {
   const candidates = [
     { file: "favicon.ico", href: "/favicon.ico", type: "image/x-icon" },
@@ -190,6 +194,7 @@ app.use(async (req, res, next) => {
   res.locals.navSubscriptionPillEnabled = AppSettingQueries.getBool("nav_subscription_pill_enabled", true);
   res.locals.siteBackground = getSiteBackgroundSettings();
   res.locals.plexServerName = await getPlexServerName() || "votre serveur Plex";
+  res.locals.siteTitle = getSiteTitle();
   res.locals.siteFavicon = getCustomFaviconAsset();
 
   if (req.session.user) {
