@@ -64,6 +64,12 @@ docker compose up -d
 - **[UNRAID.md](./UNRAID.md)**  Configuration spécifique Unraid
 - **[TECHNICAL.md](./TECHNICAL.md)**  Architecture technique et fonctionnement runtime
 
+##  Projet et politique
+
+- **[CONTRIBUTING.md](./CONTRIBUTING.md)**  Regles pour proposer une contribution
+- **[CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md)**  Regles de comportement pour les contributions et echanges
+- **[SECURITY.md](./SECURITY.md)**  Procedure de signalement des failles de securite
+
 ---
 
 ##  Structure du projet
