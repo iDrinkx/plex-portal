@@ -306,6 +306,7 @@
 <!-- Version Footer & Changelog Modal (Dashboard only) -->
 <footer class="version-footer" id="versionFooter">
   <span class="version-number" id="versionNumber">v--</span>
+  <span class="version-badge" id="versionBadge">Checking...</span>
 </footer>
 
 <!-- Changelog Modal -->
@@ -326,6 +327,7 @@
   (function() {
     const versionNumber = document.getElementById('versionNumber');
     const versionFooter = document.getElementById('versionFooter');
+    const versionBadge = document.getElementById('versionBadge');
     const changelogModal = document.getElementById('changelogModal');
     const changelogClose = document.getElementById('changelogClose');
     const changelogBody = document.getElementById('changelogBody');
@@ -334,13 +336,38 @@
     // Fetch version from API
     async function loadVersion() {
       try {
-        const response = await fetch((window.APP_BASE_PATH || '') + '/api/version');
+        const response = await fetch((window.APP_BASE_PATH || '') + '/api/version/status');
         if (!response.ok) throw new Error('Failed to fetch version');
-        const { version } = await response.json();
-        versionNumber.textContent = 'v' + version;
-        changelogVersion.textContent = version;
+        const data = await response.json();
+        const currentVersion = data.currentVersion || '--';
+        const latestVersion = data.latestVersion || null;
+
+        versionNumber.textContent = 'v' + currentVersion;
+        changelogVersion.textContent = currentVersion;
+
+        versionBadge.classList.remove('version-badge--latest', 'version-badge--outdated', 'version-badge--error');
+        versionFooter.classList.remove('version-footer--latest', 'version-footer--outdated', 'version-footer--error');
+
+        if (data.upToDate === true) {
+          versionBadge.textContent = 'Up to date';
+          versionBadge.classList.add('version-badge--latest');
+          versionFooter.classList.add('version-footer--latest');
+        } else if (data.upToDate === false && latestVersion) {
+          versionBadge.textContent = 'Update v' + latestVersion;
+          versionBadge.classList.add('version-badge--outdated');
+          versionFooter.classList.add('version-footer--outdated');
+        } else {
+          versionBadge.textContent = 'Unknown';
+          versionBadge.classList.add('version-badge--error');
+          versionFooter.classList.add('version-footer--error');
+        }
       } catch (err) {
         versionNumber.textContent = 'v?.?.?';
+        versionBadge.textContent = 'Unknown';
+        versionBadge.classList.remove('version-badge--latest', 'version-badge--outdated');
+        versionBadge.classList.add('version-badge--error');
+        versionFooter.classList.remove('version-footer--latest', 'version-footer--outdated');
+        versionFooter.classList.add('version-footer--error');
       }
     }
 
