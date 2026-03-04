@@ -2,6 +2,13 @@
 
 Toutes les modifications notables de ce projet sont documentées dans ce fichier.
 
+## <small>1.32.1 (2026-03-04)</small>
+
+* Merge pull request #32 from iDrinkx/develop ([0f09887](https://github.com/iDrinkx/plex-portal/commit/0f09887)), closes [#32](https://github.com/iDrinkx/plex-portal/issues/32)
+* fix: update card opacity limits for improved customization options ([80e27f6](https://github.com/iDrinkx/plex-portal/commit/80e27f6))
+* style: update card background opacity using CSS variables for improved consistency across the portal ([11c4eb6](https://github.com/iDrinkx/plex-portal/commit/11c4eb6))
+* style: update dimensions of custom logo for improved visibility ([8ed58ca](https://github.com/iDrinkx/plex-portal/commit/8ed58ca))
+
 ## 1.32.0 (2026-03-04)
 
 * Merge pull request #31 from iDrinkx/develop ([50502d0](https://github.com/iDrinkx/plex-portal/commit/50502d0)), closes [#31](https://github.com/iDrinkx/plex-portal/issues/31)
