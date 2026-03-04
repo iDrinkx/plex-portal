@@ -2204,6 +2204,121 @@ router.get('/api/version', (req, res) => {
   }
 });
 
+const VERSION_STATUS_CACHE_TTL_MS = 10 * 60 * 1000;
+let versionStatusCache = {
+  expiresAt: 0,
+  data: null
+};
+
+function stripVersionPrefix(value) {
+  return String(value || "").trim().replace(/^v/i, "");
+}
+
+function parseVersion(value) {
+  const match = stripVersionPrefix(value).match(/^(\d+)\.(\d+)\.(\d+)(?:-([\w.-]+))?$/);
+  if (!match) return null;
+  return {
+    major: Number(match[1]),
+    minor: Number(match[2]),
+    patch: Number(match[3]),
+    pre: match[4] || ""
+  };
+}
+
+function compareVersions(current, latest) {
+  const a = parseVersion(current);
+  const b = parseVersion(latest);
+  if (!a || !b) return null;
+  if (a.major !== b.major) return a.major > b.major ? 1 : -1;
+  if (a.minor !== b.minor) return a.minor > b.minor ? 1 : -1;
+  if (a.patch !== b.patch) return a.patch > b.patch ? 1 : -1;
+  if (!a.pre && b.pre) return 1;
+  if (a.pre && !b.pre) return -1;
+  if (a.pre !== b.pre) return a.pre > b.pre ? 1 : -1;
+  return 0;
+}
+
+function getGithubRepoSlug() {
+  const envValue = String(process.env.GITHUB_REPO || "").trim();
+  if (envValue) return envValue.replace(/\.git$/i, "");
+
+  try {
+    const pkg = require("../package.json");
+    const repo = pkg.repository;
+    const candidate = typeof repo === "string" ? repo : repo?.url;
+    if (!candidate) return "iDrinkx/plex-portal";
+
+    const normalized = String(candidate)
+      .replace(/^git\+/, "")
+      .replace(/^github:/, "https://github.com/")
+      .replace(/\.git$/i, "");
+    const match = normalized.match(/github\.com[/:]([^/]+\/[^/]+)/i);
+    return match ? match[1] : "iDrinkx/plex-portal";
+  } catch (_) {
+    return "iDrinkx/plex-portal";
+  }
+}
+
+async function getVersionStatus() {
+  const now = Date.now();
+  if (versionStatusCache.data && now < versionStatusCache.expiresAt) {
+    return versionStatusCache.data;
+  }
+
+  const { version: currentVersion } = require("../package.json");
+  const repo = getGithubRepoSlug();
+  const apiUrl = `https://api.github.com/repos/${repo}/releases/latest`;
+
+  try {
+    const response = await fetch(apiUrl, {
+      headers: {
+        "Accept": "application/vnd.github+json",
+        "User-Agent": "plex-portal-version-check"
+      },
+      timeout: 8000
+    });
+    if (!response.ok) {
+      throw new Error(`GitHub API ${response.status}`);
+    }
+
+    const data = await response.json();
+    const latestVersion = stripVersionPrefix(data.tag_name || "");
+    const comparison = compareVersions(currentVersion, latestVersion);
+    const upToDate = comparison !== null ? comparison >= 0 : currentVersion === latestVersion;
+
+    const payload = {
+      currentVersion,
+      latestVersion,
+      upToDate,
+      releaseUrl: data.html_url || null,
+      repo
+    };
+    versionStatusCache = {
+      expiresAt: now + VERSION_STATUS_CACHE_TTL_MS,
+      data: payload
+    };
+    return payload;
+  } catch (err) {
+    return {
+      currentVersion,
+      latestVersion: null,
+      upToDate: null,
+      releaseUrl: null,
+      repo,
+      error: "Version status unavailable"
+    };
+  }
+}
+
+router.get('/api/version/status', async (_, res) => {
+  try {
+    const status = await getVersionStatus();
+    res.json(status);
+  } catch (err) {
+    res.status(500).json({ error: 'Could not read version status' });
+  }
+});
+
 router.get('/api/changelog', (_, res) => {
   try {
     const fs = require('fs');

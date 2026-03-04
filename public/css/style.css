@@ -2048,6 +2048,20 @@ body.site-bg-mode-custom .site-bg-image {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
+.version-footer.version-footer--latest {
+  border-color: rgba(52, 211, 153, 0.45);
+  box-shadow: 0 0 0 1px rgba(52, 211, 153, 0.15), 0 6px 16px rgba(0, 0, 0, 0.25);
+}
+
+.version-footer.version-footer--outdated {
+  border-color: rgba(251, 146, 60, 0.45);
+  box-shadow: 0 0 0 1px rgba(251, 146, 60, 0.16), 0 6px 16px rgba(0, 0, 0, 0.25);
+}
+
+.version-footer.version-footer--error {
+  border-color: rgba(239, 68, 68, 0.45);
+}
+
 .version-number {
   color: #999;
   font-weight: 500;
@@ -2067,6 +2081,11 @@ body.site-bg-mode-custom .site-bg-image {
 .version-badge--latest {
   background: rgba(52, 211, 153, 0.2);
   color: #34d399;
+}
+
+.version-badge--outdated {
+  background: rgba(251, 146, 60, 0.2);
+  color: #fb923c;
 }
 
 .version-badge--error {
