@@ -50,6 +50,20 @@ function getCustomFaviconAsset() {
   return { href: "/logo.png", type: "image/png" };
 }
 
+function slugifyCardTitle(value) {
+  const normalized = String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return normalized || "app";
+}
+
+function getCardSlug(card) {
+  return slugifyCardTitle(card?.title || card?.label || "");
+}
+
 async function getPlexServerName() {
   const plexUrl = (process.env.PLEX_URL || "").replace(/\/$/, "");
   const plexToken = process.env.PLEX_TOKEN || "";
@@ -219,7 +233,7 @@ app.use(async (req, res, next) => {
         const navColors = navColorMap[card.colorKey] || { base: "rgba(226, 246, 255, 0.9)", hover: "#e8f6ff", accent: "#62b2ff" };
         let href = "";
         if (integrationKey !== "custom" || openInIframe) {
-          href = `${basePath}/app-card/${card.id}`;
+          href = `${basePath}/${getCardSlug(card)}`;
         } else {
           href = rawUrl.startsWith("/") ? `${basePath}${rawUrl}` : rawUrl;
         }
