@@ -306,7 +306,7 @@
 <!-- Version Footer & Changelog Modal (Dashboard only) -->
 <footer class="version-footer" id="versionFooter">
   <span class="version-number" id="versionNumber">v--</span>
-  <span class="version-badge" id="versionBadge">Checking...</span>
+  <span class="version-badge" id="versionBadge">v--</span>
 </footer>
 
 <!-- Changelog Modal -->
@@ -349,21 +349,21 @@
         versionFooter.classList.remove('version-footer--latest', 'version-footer--outdated', 'version-footer--error');
 
         if (data.upToDate === true) {
-          versionBadge.textContent = 'Up to date';
+          versionBadge.textContent = 'v' + currentVersion;
           versionBadge.classList.add('version-badge--latest');
           versionFooter.classList.add('version-footer--latest');
         } else if (data.upToDate === false && latestVersion) {
-          versionBadge.textContent = 'Update v' + latestVersion;
+          versionBadge.textContent = 'v' + latestVersion;
           versionBadge.classList.add('version-badge--outdated');
           versionFooter.classList.add('version-footer--outdated');
         } else {
-          versionBadge.textContent = 'Unknown';
+          versionBadge.textContent = 'v--';
           versionBadge.classList.add('version-badge--error');
           versionFooter.classList.add('version-footer--error');
         }
       } catch (err) {
         versionNumber.textContent = 'v?.?.?';
-        versionBadge.textContent = 'Unknown';
+        versionBadge.textContent = 'v--';
         versionBadge.classList.remove('version-badge--latest', 'version-badge--outdated');
         versionBadge.classList.add('version-badge--error');
         versionFooter.classList.remove('version-footer--latest', 'version-footer--outdated');
