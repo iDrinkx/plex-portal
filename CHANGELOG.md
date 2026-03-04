@@ -2,6 +2,38 @@
 
 Toutes les modifications notables de ce projet sont documentées dans ce fichier.
 
+## 1.32.0 (2026-03-04)
+
+* Merge pull request #31 from iDrinkx/develop ([50502d0](https://github.com/iDrinkx/plex-portal/commit/50502d0)), closes [#31](https://github.com/iDrinkx/plex-portal/issues/31)
+* Replace PNG icon with SVG for Seerr in various files; remove old PNG file. ([ec2c440](https://github.com/iDrinkx/plex-portal/commit/ec2c440))
+* style: add margin and font size to login card title for improved readability ([52ee013](https://github.com/iDrinkx/plex-portal/commit/52ee013))
+* style: add styles for logout button for improved visibility and interaction ([c201133](https://github.com/iDrinkx/plex-portal/commit/c201133))
+* style: adjust logo button width for improved consistency in login page ([8fb491d](https://github.com/iDrinkx/plex-portal/commit/8fb491d))
+* style: enhance login page styles for improved layout and visual consistency ([f78aa4a](https://github.com/iDrinkx/plex-portal/commit/f78aa4a))
+* style: refactor login page styles for improved layout and button design ([c1557cf](https://github.com/iDrinkx/plex-portal/commit/c1557cf))
+* style: update login button styles for improved appearance and consistency ([ab65660](https://github.com/iDrinkx/plex-portal/commit/ab65660))
+* fix: add custom logo styling for Jellyfin and enhance HTML preview frame in settings ([11e0182](https://github.com/iDrinkx/plex-portal/commit/11e0182))
+* fix: add file size validation and user feedback for background image uploads ([139598d](https://github.com/iDrinkx/plex-portal/commit/139598d))
+* fix: add site title to Seerr route response for improved context ([e050d64](https://github.com/iDrinkx/plex-portal/commit/e050d64))
+* fix: adjust dimensions of custom logo for consistency ([4f385b6](https://github.com/iDrinkx/plex-portal/commit/4f385b6))
+* fix: enhance CSRF token handling and login request structure in RomM authentication ([2a2397a](https://github.com/iDrinkx/plex-portal/commit/2a2397a))
+* fix: enhance dashboard custom HTML management with block support ([7a7647e](https://github.com/iDrinkx/plex-portal/commit/7a7647e))
+* fix: enhance external link handling for dashboard hero cards ([e387829](https://github.com/iDrinkx/plex-portal/commit/e387829))
+* fix: enhance user data handling by adding Tautulli user support and refactoring user mapping logic ([411c48a](https://github.com/iDrinkx/plex-portal/commit/411c48a))
+* fix: escape HTML in site background and dashboard items JSON data ([8b369e2](https://github.com/iDrinkx/plex-portal/commit/8b369e2))
+* fix: implement fallback logic for user classement selection from Tautulli and database ([1b406de](https://github.com/iDrinkx/plex-portal/commit/1b406de))
+* fix: improve condition for rendering custom HTML in dashboard ([1b5027f](https://github.com/iDrinkx/plex-portal/commit/1b5027f))
+* fix: remove redundant screen reader text and improve button layout in login page ([b7848ae](https://github.com/iDrinkx/plex-portal/commit/b7848ae))
+* fix: remove unused dashboard HTML preview elements and related logic ([e30ae0b](https://github.com/iDrinkx/plex-portal/commit/e30ae0b))
+* fix: update login page title for improved user clarity ([53a01f5](https://github.com/iDrinkx/plex-portal/commit/53a01f5))
+* fix: update SVG icons for Jellyfin and RomM with new designs and dimensions ([dc2c267](https://github.com/iDrinkx/plex-portal/commit/dc2c267))
+* feat: add site title configuration and update references throughout the application ([30ab0fb](https://github.com/iDrinkx/plex-portal/commit/30ab0fb))
+* feat: add support for custom HTML block positioning in dashboard ([76618c2](https://github.com/iDrinkx/plex-portal/commit/76618c2))
+* feat: add support for opening dashboard cards in a new tab and update related UI elements ([56acb8b](https://github.com/iDrinkx/plex-portal/commit/56acb8b))
+* feat: implement cookie handling for RomM session and CSRF tokens in authentication ([6f8f160](https://github.com/iDrinkx/plex-portal/commit/6f8f160))
+* feat: implement dashboard card ordering and update UI for better user interaction ([5ef5fb9](https://github.com/iDrinkx/plex-portal/commit/5ef5fb9))
+* feat: implement dynamic favicon support based on available assets ([4419c68](https://github.com/iDrinkx/plex-portal/commit/4419c68))
+
 ## <small>1.31.2 (2026-03-03)</small>
 
 * Merge pull request #30 from iDrinkx/develop ([0d5a9f6](https://github.com/iDrinkx/plex-portal/commit/0d5a9f6)), closes [#30](https://github.com/iDrinkx/plex-portal/issues/30)
