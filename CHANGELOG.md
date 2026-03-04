@@ -2,6 +2,13 @@
 
 Toutes les modifications notables de ce projet sont documentées dans ce fichier.
 
+## 1.33.0 (2026-03-04)
+
+* Add LICENSE file ([c56f819](https://github.com/iDrinkx/plex-portal/commit/c56f819))
+* Merge branch 'main' into develop ([eb4f1ef](https://github.com/iDrinkx/plex-portal/commit/eb4f1ef))
+* Merge pull request #34 from iDrinkx/develop ([0f835f0](https://github.com/iDrinkx/plex-portal/commit/0f835f0)), closes [#34](https://github.com/iDrinkx/plex-portal/issues/34)
+* feat: Update Docker image references and improve documentation ([fc36e70](https://github.com/iDrinkx/plex-portal/commit/fc36e70))
+
 ## <small>1.32.1 (2026-03-04)</small>
 
 * Merge pull request #32 from iDrinkx/develop ([0f09887](https://github.com/iDrinkx/plex-portal/commit/0f09887)), closes [#32](https://github.com/iDrinkx/plex-portal/issues/32)
