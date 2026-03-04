@@ -213,10 +213,61 @@ function resolveIntegrationSrc(card, basePath = "") {
   return rawUrl;
 }
 
+function slugifyCardTitle(value) {
+  const normalized = String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return normalized || "app";
+}
+
+const RESERVED_CARD_SLUGS = new Set([
+  "",
+  "api",
+  "dashboard",
+  "profil",
+  "classement",
+  "statistiques",
+  "mes-stats",
+  "succes",
+  "calendrier",
+  "parametres",
+  "seerr",
+  "setup",
+  "login",
+  "logout",
+  "auth-complete",
+  "app-card",
+  "jellyfin-proxy"
+]);
+
+function getCardSlug(card) {
+  return slugifyCardTitle(card?.title || card?.label || "");
+}
+
+function validateCardSlugForTitle(cards, title, excludeId = null) {
+  const slug = slugifyCardTitle(title);
+  if (RESERVED_CARD_SLUGS.has(slug)) {
+    return { ok: false, error: `Titre invalide: "${title}" est reserve` };
+  }
+  const duplicate = cards.find(c => {
+    const sameSlug = slugifyCardTitle(c.title || c.label || "") === slug;
+    if (!sameSlug) return false;
+    if (excludeId === null) return true;
+    return Number(c.id) !== Number(excludeId);
+  });
+  if (duplicate) {
+    return { ok: false, error: "Deux cartes ne peuvent pas avoir le meme titre (URL deja utilisee)" };
+  }
+  return { ok: true, slug };
+}
+
 function toCardHref(card, basePath = "") {
   const integrationKey = String(card.integrationKey || "custom");
   if (integrationKey !== "custom" || card.openInIframe) {
-    return `${basePath}/app-card/${card.id}`;
+    return `${basePath}/${getCardSlug(card)}`;
   }
   const rawUrl = String(card.url || "");
   return rawUrl.startsWith("/") ? `${basePath}${rawUrl}` : rawUrl;
@@ -784,12 +835,12 @@ async function grabRommCookieForUser(res, sessionUser) {
   return { ok: true };
 }
 
-function renderServiceConnectGate(res, req, serviceKey, cardTitle, errorMessage = "") {
+function renderServiceConnectGate(res, req, card, serviceKey, cardTitle, errorMessage = "") {
   const serviceName =
     serviceKey === "komga" ? "Komga" :
     serviceKey === "jellyfin" ? "Jellyfin" :
     "RomM";
-  const returnPath = `${req.basePath || ""}/app-card/${req.params.id}`;
+  const returnPath = `${req.basePath || ""}/${getCardSlug(card || {})}`;
   return res.render("apps/service-connect", {
     layout: false,
     basePath: req.basePath || "",
@@ -799,6 +850,67 @@ function renderServiceConnectGate(res, req, serviceKey, cardTitle, errorMessage 
     cardTitle: cardTitle || serviceName,
     returnPath,
     errorMessage: errorMessage || ""
+  });
+}
+
+function findCardBySlug(slug) {
+  const normalized = slugifyCardTitle(slug || "");
+  return DashboardCardQueries.list().find(c => getCardSlug(c) === normalized) || null;
+}
+
+async function openCardByModel(req, res, card) {
+  const integrationKey = String(card.integrationKey || "custom");
+  let srcUrl = resolveIntegrationSrc(card, req.basePath || "");
+  if (!srcUrl) {
+    return res.redirect(req.basePath + "/dashboard");
+  }
+
+  if (integrationKey === "komga_auto") {
+    try {
+      const result = await grabKomgaCookieForUser(res, req.session.user);
+      if (!result.ok && result.needsSetup) {
+        return renderServiceConnectGate(res, req, card, "komga", card.title, "Connecte ton compte Komga pour continuer");
+      }
+      if (!result.ok && result.error) {
+        return res.status(503).send(result.error);
+      }
+    } catch (_) {
+      return renderServiceConnectGate(res, req, card, "komga", card.title, "Connexion Komga requise");
+    }
+  }
+
+  if (integrationKey === "jellyfin_auto" || integrationKey === "jellyfin_iframe") {
+    try {
+      const result = await refreshJellyfinSessionAuth(req.session, req.session.user);
+      if (!result.ok && result.needsSetup) {
+        return renderServiceConnectGate(res, req, card, "jellyfin", card.title, "Connecte ton compte Jellyfin pour continuer");
+      }
+      srcUrl = buildJellyfinProxyUrl(srcUrl, req.basePath || "");
+    } catch (_) {
+      return renderServiceConnectGate(res, req, card, "jellyfin", card.title, "Connexion Jellyfin requise");
+    }
+  }
+
+  if (integrationKey === "romm_auto") {
+    try {
+      const result = await grabRommCookieForUser(res, req.session.user);
+      if (!result.ok && result.needsSetup) {
+        return renderServiceConnectGate(res, req, card, "romm", card.title, "Connecte ton compte RomM pour continuer");
+      }
+      if (!result.ok && result.error) {
+        return renderServiceConnectGate(res, req, card, "romm", card.title, result.error);
+      }
+      return res.redirect(srcUrl);
+    } catch (_) {
+      return renderServiceConnectGate(res, req, card, "romm", card.title, "Connexion RomM requise");
+    }
+  }
+
+  return res.render("apps/iframe", {
+    layout: false,
+    basePath: req.basePath || "",
+    title: card.title || "Application",
+    srcUrl
   });
 }
 
@@ -1753,6 +1865,10 @@ router.post("/api/admin/dashboard-cards", requireAuth, requireAdmin, (req, res) 
   }
 
   const cards = DashboardCardQueries.list();
+  const slugCheck = validateCardSlugForTitle(cards, title);
+  if (!slugCheck.ok) {
+    return res.status(400).json({ error: slugCheck.error });
+  }
   const availableColorKeys = new Set(getAvailableColorKeys(cards));
   if (!availableColorKeys.has(colorKey)) {
     return res.status(400).json({ error: "Couleur non disponible" });
@@ -1805,6 +1921,10 @@ router.put("/api/admin/dashboard-cards/:id", requireAuth, requireAdmin, (req, re
   if (!target) {
     return res.status(404).json({ error: "Carte introuvable" });
   }
+  const slugCheck = validateCardSlugForTitle(cards, title, id);
+  if (!slugCheck.ok) {
+    return res.status(400).json({ error: slugCheck.error });
+  }
 
   // Couleur autorisée si elle reste identique, sinon elle doit être libre.
   const colorUnchanged = target.colorKey === colorKey;
@@ -1839,68 +1959,43 @@ router.post("/api/admin/dashboard-cards/order", requireAuth, requireAdmin, (req,
   res.json({ success: true, ids: orderedIds });
 });
 
-router.get("/app-card/:id", requireAuth, async (req, res) => {
-  const id = parseInt(req.params.id, 10);
-  if (!Number.isInteger(id) || id <= 0) {
-    return res.redirect(req.basePath + "/dashboard");
+router.get("/app-card/:cardRef", requireAuth, async (req, res) => {
+  const rawRef = String(req.params.cardRef || "").trim();
+  let card = null;
+
+  const strictId = parseInt(rawRef, 10);
+  if (Number.isInteger(strictId) && strictId > 0 && String(strictId) === rawRef) {
+    card = DashboardCardQueries.getById(strictId);
   }
-  const card = DashboardCardQueries.getById(id);
+  if (!card) {
+    const idMatch = rawRef.match(/-(\d+)$/);
+    const fallbackId = idMatch ? parseInt(idMatch[1], 10) : NaN;
+    if (Number.isInteger(fallbackId) && fallbackId > 0) {
+      card = DashboardCardQueries.getById(fallbackId);
+    }
+  }
+  if (!card && rawRef) {
+    card = findCardBySlug(rawRef);
+  }
   if (!card) {
     return res.redirect(req.basePath + "/dashboard");
   }
 
   const integrationKey = String(card.integrationKey || "custom");
-  let srcUrl = resolveIntegrationSrc(card, req.basePath || "");
-  if (!srcUrl) {
+  if (integrationKey === "custom" && !card.openInIframe) {
     return res.redirect(req.basePath + "/dashboard");
   }
+  return res.redirect(`${req.basePath || ""}/${getCardSlug(card)}`);
+});
 
-  // Schéma préconfig: Komga/Jellyfin auto-auth par utilisateur
-  if (integrationKey === "komga_auto") {
-    try {
-      const result = await grabKomgaCookieForUser(res, req.session.user);
-      if (!result.ok && result.needsSetup) {
-        return renderServiceConnectGate(res, req, "komga", card.title, "Connecte ton compte Komga pour continuer");
-      }
-      if (!result.ok && result.error) {
-        return res.status(503).send(result.error);
-      }
-    } catch (_) {
-      return renderServiceConnectGate(res, req, "komga", card.title, "Connexion Komga requise");
-    }
-  }
-  if (integrationKey === "jellyfin_auto" || integrationKey === "jellyfin_iframe") {
-    try {
-      const result = await refreshJellyfinSessionAuth(req.session, req.session.user);
-      if (!result.ok && result.needsSetup) {
-        return renderServiceConnectGate(res, req, "jellyfin", card.title, "Connecte ton compte Jellyfin pour continuer");
-      }
-      srcUrl = buildJellyfinProxyUrl(srcUrl, req.basePath || "");
-    } catch (_) {
-      return renderServiceConnectGate(res, req, "jellyfin", card.title, "Connexion Jellyfin requise");
-    }
-  }
-  if (integrationKey === "romm_auto") {
-    try {
-      const result = await grabRommCookieForUser(res, req.session.user);
-      if (!result.ok && result.needsSetup) {
-        return renderServiceConnectGate(res, req, "romm", card.title, "Connecte ton compte RomM pour continuer");
-      }
-      if (!result.ok && result.error) {
-        return renderServiceConnectGate(res, req, "romm", card.title, result.error);
-      }
-      return res.redirect(srcUrl);
-    } catch (_) {
-      return renderServiceConnectGate(res, req, "romm", card.title, "Connexion RomM requise");
-    }
-  }
-
-  res.render("apps/iframe", {
-    layout: false,
-    basePath: req.basePath || "",
-    title: card.title || "Application",
-    srcUrl
-  });
+router.get("/:cardSlug", requireAuth, async (req, res, next) => {
+  const slug = String(req.params.cardSlug || "").trim();
+  if (!slug || RESERVED_CARD_SLUGS.has(slug)) return next();
+  const card = findCardBySlug(slug);
+  if (!card) return next();
+  const integrationKey = String(card.integrationKey || "custom");
+  if (integrationKey === "custom" && !card.openInIframe) return next();
+  return openCardByModel(req, res, card);
 });
 
 router.delete("/api/admin/dashboard-cards/:id", requireAuth, requireAdmin, (req, res) => {
@@ -2197,7 +2292,7 @@ router.get("/api/calendar", requireAuth, async (req, res) => {
 
 router.get('/api/version', (req, res) => {
   try {
-    const { version } = require('../package.json');
+    const version = getLocalAppVersion();
     res.json({ version });
   } catch (err) {
     res.status(500).json({ error: 'Could not read version' });
@@ -2207,8 +2302,22 @@ router.get('/api/version', (req, res) => {
 const VERSION_STATUS_CACHE_TTL_MS = 10 * 60 * 1000;
 let versionStatusCache = {
   expiresAt: 0,
+  currentVersion: null,
   data: null
 };
+
+function readPackageJsonFresh() {
+  const fs = require("fs");
+  const path = require("path");
+  const packageJsonPath = path.join(__dirname, "../package.json");
+  const raw = fs.readFileSync(packageJsonPath, "utf8");
+  return JSON.parse(raw);
+}
+
+function getLocalAppVersion() {
+  const pkg = readPackageJsonFresh();
+  return String(pkg.version || "").trim();
+}
 
 function stripVersionPrefix(value) {
   return String(value || "").trim().replace(/^v/i, "");
@@ -2243,7 +2352,7 @@ function getGithubRepoSlug() {
   if (envValue) return envValue.replace(/\.git$/i, "");
 
   try {
-    const pkg = require("../package.json");
+    const pkg = readPackageJsonFresh();
     const repo = pkg.repository;
     const candidate = typeof repo === "string" ? repo : repo?.url;
     if (!candidate) return "iDrinkx/plex-portal";
@@ -2261,11 +2370,15 @@ function getGithubRepoSlug() {
 
 async function getVersionStatus() {
   const now = Date.now();
-  if (versionStatusCache.data && now < versionStatusCache.expiresAt) {
+  const currentVersion = getLocalAppVersion();
+  if (
+    versionStatusCache.data &&
+    versionStatusCache.currentVersion === currentVersion &&
+    now < versionStatusCache.expiresAt
+  ) {
     return versionStatusCache.data;
   }
 
-  const { version: currentVersion } = require("../package.json");
   const repo = getGithubRepoSlug();
   const apiUrl = `https://api.github.com/repos/${repo}/releases/latest`;
 
@@ -2295,6 +2408,7 @@ async function getVersionStatus() {
     };
     versionStatusCache = {
       expiresAt: now + VERSION_STATUS_CACHE_TTL_MS,
+      currentVersion,
       data: payload
     };
     return payload;
@@ -2334,7 +2448,7 @@ router.get('/api/changelog', (_, res) => {
 
 router.get('/api/version-badge.svg', (_, res) => {
   try {
-    const { version } = require('../package.json');
+    const version = getLocalAppVersion();
 
     // SVG badge dynamique basé sur package.json
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="114" height="20" role="img" aria-label="Version: ${version}">
