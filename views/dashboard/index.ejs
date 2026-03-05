@@ -345,12 +345,12 @@
         versionNumber.textContent = 'v' + currentVersion;
         changelogVersion.textContent = currentVersion;
 
-        versionBadge.classList.remove('version-badge--latest', 'version-badge--outdated', 'version-badge--error');
+        versionBadge.classList.remove('version-badge--latest', 'version-badge--outdated', 'version-badge--error', 'version-badge--hidden');
         versionFooter.classList.remove('version-footer--latest', 'version-footer--outdated', 'version-footer--error');
 
         if (data.upToDate === true) {
-          versionBadge.textContent = 'v' + currentVersion;
-          versionBadge.classList.add('version-badge--latest');
+          versionBadge.textContent = '';
+          versionBadge.classList.add('version-badge--hidden');
           versionFooter.classList.add('version-footer--latest');
         } else if (data.upToDate === false && latestVersion) {
           versionBadge.textContent = 'v' + latestVersion;
@@ -364,7 +364,7 @@
       } catch (err) {
         versionNumber.textContent = 'v?.?.?';
         versionBadge.textContent = 'v--';
-        versionBadge.classList.remove('version-badge--latest', 'version-badge--outdated');
+        versionBadge.classList.remove('version-badge--latest', 'version-badge--outdated', 'version-badge--hidden');
         versionBadge.classList.add('version-badge--error');
         versionFooter.classList.remove('version-footer--latest', 'version-footer--outdated');
         versionFooter.classList.add('version-footer--error');
