@@ -354,10 +354,12 @@ ouvrez une issue ou proposez une pull request sur le dépôt principal.
 
 ## Licence
 
-Ce projet est propriétaire.
+Ce projet est distribué sous licence **GNU General Public License v3.0 (GPLv3)**.
 
-L'utilisation de l'image Docker officielle est autorisée pour un usage personnel ou interne uniquement.
+Vous pouvez utiliser, modifier et redistribuer ce projet conformément aux termes de la GPLv3.
 
-Toute modification, redistribution ou usage commercial est strictement interdit sans autorisation écrite de l'auteur.
+Toute redistribution d'une version modifiée doit rester sous GPLv3 et respecter les obligations de la licence.
+
+Ce logiciel est fourni sans garantie, dans les limites prévues par la GPLv3.
 
 Voir le fichier [LICENSE](LICENSE) pour plus d'informations.
