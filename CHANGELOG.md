@@ -1,3 +1,10 @@
+## 1.35.0 (2026-03-04)
+
+* Merge pull request #42 from iDrinkx/develop ([1143235](https://github.com/iDrinkx/plex-portal/commit/1143235)), closes [#42](https://github.com/iDrinkx/plex-portal/issues/42)
+* Merge pull request #43 from iDrinkx/develop ([47b30a3](https://github.com/iDrinkx/plex-portal/commit/47b30a3)), closes [#43](https://github.com/iDrinkx/plex-portal/issues/43)
+* fix(release): update GITHUB_TOKEN to use RELEASE_TOKEN for semantic-release ([fbbd15f](https://github.com/iDrinkx/plex-portal/commit/fbbd15f))
+* feat(dashboard): add slugify functionality for card titles and update routing logic ([c9e31c4](https://github.com/iDrinkx/plex-portal/commit/c9e31c4))
+
 # Changelog
 
 Toutes les modifications notables de ce projet sont documentées dans ce fichier.
