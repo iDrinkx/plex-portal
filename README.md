@@ -1,6 +1,6 @@
 ﻿
 <p align="center">
-  <img src="./public/img/plex-alt-light.svg" alt="Plex Portal Logo" width="280">
+  <img src="./public/img/plex-portal.png" alt="Plex Portal Logo" width="280">
 </p>
 
 <h1 align="center">Plex Portal</h1>
