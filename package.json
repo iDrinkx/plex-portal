@@ -1,6 +1,6 @@
 {
   "name": "plex-portal",
-  "version": "1.35.0",
+  "version": "1.35.1",
   "main": "server.js",
   "overrides": {
     "tar": "^7.5.8"
