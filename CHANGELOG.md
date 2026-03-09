@@ -1,3 +1,8 @@
+## <small>1.36.2 (2026-03-09)</small>
+
+* Merge pull request #56 from iDrinkx/develop ([e981ee1](https://github.com/iDrinkx/portall/commit/e981ee1)), closes [#56](https://github.com/iDrinkx/portall/issues/56)
+* fix(ci): enable sha tag generation for branch events in Docker workflow ([cbc3d23](https://github.com/iDrinkx/portall/commit/cbc3d23))
+
 ## <small>1.36.1 (2026-03-09)</small>
 
 * Merge pull request #55 from iDrinkx/develop ([e3039ab](https://github.com/iDrinkx/portall/commit/e3039ab)), closes [#55](https://github.com/iDrinkx/portall/issues/55)
