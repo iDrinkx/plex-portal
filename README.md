@@ -1,6 +1,6 @@
 ﻿
 <p align="center">
-  <img src="./public/img/plex-portal.png" alt="Plex Portal Logo" width="280">
+  <img src="./public/img/portall-v2.png" alt="Plex Portal Logo" width="280">
 </p>
 
 Tableau de bord compagnon non officiel pour les utilisateurs de Plex.
