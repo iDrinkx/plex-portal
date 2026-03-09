@@ -1,3 +1,9 @@
+## <small>1.36.1 (2026-03-09)</small>
+
+* Merge pull request #55 from iDrinkx/develop ([e3039ab](https://github.com/iDrinkx/portall/commit/e3039ab)), closes [#55](https://github.com/iDrinkx/portall/issues/55)
+* fix(ci): update Docker workflow to handle release events and include tags for image versioning ([f3b01d6](https://github.com/iDrinkx/portall/commit/f3b01d6))
+* fix(ci): update Docker workflow to refine tag handling for default branch and versioning ([daaad90](https://github.com/iDrinkx/portall/commit/daaad90))
+
 ## 1.36.0 (2026-03-09)
 
 * Merge pull request #54 from iDrinkx/develop ([13154bf](https://github.com/iDrinkx/portall/commit/13154bf)), closes [#54](https://github.com/iDrinkx/portall/issues/54)
