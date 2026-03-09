@@ -27,3 +27,8 @@ logs
 # Autres
 README.md
 .github
+
+# Assets uniquement utilises par le README GitHub
+public/img/screenshots
+public/img/portall-v2.png
+public/img/portall-logo.png
