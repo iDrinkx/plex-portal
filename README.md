@@ -384,3 +384,7 @@ Voir le fichier [LICENSE](LICENSE) pour plus d'informations.
 This project is not affiliated with, endorsed by, or sponsored by Plex Inc.
 
 "Plex" is a trademark of Plex Inc.
+
+<p align="center">
+  <img src="./public/img/portall-logo.png" alt="Plex Portal Logo" width="280">
+</p>
