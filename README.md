@@ -1,6 +1,6 @@
 ﻿
 <p align="center">
-  <img src="https://raw.githubusercontent.com/idrinktv/portall/main/public/img/portall-v2.png" alt="Plex Portal Logo" width="280">
+  <img src="https://github.com/iDrinkx/portall/raw/main/./public/img/portall-v2.png" alt="Portall Logo Complet" width="280">
 </p>
 
 Tableau de bord compagnon non officiel pour les utilisateurs de Plex.
@@ -11,7 +11,7 @@ Application web pour gérer votre accès Plex, afficher abonnements, statistique
 
 ## 📦 Dernière Version & Changelog
 
-**📖 [Voir le CHANGELOG complet](./CHANGELOG.md)** pour l'historique des versions et fonctionnalités
+**📖 [Voir le CHANGELOG complet](https://github.com/iDrinkx/portall/blob/main/CHANGELOG.md)** pour l'historique des versions et fonctionnalités
 
 
 ---
@@ -386,5 +386,5 @@ This project is not affiliated with, endorsed by, or sponsored by Plex Inc.
 "Plex" is a trademark of Plex Inc.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/idrinktv/portall/main/public/img/portall-logo.png" alt="Plex Portal Logo" width="280">
+  <img src="https://github.com/iDrinkx/portall/raw/main/./public/img/portall-logo.png" alt="Portall Logo" width="280">
 </p>
