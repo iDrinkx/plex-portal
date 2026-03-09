@@ -1,3 +1,13 @@
+## <small>1.35.4 (2026-03-09)</small>
+
+* Merge branch 'develop' of https://github.com/iDrinkx/plex-portal into develop ([7339c50](https://github.com/iDrinkx/portall/commit/7339c50))
+* Merge pull request #51 from iDrinkx/main ([20326d5](https://github.com/iDrinkx/portall/commit/20326d5)), closes [#51](https://github.com/iDrinkx/portall/issues/51)
+* Merge pull request #52 from iDrinkx/develop ([7a4b78f](https://github.com/iDrinkx/portall/commit/7a4b78f)), closes [#52](https://github.com/iDrinkx/portall/issues/52)
+* Refactor code structure for improved readability and maintainability ([8a2f356](https://github.com/iDrinkx/portall/commit/8a2f356))
+* Refactor code structure for improved readability and maintainability ([31686dd](https://github.com/iDrinkx/portall/commit/31686dd))
+* fix(docs): add assets to .dockerignore for README GitHub usage ([0c6bc5b](https://github.com/iDrinkx/portall/commit/0c6bc5b))
+* fix(docs): update English description in README for clarity ([8cc0a55](https://github.com/iDrinkx/portall/commit/8cc0a55))
+
 ## <small>1.35.3 (2026-03-06)</small>
 
 * Merge branch 'develop' of https://github.com/iDrinkx/plex-portal into develop ([b1f1420](https://github.com/iDrinkx/plex-portal/commit/b1f1420))
