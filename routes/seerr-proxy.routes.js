@@ -121,6 +121,33 @@ function buildProxyPrefix(req) {
   return `${req.basePath || ""}/seerr`;
 }
 
+const SEERR_APP_PATH_PREFIXES = [
+  "/requests",
+  "/discover",
+  "/movies",
+  "/tv",
+  "/search",
+  "/library",
+  "/collections",
+  "/settings",
+  "/users",
+  "/user",
+  "/watchlist",
+  "/issue",
+  "/issues",
+  "/admin",
+  "/media",
+  "/person",
+  "/studio",
+  "/network",
+  "/company"
+];
+
+function isSeerrAppPath(pathname) {
+  const path = String(pathname || "");
+  return SEERR_APP_PATH_PREFIXES.some(prefix => path === prefix || path.startsWith(`${prefix}/`));
+}
+
 function rewriteHtmlForProxy(htmlBuffer, req) {
   const html = htmlBuffer.toString("utf8");
   const proxyPrefix = buildProxyPrefix(req);
@@ -141,14 +168,10 @@ function rewriteHtmlForProxy(htmlBuffer, req) {
 <style>
   :root { --plex-portal-seerr-topbar-height: 44px; }
   html { min-height: 100%; background: #0f1117; }
-  body {
-    min-height: 100vh;
-    padding-top: var(--plex-portal-seerr-topbar-height) !important;
-    box-sizing: border-box;
-  }
+  body { min-height: 100vh; box-sizing: border-box; }
   #plex-portal-seerr-topbar {
-    position: fixed;
-    inset: 0 0 auto 0;
+    position: sticky;
+    top: 0;
     z-index: 2147483647;
     display: flex;
     align-items: center;
@@ -157,6 +180,9 @@ function rewriteHtmlForProxy(htmlBuffer, req) {
     padding: 0 16px;
     background: #161b22;
     border-bottom: 1px solid #30363d;
+  }
+  #plex-portal-seerr-topbar + * {
+    min-height: calc(100vh - var(--plex-portal-seerr-topbar-height));
   }
   #plex-portal-seerr-back {
     display: inline-flex;
@@ -348,6 +374,18 @@ const seerrProxy = createProxyMiddleware({
 router.get(/^\/seerr$/, requireAuth, ensureSeerrSession, (req, res) => {
   const query = req.url.includes("?") ? req.url.slice(req.url.indexOf("?")) : "";
   return res.redirect(302, `${req.basePath || ""}/seerr/${query}`);
+});
+
+router.use(requireAuth, ensureSeerrSession, (req, res, next) => {
+  const path = req.path || "/";
+  if (path.startsWith("/seerr")) return next();
+  if (!isSeerrAppPath(path)) return next();
+
+  const referer = String(req.get("referer") || "");
+  const expectedPrefix = `${req.protocol}://${req.get("host")}${req.basePath || ""}/seerr`;
+  if (!referer.startsWith(expectedPrefix)) return next();
+
+  return res.redirect(302, `${req.basePath || ""}/seerr${req.originalUrl || path}`);
 });
 
 router.use("/seerr", requireAuth, (req, res, next) => {
