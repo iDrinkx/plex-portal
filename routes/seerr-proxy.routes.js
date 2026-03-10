@@ -229,6 +229,27 @@ function rewriteHtmlForProxy(htmlBuffer, req) {
     };
   } catch (_) {}
 
+  try {
+    if ("serviceWorker" in navigator && navigator.serviceWorker) {
+      navigator.serviceWorker.getRegistrations()
+        .then((registrations) => registrations.forEach((registration) => {
+          try { registration.unregister(); } catch (_) {}
+        }))
+        .catch(() => {});
+
+      navigator.serviceWorker.register = async function() {
+        return {
+          scope: location.origin + prefix + "/",
+          active: null,
+          installing: null,
+          waiting: null,
+          unregister: async () => true,
+          update: async () => {}
+        };
+      };
+    }
+  } catch (_) {}
+
   document.addEventListener("click", (event) => {
     const anchor = event.target.closest && event.target.closest("a[href]");
     if (!anchor) return;
