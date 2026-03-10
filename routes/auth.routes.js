@@ -13,24 +13,6 @@ function getSafeUserLabel(user) {
   return `user#${user?.id || "unknown"}`;
 }
 
-/**
- * Grab le cookie connect.sid de Seerr via le token Plex.
- * Même logique qu'Organizr sso-functions.php#L335.
- *
- * En mode iframe, le cookie peut être posé avec domain=.votredomaine.com.
- * En mode proxy interne (/seerr), aucun domaine partagé n'est nécessaire.
- */
-function getSeerrCookieDomain() {
-  const publicUrl = getConfigValue("SEERR_PUBLIC_URL", "");
-  if (!publicUrl) return null;
-  try {
-    const hostname = new URL(publicUrl).hostname; // ex: seerr.votredomaine.com
-    const parts = hostname.split(".");
-    if (parts.length >= 2) return "." + parts.slice(-2).join("."); // .votredomaine.com
-  } catch (e) {}
-  return null;
-}
-
 async function grabSeerrCookie(authToken, res) {
   const seerrUrl = getConfigValue("SEERR_URL", "").replace(/\/$/, "");
   if (!seerrUrl || !authToken) return;
@@ -53,16 +35,14 @@ async function grabSeerrCookie(authToken, res) {
     const sidCookie = setCookies.find(c => c.startsWith("connect.sid="));
     if (sidCookie) {
       const value = sidCookie.split(";")[0].replace("connect.sid=", "");
-      const cookieDomain = getSeerrCookieDomain();
       const cookieOpts = {
         path: "/",
         httpOnly: true,
         sameSite: "lax",
         secure: process.env.COOKIE_SECURE === "true"
       };
-      if (cookieDomain) cookieOpts.domain = cookieDomain;
       res.cookie("connect.sid", decodeURIComponent(value), cookieOpts);
-      logAuth.info(`SSO cookie Seerr posé (domain=${cookieDomain || "courant"})`);
+      logAuth.info("SSO cookie Seerr pose pour le domaine courant");
     } else {
       logAuth.warn("Seerr n'a pas retourné de connect.sid");
     }

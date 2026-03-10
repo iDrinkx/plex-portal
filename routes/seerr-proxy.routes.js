@@ -18,27 +18,13 @@ function getSeerrUrl() {
   return String(getConfigValue("SEERR_URL", "") || "").trim().replace(/\/$/, "");
 }
 
-function getSeerrCookieDomain() {
-  const publicUrl = String(getConfigValue("SEERR_PUBLIC_URL", "") || "").trim();
-  if (!publicUrl) return null;
-  try {
-    const hostname = new URL(publicUrl).hostname;
-    const parts = hostname.split(".");
-    if (parts.length >= 2) return "." + parts.slice(-2).join(".");
-  } catch (_) {}
-  return null;
-}
-
 function getSeerrCookieOptions() {
-  const cookieOpts = {
+  return {
     path: "/",
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.COOKIE_SECURE === "true"
   };
-  const cookieDomain = getSeerrCookieDomain();
-  if (cookieDomain) cookieOpts.domain = cookieDomain;
-  return cookieOpts;
 }
 
 function escapeRegExp(value) {
@@ -158,16 +144,6 @@ function rewriteHtmlForProxy(htmlBuffer, req) {
   const proxyPrefixEscaped = proxyPrefix.replace(/"/g, "&quot;");
   const baseHref = `${proxyPrefix}/`;
   const dashboardUrl = `${req.basePath || ""}/dashboard`;
-  const topbarMarkup = `
-<div id="plex-portal-seerr-topbar">
-  <a href="${dashboardUrl}" id="plex-portal-seerr-back">
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
-      <path fill-rule="evenodd" d="M9.78 12.78a.75.75 0 0 1-1.06 0L4.47 8.53a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 1.06L6.06 8l3.72 3.72a.75.75 0 0 1 0 1.06z"/>
-    </svg>
-    Retour au portail
-  </a>
-</div>
-<div id="plex-portal-seerr-content">`;
   const clientPatch = `
 <base href="${baseHref}">
 <style>
@@ -217,6 +193,7 @@ function rewriteHtmlForProxy(htmlBuffer, req) {
 <script>
 (() => {
   const prefix = ${JSON.stringify(proxyPrefix)};
+  const dashboardUrl = ${JSON.stringify(dashboardUrl)};
   const normalize = (url) => {
     if (typeof url !== "string") return url;
     if (!url.startsWith("/") || url.startsWith("//") || url.startsWith(prefix + "/")) return url;
@@ -299,9 +276,40 @@ function rewriteHtmlForProxy(htmlBuffer, req) {
       anchor.setAttribute('href', normalize(url.pathname + url.search + url.hash));
     });
   };
+
+  const ensureTopbar = () => {
+    if (document.getElementById("plex-portal-seerr-topbar")) return;
+
+    const topbar = document.createElement("div");
+    topbar.id = "plex-portal-seerr-topbar";
+    topbar.innerHTML = [
+      '<a href="' + dashboardUrl + '" id="plex-portal-seerr-back">',
+      '<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">',
+      '<path fill-rule="evenodd" d="M9.78 12.78a.75.75 0 0 1-1.06 0L4.47 8.53a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 1.06L6.06 8l3.72 3.72a.75.75 0 0 1 0 1.06z"/>',
+      '</svg>',
+      'Retour au portail',
+      '</a>'
+    ].join("");
+
+    const content = document.createElement("div");
+    content.id = "plex-portal-seerr-content";
+
+    while (document.body.firstChild) {
+      content.appendChild(document.body.firstChild);
+    }
+
+    document.body.appendChild(topbar);
+    document.body.appendChild(content);
+  };
+
+  ensureTopbar();
   rewriteAnchors();
+  document.addEventListener("DOMContentLoaded", ensureTopbar);
   document.addEventListener("DOMContentLoaded", rewriteAnchors);
-  const observer = new MutationObserver(() => rewriteAnchors());
+  const observer = new MutationObserver(() => {
+    ensureTopbar();
+    rewriteAnchors();
+  });
   observer.observe(document.documentElement, { childList: true, subtree: true });
 })();
 </script>`;
@@ -309,13 +317,8 @@ function rewriteHtmlForProxy(htmlBuffer, req) {
   const withHeadPatch = html.includes("</head>")
     ? html.replace("</head>", `${clientPatch}</head>`)
     : `${clientPatch}${html}`;
-  const withTopbar = withHeadPatch.includes("<body")
-    ? withHeadPatch
-      .replace(/<body([^>]*)>/i, `<body$1>${topbarMarkup}`)
-      .replace(/<\/body>/i, `</div></body>`)
-    : `${topbarMarkup}${withHeadPatch}`;
 
-  return withTopbar
+  return withHeadPatch
     .replace(/(href|src|action)=("|')\/(?!\/)/gi, `$1=$2${proxyPrefixEscaped}/`)
     .replace(/(["'])\/_next\//g, `$1${proxyPrefix}/_next/`)
     .replace(/(["'])\/images\//g, `$1${proxyPrefix}/images/`)
@@ -368,14 +371,20 @@ router.get(/^\/seerr$/, requireAuth, ensureSeerrSession, (req, res) => {
 
 router.use((req, res, next) => {
   const path = req.path || "/";
-  if (path.startsWith("/seerr")) return next();
-  if (!isSeerrAppPath(path)) return next();
-
   if (!req.session || !req.session.user) return next();
 
   const referer = String(req.get("referer") || "");
   const expectedPrefix = `${req.protocol}://${req.get("host")}${req.basePath || ""}/seerr`;
   if (!referer.startsWith(expectedPrefix)) return next();
+
+  if (path === "/") {
+    return ensureSeerrSession(req, res, () => (
+      res.redirect(302, `${req.basePath || ""}/seerr/`)
+    ));
+  }
+
+  if (path.startsWith("/seerr")) return next();
+  if (!isSeerrAppPath(path)) return next();
 
   return ensureSeerrSession(req, res, () => (
     res.redirect(302, `${req.basePath || ""}/seerr${req.originalUrl || path}`)
