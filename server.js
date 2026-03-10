@@ -148,7 +148,7 @@ app.use(session({
   }
 }));
 
-// 2. Route Seerr (iframe SSO Organizr-style — simple GET, pas de proxy)
+// 2. Route Seerr (proxy interne avec SSO Plex -> Seerr)
 app.use("/", seeerrProxyRoutes);
 
 // 3. Body parsers

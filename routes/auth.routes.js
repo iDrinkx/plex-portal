@@ -17,9 +17,8 @@ function getSafeUserLabel(user) {
  * Grab le cookie connect.sid de Seerr via le token Plex.
  * Même logique qu'Organizr sso-functions.php#L335.
  *
- * Approche iframe : le cookie est posé avec domain=.votredomaine.com (parent commun
- * entre plex-portal.votredomaine.com et seerr.votredomaine.com) → le browser l'envoie
- * automatiquement quand l'iframe charge seerr.votredomaine.com.
+ * En mode iframe, le cookie peut être posé avec domain=.votredomaine.com.
+ * En mode proxy interne (/seerr), aucun domaine partagé n'est nécessaire.
  */
 function getSeerrCookieDomain() {
   const publicUrl = getConfigValue("SEERR_PUBLIC_URL", "");
@@ -59,7 +58,7 @@ async function grabSeerrCookie(authToken, res) {
         path: "/",
         httpOnly: true,
         sameSite: "lax",
-        secure: true  // HTTPS requis pour cross-subdomain
+        secure: process.env.COOKIE_SECURE === "true"
       };
       if (cookieDomain) cookieOpts.domain = cookieDomain;
       res.cookie("connect.sid", decodeURIComponent(value), cookieOpts);
