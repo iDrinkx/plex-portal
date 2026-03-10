@@ -376,16 +376,20 @@ router.get(/^\/seerr$/, requireAuth, ensureSeerrSession, (req, res) => {
   return res.redirect(302, `${req.basePath || ""}/seerr/${query}`);
 });
 
-router.use(requireAuth, ensureSeerrSession, (req, res, next) => {
+router.use((req, res, next) => {
   const path = req.path || "/";
   if (path.startsWith("/seerr")) return next();
   if (!isSeerrAppPath(path)) return next();
+
+  if (!req.session || !req.session.user) return next();
 
   const referer = String(req.get("referer") || "");
   const expectedPrefix = `${req.protocol}://${req.get("host")}${req.basePath || ""}/seerr`;
   if (!referer.startsWith(expectedPrefix)) return next();
 
-  return res.redirect(302, `${req.basePath || ""}/seerr${req.originalUrl || path}`);
+  return ensureSeerrSession(req, res, () => (
+    res.redirect(302, `${req.basePath || ""}/seerr${req.originalUrl || path}`)
+  ));
 });
 
 router.use("/seerr", requireAuth, (req, res, next) => {
