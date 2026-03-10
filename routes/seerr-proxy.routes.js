@@ -184,6 +184,12 @@ function rewriteHtmlForProxy(htmlBuffer, req) {
     padding-top: 72px;
     box-sizing: border-box;
   }
+  #plex-portal-seerr-content > #__next,
+  #plex-portal-seerr-content > div,
+  #plex-portal-seerr-content > main {
+    margin-top: 72px !important;
+    min-height: calc(100vh - 72px) !important;
+  }
   @media (max-width: 768px) {
     #plex-portal-seerr-navbar {
       height: auto !important;
@@ -195,6 +201,12 @@ function rewriteHtmlForProxy(htmlBuffer, req) {
     #plex-portal-seerr-content {
       min-height: calc(100vh - 60px);
       padding-top: 60px;
+    }
+    #plex-portal-seerr-content > #__next,
+    #plex-portal-seerr-content > div,
+    #plex-portal-seerr-content > main {
+      margin-top: 60px !important;
+      min-height: calc(100vh - 60px) !important;
     }
   }
 </style>
@@ -252,14 +264,32 @@ function rewriteHtmlForProxy(htmlBuffer, req) {
     });
   };
 
+  const offsetSeerrRoot = () => {
+    const content = document.getElementById("plex-portal-seerr-content");
+    if (!content) return;
+    const root = content.querySelector(":scope > #__next, :scope > div, :scope > main");
+    if (!root) return;
+    const nav = document.getElementById("plex-portal-seerr-navbar");
+    const offset = nav ? nav.offsetHeight : 72;
+    root.style.marginTop = offset + "px";
+    root.style.minHeight = "calc(100vh - " + offset + "px)";
+  };
+
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", rewriteAnchors, { once: true });
+    document.addEventListener("DOMContentLoaded", () => {
+      rewriteAnchors();
+      offsetSeerrRoot();
+    }, { once: true });
   } else {
     rewriteAnchors();
+    offsetSeerrRoot();
   }
 
   try {
-    const observer = new MutationObserver(() => rewriteAnchors());
+    const observer = new MutationObserver(() => {
+      rewriteAnchors();
+      offsetSeerrRoot();
+    });
     observer.observe(document.documentElement, { childList: true, subtree: true });
   } catch (_) {}
 })();
