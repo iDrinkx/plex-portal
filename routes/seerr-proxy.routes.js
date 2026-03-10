@@ -111,7 +111,7 @@ function buildSeerrNavbarMarkup(req) {
   const isAdmin = !!req.session?.user?.isAdmin;
 
   return `
-<div id="plex-portal-seerr-navbar" style="position:sticky;top:0;z-index:2147483647;height:72px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;background:#111;border-bottom:1px solid rgba(255,255,255,.08);box-sizing:border-box;">
+<div id="plex-portal-seerr-navbar" style="position:fixed;top:0;left:0;right:0;z-index:2147483647;height:72px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;background:#111;border-bottom:1px solid rgba(255,255,255,.08);box-sizing:border-box;">
   <a data-portal-link="1" href="${basePath}/dashboard" style="display:flex;align-items:center;text-decoration:none;">
     <img data-portal-asset="1" src="${basePath}/logo.png" alt="Portal" style="height:44px;width:auto;max-width:128px;object-fit:contain;display:block;filter:drop-shadow(0 0 6px rgba(0,0,0,.5));">
   </a>
@@ -178,17 +178,14 @@ function rewriteHtmlForProxy(htmlBuffer, req) {
 <base href="${proxyPrefix}/">
 <style>
   html, body { min-height: 100%; background: #0f1117; }
-  body { box-sizing: border-box; overflow-x: hidden; }
+  body {
+    box-sizing: border-box;
+    overflow-x: hidden;
+    padding-top: 72px !important;
+  }
   #plex-portal-seerr-content {
     min-height: calc(100vh - 72px);
-    padding-top: 72px;
     box-sizing: border-box;
-  }
-  #plex-portal-seerr-content > #__next,
-  #plex-portal-seerr-content > div,
-  #plex-portal-seerr-content > main {
-    margin-top: 72px !important;
-    min-height: calc(100vh - 72px) !important;
   }
   @media (max-width: 768px) {
     #plex-portal-seerr-navbar {
@@ -198,16 +195,10 @@ function rewriteHtmlForProxy(htmlBuffer, req) {
       gap: 12px;
       flex-wrap: wrap;
     }
-    #plex-portal-seerr-content {
-      min-height: calc(100vh - 60px);
-      padding-top: 60px;
+    body {
+      padding-top: 60px !important;
     }
-    #plex-portal-seerr-content > #__next,
-    #plex-portal-seerr-content > div,
-    #plex-portal-seerr-content > main {
-      margin-top: 60px !important;
-      min-height: calc(100vh - 60px) !important;
-    }
+    #plex-portal-seerr-content { min-height: calc(100vh - 60px); }
   }
 </style>
 <script>
@@ -264,31 +255,26 @@ function rewriteHtmlForProxy(htmlBuffer, req) {
     });
   };
 
-  const offsetSeerrRoot = () => {
-    const content = document.getElementById("plex-portal-seerr-content");
-    if (!content) return;
-    const root = content.querySelector(":scope > #__next, :scope > div, :scope > main");
-    if (!root) return;
+  const applyBodyOffset = () => {
     const nav = document.getElementById("plex-portal-seerr-navbar");
     const offset = nav ? nav.offsetHeight : 72;
-    root.style.marginTop = offset + "px";
-    root.style.minHeight = "calc(100vh - " + offset + "px)";
+    document.body.style.paddingTop = offset + "px";
   };
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", () => {
       rewriteAnchors();
-      offsetSeerrRoot();
+      applyBodyOffset();
     }, { once: true });
   } else {
     rewriteAnchors();
-    offsetSeerrRoot();
+    applyBodyOffset();
   }
 
   try {
     const observer = new MutationObserver(() => {
       rewriteAnchors();
-      offsetSeerrRoot();
+      applyBodyOffset();
     });
     observer.observe(document.documentElement, { childList: true, subtree: true });
   } catch (_) {}
