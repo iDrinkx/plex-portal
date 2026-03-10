@@ -223,10 +223,7 @@ const seerrProxy = createProxyMiddleware({
   })
 });
 
-router.get("/seerr", requireAuth, ensureSeerrSession, (req, res, next) => {
-  const pathOnly = (req.path || "").replace(/\/+$/, "");
-  if (pathOnly !== "/seerr") return next();
-
+router.get(/^\/seerr$/, requireAuth, ensureSeerrSession, (req, res) => {
   const query = req.url.includes("?") ? req.url.slice(req.url.indexOf("?")) : "";
   return res.redirect(302, `${req.basePath || ""}/seerr/${query}`);
 });
