@@ -194,12 +194,13 @@ function isSeerrAppPath(pathname) {
 }
 
 function rewriteHtmlForProxy(htmlBuffer, req) {
-  const html = htmlBuffer.toString("utf8");
-  const proxyPrefix = buildProxyPrefix(req);
-  const proxyPrefixEscaped = proxyPrefix.replace(/"/g, "&quot;");
-  const baseHref = `${proxyPrefix}/`;
-  const portalNavbarMarkup = buildSeerrNavbarMarkup(req);
-  const clientPatch = `
+  try {
+    const html = htmlBuffer.toString("utf8");
+    const proxyPrefix = buildProxyPrefix(req);
+    const proxyPrefixEscaped = proxyPrefix.replace(/"/g, "&quot;");
+    const baseHref = `${proxyPrefix}/`;
+    const portalNavbarMarkup = buildSeerrNavbarMarkup(req);
+    const clientPatch = `
 <base href="${baseHref}">
 <style>
   :root {
@@ -439,11 +440,15 @@ function rewriteHtmlForProxy(htmlBuffer, req) {
       .replace(/<\/body>/i, `</div></body>`)
     : `${portalNavbarMarkup}${withHeadPatch}`;
 
-  return withNavbar
-    .replace(/(href|src|action)=("|')\/(?!\/)/gi, `$1=$2${proxyPrefixEscaped}/`)
-    .replace(/(["'])\/_next\//g, `$1${proxyPrefix}/_next/`)
-    .replace(/(["'])\/images\//g, `$1${proxyPrefix}/images/`)
-    .replace(/(["'])\/api\/v1\//g, `$1${proxyPrefix}/api/v1/`);
+    return withNavbar
+      .replace(/(href|src|action)=("|')\/(?!\/)/gi, `$1=$2${proxyPrefixEscaped}/`)
+      .replace(/(["'])\/_next\//g, `$1${proxyPrefix}/_next/`)
+      .replace(/(["'])\/images\//g, `$1${proxyPrefix}/images/`)
+      .replace(/(["'])\/api\/v1\//g, `$1${proxyPrefix}/api/v1/`);
+  } catch (error) {
+    logSeerr.error(`Erreur rewriteHtmlForProxy: ${error.message}`);
+    return htmlBuffer;
+  }
 }
 
 const seerrProxy = createProxyMiddleware({
