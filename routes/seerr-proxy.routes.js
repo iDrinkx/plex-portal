@@ -160,32 +160,31 @@ function rewriteHtmlForProxy(htmlBuffer, req) {
   const dashboardUrl = `${req.basePath || ""}/dashboard`;
   const topbarMarkup = `
 <div id="plex-portal-seerr-topbar">
-  <button type="button" id="plex-portal-seerr-back">
+  <a href="${dashboardUrl}" id="plex-portal-seerr-back">
     <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
       <path fill-rule="evenodd" d="M9.78 12.78a.75.75 0 0 1-1.06 0L4.47 8.53a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 1.06L6.06 8l3.72 3.72a.75.75 0 0 1 0 1.06z"/>
     </svg>
-    Retour
-  </button>
-</div>`;
+    Retour au portail
+  </a>
+</div>
+<div id="plex-portal-seerr-content">`;
   const clientPatch = `
 <base href="${baseHref}">
 <style>
   :root { --plex-portal-seerr-topbar-height: 44px; }
-  html { min-height: 100%; background: #0f1117; }
-  body { min-height: 100vh; box-sizing: border-box; }
+  html, body { min-height: 100%; background: #0f1117; }
+  body { box-sizing: border-box; overflow-x: hidden; }
   #plex-portal-seerr-topbar {
-    position: sticky;
-    top: 0;
-    z-index: 2147483647;
     display: flex;
     align-items: center;
     gap: 12px;
+    z-index: 2147483647;
     height: var(--plex-portal-seerr-topbar-height);
     padding: 0 16px;
     background: #161b22;
     border-bottom: 1px solid #30363d;
   }
-  #plex-portal-seerr-topbar + * {
+  #plex-portal-seerr-content {
     min-height: calc(100vh - var(--plex-portal-seerr-topbar-height));
   }
   #plex-portal-seerr-back {
@@ -193,6 +192,7 @@ function rewriteHtmlForProxy(htmlBuffer, req) {
     align-items: center;
     gap: 7px;
     color: #c9d1d9;
+    text-decoration: none;
     font-size: 0.85rem;
     font-weight: 500;
     padding: 5px 12px;
@@ -217,7 +217,6 @@ function rewriteHtmlForProxy(htmlBuffer, req) {
 <script>
 (() => {
   const prefix = ${JSON.stringify(proxyPrefix)};
-  const dashboardUrl = ${JSON.stringify(dashboardUrl)};
   const normalize = (url) => {
     if (typeof url !== "string") return url;
     if (!url.startsWith("/") || url.startsWith("//") || url.startsWith(prefix + "/")) return url;
@@ -291,6 +290,7 @@ function rewriteHtmlForProxy(htmlBuffer, req) {
 
   const rewriteAnchors = () => {
     document.querySelectorAll('a[href]').forEach((anchor) => {
+      if (anchor.id === 'plex-portal-seerr-back') return;
       const href = anchor.getAttribute('href');
       if (!href) return;
       const url = absolutize(href);
@@ -299,23 +299,7 @@ function rewriteHtmlForProxy(htmlBuffer, req) {
       anchor.setAttribute('href', normalize(url.pathname + url.search + url.hash));
     });
   };
-
-  const bindBackButton = () => {
-    const backBtn = document.getElementById("plex-portal-seerr-back");
-    if (!backBtn || backBtn.dataset.bound === "1") return;
-    backBtn.dataset.bound = "1";
-    backBtn.addEventListener("click", () => {
-      if (document.referrer && document.referrer.startsWith(location.origin)) {
-        history.back();
-        return;
-      }
-      location.href = dashboardUrl;
-    });
-  };
-
-  bindBackButton();
   rewriteAnchors();
-  document.addEventListener("DOMContentLoaded", bindBackButton);
   document.addEventListener("DOMContentLoaded", rewriteAnchors);
   const observer = new MutationObserver(() => rewriteAnchors());
   observer.observe(document.documentElement, { childList: true, subtree: true });
@@ -326,7 +310,9 @@ function rewriteHtmlForProxy(htmlBuffer, req) {
     ? html.replace("</head>", `${clientPatch}</head>`)
     : `${clientPatch}${html}`;
   const withTopbar = withHeadPatch.includes("<body")
-    ? withHeadPatch.replace(/<body([^>]*)>/i, `<body$1>${topbarMarkup}`)
+    ? withHeadPatch
+      .replace(/<body([^>]*)>/i, `<body$1>${topbarMarkup}`)
+      .replace(/<\/body>/i, `</div></body>`)
     : `${topbarMarkup}${withHeadPatch}`;
 
   return withTopbar
