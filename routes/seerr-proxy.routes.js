@@ -107,6 +107,13 @@ function buildProxyPrefix(req) {
   return `${req.basePath || ""}/seerr`;
 }
 
+function applySeerrForwardedHeaders(proxyReq, req) {
+  proxyReq.setHeader("X-Forwarded-Prefix", buildProxyPrefix(req));
+  proxyReq.setHeader("X-Forwarded-Host", req.get("host") || "");
+  proxyReq.setHeader("X-Forwarded-Proto", req.protocol || "http");
+  proxyReq.setHeader("X-Forwarded-Uri", req.originalUrl || req.url || "/");
+}
+
 const SEERR_APP_PATH_PREFIXES = [
   "/requests",
   "/discover",
@@ -343,12 +350,7 @@ const seerrProxy = createProxyMiddleware({
     return path.replace(/^\/seerr/, "") || "/";
   },
   cookieDomainRewrite: { "*": "" },
-  onProxyReq(proxyReq, req) {
-    proxyReq.setHeader("X-Forwarded-Prefix", buildProxyPrefix(req));
-    proxyReq.setHeader("X-Forwarded-Host", req.get("host") || "");
-    proxyReq.setHeader("X-Forwarded-Proto", req.protocol || "http");
-    proxyReq.setHeader("X-Forwarded-Uri", req.originalUrl || req.url || "/");
-  },
+  onProxyReq: applySeerrForwardedHeaders,
   onProxyRes: responseInterceptor(async (responseBuffer, proxyRes, req, res) => {
     const proxyPrefix = buildProxyPrefix(req);
     const location = proxyRes.headers.location;
@@ -370,10 +372,25 @@ const seerrProxy = createProxyMiddleware({
   })
 });
 
+const seerrRootAssetProxy = createProxyMiddleware({
+  target: "http://127.0.0.1",
+  changeOrigin: true,
+  ws: true,
+  router() {
+    return getSeerrUrl();
+  },
+  cookieDomainRewrite: { "*": "" },
+  onProxyReq: applySeerrForwardedHeaders
+});
+
 router.get(/^\/seerr$/, requireAuth, ensureSeerrSession, (req, res) => {
   const query = req.url.includes("?") ? req.url.slice(req.url.indexOf("?")) : "";
   return res.redirect(302, `${req.basePath || ""}/seerr/${query}`);
 });
+
+router.use("/_next", requireAuth, ensureSeerrSession, seerrRootAssetProxy);
+router.get("/sw.js", requireAuth, ensureSeerrSession, seerrRootAssetProxy);
+router.get("/manifest.json", requireAuth, ensureSeerrSession, seerrRootAssetProxy);
 
 router.use((req, res, next) => {
   const path = req.path || "/";
