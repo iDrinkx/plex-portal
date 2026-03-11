@@ -26,7 +26,7 @@ let cachedPlexServerName = undefined;
 let cachedPlexServerKey = null;
 
 function getSiteTitle() {
-  return String(AppSettingQueries.get("site_title", "Plex-Portal") || "Plex-Portal").trim() || "Plex-Portal";
+  return String(AppSettingQueries.get("site_title", "portall") || "portall").trim() || "portall";
 }
 
 function getCustomFaviconAsset() {
@@ -207,7 +207,8 @@ app.use(async (req, res, next) => {
   res.locals.dashboardNavItems = [];
   res.locals.navSubscriptionPillEnabled = AppSettingQueries.getBool("nav_subscription_pill_enabled", true);
   res.locals.siteBackground = getSiteBackgroundSettings();
-  res.locals.plexServerName = await getPlexServerName() || "votre serveur Plex";
+  // Keep login unauthorized message aligned with admin-configured site name.
+  res.locals.plexServerName = getSiteTitle();
   res.locals.siteTitle = getSiteTitle();
   res.locals.siteFavicon = getCustomFaviconAsset();
 

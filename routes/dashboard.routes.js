@@ -1740,11 +1740,11 @@ router.post("/api/admin/settings/site-language", requireAuth, requireAdmin, (req
 });
 
 router.get("/api/admin/settings/site-title", requireAuth, requireAdmin, (req, res) => {
-  res.json({ siteTitle: String(AppSettingQueries.get("site_title", "Plex-Portal") || "Plex-Portal") });
+  res.json({ siteTitle: String(AppSettingQueries.get("site_title", "portall") || "portall") });
 });
 
 router.post("/api/admin/settings/site-title", requireAuth, requireAdmin, (req, res) => {
-  const siteTitle = String(req.body?.siteTitle || "").trim() || "Plex-Portal";
+  const siteTitle = String(req.body?.siteTitle || "").trim() || "portall";
   AppSettingQueries.set("site_title", siteTitle);
   log.create("[Admin]").info(`Nom du site mis a jour par ${req.session.user.username}: ${siteTitle}`);
   res.json({ success: true, siteTitle });
