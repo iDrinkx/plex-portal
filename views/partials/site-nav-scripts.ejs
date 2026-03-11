@@ -1,0 +1,74 @@
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const burger = document.getElementById("burger");
+    const mobileMenu = document.getElementById("mobileMenu");
+    const overlay = document.getElementById("overlay");
+
+    if (burger && mobileMenu && overlay) {
+      const openMenu = () => {
+        mobileMenu.classList.add("open");
+        overlay.classList.add("active");
+        document.body.style.overflow = "hidden";
+      };
+
+      const closeMenu = () => {
+        mobileMenu.classList.remove("open");
+        overlay.classList.remove("active");
+        document.body.style.overflow = "";
+      };
+
+      burger.addEventListener("click", () => {
+        if (mobileMenu.classList.contains("open")) closeMenu();
+        else openMenu();
+      });
+
+      overlay.addEventListener("click", closeMenu);
+
+      document.querySelectorAll(".mobile-menu a").forEach(link => {
+        link.addEventListener("click", closeMenu);
+      });
+    }
+  });
+
+  <% if (navSubscriptionPillEnabled) { %>
+  (function () {
+    const pill = document.getElementById('navSubPill');
+    const userId = document.body.getAttribute('data-user-id') || 'guest';
+    if (!pill) return;
+
+    const PILL_KEY = 'nav_pill_snap:' + userId;
+    const PILL_TTL = 24 * 60 * 60 * 1000;
+
+    function applyPill(data) {
+      const numMatch = data.daysLeft && String(data.daysLeft).match(/\d+/);
+      const text = data.status === 'unlimited' ? '\u221e'
+                 : numMatch ? numMatch[0] + '\u00a0jours'
+                 : data.label || '\u2014';
+      const cls = 'nav-sub-pill--' + (data.status || 'loading');
+      [pill, document.getElementById('mobileSubPill')].forEach(el => {
+        if (!el) return;
+        el.textContent = text;
+        el.className = el.className.replace(/\bnav-sub-pill--\S+/g, '');
+        el.classList.add(cls);
+      });
+    }
+
+    try {
+      const raw = localStorage.getItem(PILL_KEY);
+      if (raw) {
+        const snap = JSON.parse(raw);
+        if (snap.savedAt && Date.now() - snap.savedAt < PILL_TTL) applyPill(snap);
+      }
+    } catch (_) {}
+
+    fetch((window.APP_BASE_PATH || '') + '/api/subscription')
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (!data) return;
+        applyPill(data);
+        try { localStorage.setItem(PILL_KEY, JSON.stringify({ ...data, savedAt: Date.now() })); } catch (_) {}
+      })
+      .catch(() => {});
+  })();
+  <% } %>
+</script>

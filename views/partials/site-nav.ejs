@@ -1,0 +1,60 @@
+<% if (user) { %>
+  <nav class="navbar">
+
+    <a href="<%= basePath %>/dashboard" class="brand">
+      <img class="brand-logo" src="<%= basePath %>/logo.png" alt="MonPlex"/>
+    </a>
+
+    <div class="nav-center desktop-menu">
+      <a href="<%= basePath %>/dashboard" class="nav-link nav-link-dashboard"><%= t("nav.dashboard") %>&nbsp;🏠</a>
+      <% (dashboardNavItems || []).forEach(function(item) { %>
+        <a href="<%= item.href %>" class="nav-link <%= item.className %>"><%= item.label %>&nbsp;<% if (item.kind === "image") { %><img src="<%= item.iconSrc %>" alt="<%= item.iconAlt %>" class="nav-seerr-logo"><% } else if (item.kind === "profile") { %>👤<% } else { %><%= item.icon %><% } %></a>
+      <% }) %>
+      <% (customNavCards || []).forEach(function(card) { %>
+        <a
+          href="<%= card.href %>"
+          class="nav-link nav-link-custom"
+          style="--custom-nav-base:<%= card.navColorBase %>;--custom-nav-hover:<%= card.navColorHover %>;--custom-nav-accent:<%= card.navColorAccent %>;"
+          <% if (card.external) { %>target="_blank" rel="noopener noreferrer"<% } %>
+        ><%= card.label %>&nbsp;<span class="nav-custom-icon"><% if ((card.integrationKey || "") === "komga_auto") { %><img src="<%= basePath %>/img/komga-icon.svg" alt="Komga" class="nav-custom-icon-logo"><% } else if ((card.integrationKey || "") === "jellyfin_auto") { %><img src="<%= basePath %>/img/jellyfin-icon.svg" alt="Jellyfin" class="nav-custom-icon-logo"><% } else if ((card.integrationKey || "") === "romm_auto") { %><img src="<%= basePath %>/img/romm-icon.svg" alt="RomM" class="nav-custom-icon-logo"><% } else { %><%= card.icon %><% } %></span></a>
+      <% }) %>
+      <% if (user.isAdmin) { %>
+        <a href="<%= basePath %>/parametres" class="nav-link nav-link-settings"><%= t("nav.settings") %>&nbsp;⚙️</a>
+      <% } %>
+    </div>
+
+    <div class="nav-right desktop-menu">
+      <% if (navSubscriptionPillEnabled) { %>
+        <a href="<%= basePath %>/profil" class="nav-sub-pill" id="navSubPill">&#x2014;</a>
+      <% } %>
+      <a class="logout-btn" href="<%= basePath %>/logout"><%= t("nav.logout") %></a>
+    </div>
+
+    <% if (navSubscriptionPillEnabled) { %>
+      <a href="<%= basePath %>/profil" class="nav-sub-pill mobile-sub-pill" id="mobileSubPill">&#x2014;</a>
+    <% } %>
+    <div class="burger" id="burger">☰</div>
+
+  </nav>
+
+  <div class="overlay" id="overlay"></div>
+
+  <div class="mobile-menu" id="mobileMenu">
+    <a href="<%= basePath %>/dashboard" class="nav-link-dashboard"><%= t("nav.dashboard") %>&nbsp;🏠</a>
+    <% (dashboardNavItems || []).forEach(function(item) { %>
+      <a href="<%= item.href %>" class="<%= item.className %>"><%= item.label %>&nbsp;<% if (item.kind === "image") { %><img src="<%= item.iconSrc %>" alt="<%= item.iconAlt %>" class="nav-seerr-logo"><% } else if (item.kind === "profile") { %>👤<% } else { %><%= item.icon %><% } %></a>
+    <% }) %>
+    <% (customNavCards || []).forEach(function(card) { %>
+      <a
+        href="<%= card.href %>"
+        class="nav-link-custom-mobile"
+        style="--custom-nav-base:<%= card.navColorBase %>;--custom-nav-hover:<%= card.navColorHover %>;--custom-nav-accent:<%= card.navColorAccent %>;"
+        <% if (card.external) { %>target="_blank" rel="noopener noreferrer"<% } %>
+      ><%= card.label %>&nbsp;<span class="nav-custom-icon"><% if ((card.integrationKey || "") === "komga_auto") { %><img src="<%= basePath %>/img/komga-icon.svg" alt="Komga" class="nav-custom-icon-logo"><% } else if ((card.integrationKey || "") === "jellyfin_auto") { %><img src="<%= basePath %>/img/jellyfin-icon.svg" alt="Jellyfin" class="nav-custom-icon-logo"><% } else if ((card.integrationKey || "") === "romm_auto") { %><img src="<%= basePath %>/img/romm-icon.svg" alt="RomM" class="nav-custom-icon-logo"><% } else { %><%= card.icon %><% } %></span></a>
+    <% }) %>
+    <% if (user.isAdmin) { %>
+      <a href="<%= basePath %>/parametres" class="nav-link-settings"><%= t("nav.settings") %> ⚙️</a>
+    <% } %>
+    <a href="<%= basePath %>/logout" class="logout-mobile"><%= t("nav.logout") %></a>
+  </div>
+<% } %>
