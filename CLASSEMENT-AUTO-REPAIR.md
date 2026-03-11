@@ -104,7 +104,7 @@ Pour voir ce qui se passe automatiquement:
 
 ```bash
 # Docker
-docker-compose logs -f plex-portal | grep "Classement"
+docker-compose logs -f portall | grep "Classement"
 
 # Local
 npm start 2>&1 | grep "Classement"
@@ -132,7 +132,7 @@ Pour voir les logs en live:
 
 ```bash
 # Docker
-docker-compose logs -f plex-portal | grep "Classement-Refresh"
+docker-compose logs -f portall | grep "Classement-Refresh"
 
 # Local Node
 node server.js 2>&1 | grep "Classement-Refresh"

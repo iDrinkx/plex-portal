@@ -41,7 +41,7 @@ function reverseProxyMiddleware(req, res, next) {
     // Reconstruire depuis les headers du reverse proxy
     appUrl = `${forwarded.proto}://${forwarded.host}${basePath}`;
     
-    // Exemple result: https://example.com/plex-portal
+    // Exemple result: https://example.com/portall
   }
 
   // ============================================

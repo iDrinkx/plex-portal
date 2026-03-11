@@ -134,8 +134,18 @@ if (!SESSION_SECRET || SESSION_SECRET === "change-me-to-a-secure-key" || SESSION
   console.warn(`   SESSION_SECRET: \"${require('crypto').randomBytes(32).toString('hex')}\"\n`);
 }
 
+app.use((req, _res, next) => {
+  const legacySessionCookieName = ["plex", "portal.sid"].join("-");
+  const currentSessionCookieName = "portall.sid";
+  const cookieHeader = String(req.headers.cookie || "");
+  if (cookieHeader && !cookieHeader.includes(`${currentSessionCookieName}=`) && cookieHeader.includes(`${legacySessionCookieName}=`)) {
+    req.headers.cookie = cookieHeader.replace(new RegExp(`(^|;\\s*)${legacySessionCookieName}=`, "i"), `$1${currentSessionCookieName}=`);
+  }
+  next();
+});
+
 app.use(session({
-  name: "plex-portal.sid", // Nom unique pour éviter le conflit avec connect.sid de Seerr
+  name: "portall.sid", // Nom unique pour éviter le conflit avec connect.sid de Seerr
   secret: SESSION_SECRET || require('crypto').randomBytes(32).toString('hex'),
   resave: false,
   saveUninitialized: false,

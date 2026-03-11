@@ -1,5 +1,5 @@
 {
-  "name": "plex-portal",
+  "name": "portall",
   "license": "GPL-3.0-only",
   "version": "1.35.3",
   "main": "server.js",

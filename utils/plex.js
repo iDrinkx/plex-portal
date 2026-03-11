@@ -19,7 +19,7 @@ async function getServerOwnerId(PLEX_TOKEN) {
   const res = await fetch("https://plex.tv/api/v2/user", {
     headers: {
       "X-Plex-Token": PLEX_TOKEN,
-      "X-Plex-Client-Identifier": "plex-portal-app",
+      "X-Plex-Client-Identifier": "portall-app",
       "Accept": "application/json"
     }
   });
@@ -73,7 +73,7 @@ async function getAuthorizedServerUsers(PLEX_TOKEN, machineId) {
   const res = await fetch("https://plex.tv/api/users", {
     headers: {
       "X-Plex-Token": PLEX_TOKEN,
-      "X-Plex-Client-Identifier": "plex-portal-app",
+      "X-Plex-Client-Identifier": "portall-app",
       "Accept": "application/xml"
     }
   });
@@ -127,7 +127,7 @@ async function getPlexFriends(PLEX_TOKEN) {
   const res = await fetch("https://plex.tv/api/users", {
     headers: {
       "X-Plex-Token": PLEX_TOKEN,
-      "X-Plex-Client-Identifier": "plex-portal-app",
+      "X-Plex-Client-Identifier": "portall-app",
       "Accept": "application/xml"
     }
   });
@@ -201,7 +201,7 @@ async function getPlexUserInfo(plexUserId, _PLEX_URL, PLEX_TOKEN) {
     const ownerRes = await fetch("https://plex.tv/api/v2/user", {
       headers: {
         "X-Plex-Token": PLEX_TOKEN,
-        "X-Plex-Client-Identifier": "plex-portal-app",
+        "X-Plex-Client-Identifier": "portall-app",
         "Accept": "application/json"
       }
     });

@@ -29,9 +29,9 @@ docker-compose up -d
 version: '3.8'
 
 services:
-  plex-portal:
+  portall:
     build: .
-    container_name: plex-portal
+    container_name: portall
     ports:
       - "3000:3000"
     environment:

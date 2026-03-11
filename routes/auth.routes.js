@@ -18,7 +18,7 @@ function getSafeUserLabel(user) {
  * Même logique qu'Organizr sso-functions.php#L335.
  *
  * Approche iframe : le cookie est posé avec domain=.votredomaine.com (parent commun
- * entre plex-portal.votredomaine.com et seerr.votredomaine.com) → le browser l'envoie
+ * entre portall.votredomaine.com et seerr.votredomaine.com) → le browser l'envoie
  * automatiquement quand l'iframe charge seerr.votredomaine.com.
  */
 function getSeerrCookieDomain() {
@@ -115,8 +115,8 @@ router.get("/login", ensureSetupComplete, async (req, res) => {
     const response = await fetch("https://plex.tv/api/v2/pins?strong=true", {
       method: "POST",
       headers: {
-        "X-Plex-Client-Identifier": "plex-portal-app",
-        "X-Plex-Product": "Plex Portal",
+        "X-Plex-Client-Identifier": "portall-app",
+        "X-Plex-Product": "portall",
         "Accept": "application/json"
       },
       signal: ctrl.signal
@@ -128,7 +128,7 @@ router.get("/login", ensureSetupComplete, async (req, res) => {
 
     const forwardUrl = req.appUrl + "/auth-complete";
     res.redirect(
-      `https://app.plex.tv/auth#?clientID=plex-portal-app&code=${data.code}&forwardUrl=${encodeURIComponent(forwardUrl)}`
+      `https://app.plex.tv/auth#?clientID=portall-app&code=${data.code}&forwardUrl=${encodeURIComponent(forwardUrl)}`
     );
   } catch (err) {
     logAuth.error("Impossible d'initier l'auth Plex:", err.message);
@@ -151,7 +151,7 @@ router.get("/auth-complete", ensureSetupComplete, async (req, res) => {
       const timeout = setTimeout(() => ctrl.abort(), 5000);
       const response = await fetch(
         `https://plex.tv/api/v2/pins/${req.session.pinId}`,
-        { headers: { "X-Plex-Client-Identifier": "plex-portal-app", "Accept": "application/json" }, signal: ctrl.signal }
+        { headers: { "X-Plex-Client-Identifier": "portall-app", "Accept": "application/json" }, signal: ctrl.signal }
       );
       clearTimeout(timeout);
 

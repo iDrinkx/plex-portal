@@ -363,7 +363,7 @@ function buildJellyfinProxyUrl(publicUrl, basePath = "") {
 }
 
 function getCredentialEncryptionKey() {
-  const seed = String(process.env.SESSION_SECRET || "plex-portal-default").trim();
+  const seed = String(process.env.SESSION_SECRET || "portall-default").trim();
   return crypto.createHash("sha256").update(seed).digest();
 }
 
@@ -473,7 +473,7 @@ async function authenticateJellyfin(username, password) {
   const jellyfinUrl = getConfigValue("JELLYFIN_URL", "").replace(/\/$/, "");
   if (!jellyfinUrl || !username || !password) return null;
   try {
-    const deviceId = `plex-portal-${crypto.randomUUID()}`;
+    const deviceId = `portall-${crypto.randomUUID()}`;
     const authResp = await fetch(`${jellyfinUrl}/Users/AuthenticateByName`, {
       method: "POST",
       headers: {
@@ -916,7 +916,7 @@ async function openCardByModel(req, res, card) {
 
 function buildJellyfinAuthorizationHeader(jellyfinAuth) {
   const token = String(jellyfinAuth?.accessToken || "").trim();
-  const deviceId = String(jellyfinAuth?.deviceId || "plex-portal-proxy").trim();
+  const deviceId = String(jellyfinAuth?.deviceId || "portall-proxy").trim();
   if (!token) return "";
   return `MediaBrowser Token="${token}", Client="PlexPortal", Device="Web", DeviceId="${deviceId}", Version="1.0.0"`;
 }
@@ -2355,16 +2355,16 @@ function getGithubRepoSlug() {
     const pkg = readPackageJsonFresh();
     const repo = pkg.repository;
     const candidate = typeof repo === "string" ? repo : repo?.url;
-    if (!candidate) return "iDrinkx/plex-portal";
+    if (!candidate) return "iDrinkx/portall";
 
     const normalized = String(candidate)
       .replace(/^git\+/, "")
       .replace(/^github:/, "https://github.com/")
       .replace(/\.git$/i, "");
     const match = normalized.match(/github\.com[/:]([^/]+\/[^/]+)/i);
-    return match ? match[1] : "iDrinkx/plex-portal";
+    return match ? match[1] : "iDrinkx/portall";
   } catch (_) {
-    return "iDrinkx/plex-portal";
+    return "iDrinkx/portall";
   }
 }
 
@@ -2386,7 +2386,7 @@ async function getVersionStatus() {
     const response = await fetch(apiUrl, {
       headers: {
         "Accept": "application/vnd.github+json",
-        "User-Agent": "plex-portal-version-check"
+        "User-Agent": "portall-version-check"
       },
       timeout: 8000
     });
