@@ -1,47 +1,11 @@
-<!DOCTYPE html>
-<html lang="<%= locale || 'fr' %>">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="stylesheet" href="<%= basePath %>/css/style.css" />
-  <link rel="icon" type="image/png" href="<%= basePath %>/logo.png" />
-  <link rel="apple-touch-icon" href="<%= basePath %>/logo.png" />
-  <title><%= title %> - <%= siteTitle || "portall" %></title>
-  <script>
-    window.APP_BASE_PATH = "<%= basePath %>";
-    window.APP_LOCALE = "<%= locale || 'fr' %>";
-  </script>
-  <style>
-    html, body {
-      height: 100%;
-      overflow: hidden;
-      background: #0f1117;
-    }
-    body.iframe-page {
-      margin: 0;
-      display: flex;
-      flex-direction: column;
-    }
-    .iframe-page-wrap {
-      display: flex;
-      flex-direction: column;
-      flex: 1 1 auto;
-      min-height: 0;
-    }
-    #app-frame {
-      display: block;
-      width: 100%;
-      flex: 1 1 0;
-      min-height: 0;
-      border: none;
-    }
-  </style>
-</head>
-<body class="iframe-page" data-user-id="<%= user && user.id ? user.id : '' %>">
-<%- include("../partials/site-nav") %>
-<div class="iframe-page-wrap">
-  <iframe id="app-frame" src="<%= srcUrl %>" allow="fullscreen" title="<%= title %>"></iframe>
-</div>
-<%- include("../partials/site-nav-scripts") %>
-</body>
-</html>
+<style>
+  .app-frame {
+    display: block;
+    width: 100%;
+    flex: 1 1 0;
+    min-height: 0;
+    border: none;
+  }
+</style>
+
+<iframe class="app-frame" src="<%= srcUrl %>" allow="fullscreen" title="<%= title %>"></iframe>

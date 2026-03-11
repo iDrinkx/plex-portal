@@ -158,9 +158,6 @@ app.use(session({
   }
 }));
 
-// 2. Route Seerr (iframe SSO Organizr-style — simple GET, pas de proxy)
-app.use("/", seeerrProxyRoutes);
-
 // 3. Body parsers
 app.use(express.json({ limit: "12mb" }));
 app.use(express.urlencoded({ extended: true, limit: "12mb" }));
@@ -281,6 +278,7 @@ app.set("layout", "layout");
    ROUTES
 ========================= */
 
+app.use("/", seeerrProxyRoutes);
 app.use("/", authRoutes);
 app.use("/", dashboardRoutes);
 

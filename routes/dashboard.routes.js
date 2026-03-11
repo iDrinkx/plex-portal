@@ -907,8 +907,8 @@ async function openCardByModel(req, res, card) {
   }
 
   return res.render("apps/iframe", {
-    layout: false,
     basePath: req.basePath || "",
+    contentClass: "content--iframe",
     title: card.title || "Application",
     srcUrl
   });

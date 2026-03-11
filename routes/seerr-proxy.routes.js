@@ -98,8 +98,8 @@ router.get("/seerr", requireAuth, async (req, res) => {
 
   // Rendu sans layout (page standalone full-screen)
   res.render("seerr/index", {
-    layout: false,
     seerrPublicUrl,
+    contentClass: "content--iframe",
     locale: res.locals.locale || "fr",
     basePath: req.basePath || "",
     siteTitle: res.locals.siteTitle || "portall"

@@ -29,7 +29,7 @@
 
 <%- include("partials/site-nav") %>
 
-<main class="content">
+<main class="content<%= contentClass ? ' ' + contentClass : '' %>">
   <%- body %>
 </main>
 
