@@ -1,4 +1,4 @@
-# 🚀 Installation Plex Portal - Guide pas à pas
+# 🚀 Installation portall - Guide pas à pas
 
 ## 📋 Prérequis
 
@@ -198,7 +198,7 @@ Note:
 
 ## 🎉 Fait!
 
-Vous devriez maintenant avoir une application Plex Portal fonctionnelle! 
+Vous devriez maintenant avoir une application portall fonctionnelle! 
 
 **En local**: `http://localhost:3000`
 **Production**: Auto-détecté via le reverse proxy! ✨

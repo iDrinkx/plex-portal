@@ -1,4 +1,4 @@
-# 📝 Convention de commits — plex-portal
+# 📝 Convention de commits — portall
 
 Ce projet utilise les **Conventional Commits** pour générer automatiquement les versions et le changelog.
 

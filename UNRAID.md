@@ -1,6 +1,6 @@
-# 📦 Configuration Unraid - Plex Portal
+# 📦 Configuration Unraid - portall
 
-Guide spécifique pour configurer Plex Portal sur **Unraid** avec **ngx proxy manager**.
+Guide spécifique pour configurer portall sur **Unraid** avec **ngx proxy manager**.
 
 > ✨ **NOUVEAU**: L'app détecte automatiquement la configuration via les headers du reverse proxy!
 
@@ -380,5 +380,5 @@ docker-compose up -d
 
 ## Code source et contributions
 
-Le code source principal de Plex Portal est ce dépôt GitHub.
+Le code source principal de portall est ce dépôt GitHub.
 Pour toute suggestion ou bug, ouvrez une issue ou contactez l'auteur.

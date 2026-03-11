@@ -2,7 +2,7 @@
 
 ## 📋 Vue d'ensemble
 
-Plex Portal inclut un **système de maintenance automatique** qui nettoie et optimise la base de données SQLite pour garantir une **stabilité à long terme** et prévenir une croissance infinie.
+portall inclut un **système de maintenance automatique** qui nettoie et optimise la base de données SQLite pour garantir une **stabilité à long terme** et prévenir une croissance infinie.
 
 ---
 

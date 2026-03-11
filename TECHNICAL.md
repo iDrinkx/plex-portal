@@ -2,7 +2,7 @@
 
 ## Vue d'ensemble
 
-Plex Portal utilise maintenant une configuration hybride:
+portall utilise maintenant une configuration hybride:
 
 - variables de bootstrap au démarrage via `docker-compose.yml`
 - configuration applicative modifiable via l'interface admin
