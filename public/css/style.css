@@ -37,6 +37,7 @@ html, body { height: 100%; }
   --site-card-soft-opacity: 0.222;
   --site-card-elevated-opacity: 0.242;
   --site-card-input-opacity: 0.362;
+  --app-vh: 100vh;
 }
 
 body {
@@ -530,10 +531,13 @@ body.site-bg-mode-custom .site-bg-image {
   margin: 0;
   padding: 0;
   min-height: 0;
-  height: calc(100vh - var(--nav-h));
-  height: calc(100dvh - var(--nav-h));
+  height: calc(var(--app-vh, 100vh) - var(--nav-h));
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+}
+
+.body--iframe-page {
   overflow: hidden;
 }
 
@@ -1493,6 +1497,9 @@ body.site-bg-mode-custom .site-bg-image {
 ========================= */
 
 @media (max-width: 768px){
+  :root {
+    --nav-h: 65px;
+  }
 
   .navbar{
     height:65px;
@@ -1523,8 +1530,7 @@ body.site-bg-mode-custom .site-bg-image {
 
   .content--iframe {
     padding: 0;
-    height: calc(100vh - var(--nav-h));
-    height: calc(100dvh - var(--nav-h));
+    height: calc(var(--app-vh, 100vh) - var(--nav-h));
   }
 
   .dashboard-header {

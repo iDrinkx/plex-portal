@@ -94,6 +94,40 @@
 
 <script>
   (function () {
+    function applyViewportHeight() {
+      const viewport = window.visualViewport;
+      const height = viewport && viewport.height ? viewport.height : window.innerHeight;
+      document.documentElement.style.setProperty("--app-vh", `${height}px`);
+    }
+
+    function syncIframePageState() {
+      const iframePage = !!document.querySelector(".content--iframe");
+      document.body.classList.toggle("body--iframe-page", iframePage);
+    }
+
+    const init = () => {
+      applyViewportHeight();
+      syncIframePageState();
+
+      window.addEventListener("resize", applyViewportHeight, { passive: true });
+      window.addEventListener("orientationchange", applyViewportHeight, { passive: true });
+
+      if (window.visualViewport) {
+        window.visualViewport.addEventListener("resize", applyViewportHeight, { passive: true });
+        window.visualViewport.addEventListener("scroll", applyViewportHeight, { passive: true });
+      }
+    };
+
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", init, { once: true });
+    } else {
+      init();
+    }
+  })();
+</script>
+
+<script>
+  (function () {
     if ((window.APP_LOCALE || "fr") === "fr") return;
     const textMap = window.APP_RUNTIME_TEXT_MAP || {};
     const replacers = Object.keys(textMap);
