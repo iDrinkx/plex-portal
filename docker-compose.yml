@@ -1,9 +1,9 @@
 version: '3.8'
 
 services:
-  plex-portal:
-    image: ghcr.io/idrinkx/plex-portal:latest
-    container_name: plex-portal
+  portall:
+    image: ghcr.io/idrinkx/portall:latest
+    container_name: portall
     ports:
       - "3000:3000"
     environment:

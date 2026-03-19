@@ -26,7 +26,7 @@ let cachedPlexServerName = undefined;
 let cachedPlexServerKey = null;
 
 function getSiteTitle() {
-  return String(AppSettingQueries.get("site_title", "Plex-Portal") || "Plex-Portal").trim() || "Plex-Portal";
+  return String(AppSettingQueries.get("site_title", "portall") || "portall").trim() || "portall";
 }
 
 function getCustomFaviconAsset() {
@@ -134,8 +134,18 @@ if (!SESSION_SECRET || SESSION_SECRET === "change-me-to-a-secure-key" || SESSION
   console.warn(`   SESSION_SECRET: \"${require('crypto').randomBytes(32).toString('hex')}\"\n`);
 }
 
+app.use((req, _res, next) => {
+  const legacySessionCookieName = ["plex", "portal.sid"].join("-");
+  const currentSessionCookieName = "portall.sid";
+  const cookieHeader = String(req.headers.cookie || "");
+  if (cookieHeader && !cookieHeader.includes(`${currentSessionCookieName}=`) && cookieHeader.includes(`${legacySessionCookieName}=`)) {
+    req.headers.cookie = cookieHeader.replace(new RegExp(`(^|;\\s*)${legacySessionCookieName}=`, "i"), `$1${currentSessionCookieName}=`);
+  }
+  next();
+});
+
 app.use(session({
-  name: "plex-portal.sid", // Nom unique pour éviter le conflit avec connect.sid de Seerr
+  name: "portall.sid", // Nom unique pour éviter le conflit avec connect.sid de Seerr
   secret: SESSION_SECRET || require('crypto').randomBytes(32).toString('hex'),
   resave: false,
   saveUninitialized: false,
@@ -147,9 +157,6 @@ app.use(session({
     maxAge: 1000 * 60 * 60 * 24 // 24h
   }
 }));
-
-// 2. Route Seerr (iframe SSO Organizr-style — simple GET, pas de proxy)
-app.use("/", seeerrProxyRoutes);
 
 // 3. Body parsers
 app.use(express.json({ limit: "12mb" }));
@@ -205,9 +212,11 @@ app.use(async (req, res, next) => {
   res.locals.runtimeTextMap = getRuntimeTextMap(res.locals.locale);
   res.locals.customNavCards = [];
   res.locals.dashboardNavItems = [];
+  res.locals.contentClass = "";
   res.locals.navSubscriptionPillEnabled = AppSettingQueries.getBool("nav_subscription_pill_enabled", true);
   res.locals.siteBackground = getSiteBackgroundSettings();
-  res.locals.plexServerName = await getPlexServerName() || "votre serveur Plex";
+  // Keep login unauthorized message aligned with admin-configured site name.
+  res.locals.plexServerName = getSiteTitle();
   res.locals.siteTitle = getSiteTitle();
   res.locals.siteFavicon = getCustomFaviconAsset();
 
@@ -270,6 +279,7 @@ app.set("layout", "layout");
    ROUTES
 ========================= */
 
+app.use("/", seeerrProxyRoutes);
 app.use("/", authRoutes);
 app.use("/", dashboardRoutes);
 
@@ -282,6 +292,25 @@ app.get("/", (req, res) => {
     return res.redirect(redirectUrl);
   }
   res.render("login", { error: req.query.error || null });
+});
+
+app.use((err, req, res, _next) => {
+  console.error("[HTTP] ❌ Unhandled error", {
+    method: req.method,
+    path: req.originalUrl || req.url,
+    message: err && err.message,
+    stack: err && err.stack
+  });
+
+  if (res.headersSent) return;
+
+  if ((req.path || "").startsWith("/api/")) {
+    return res.status(500).json({
+      error: "Internal Server Error"
+    });
+  }
+
+  return res.status(500).send("Internal Server Error");
 });
 
 /* =========================

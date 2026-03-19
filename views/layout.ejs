@@ -6,7 +6,7 @@
   <link rel="stylesheet" href="<%= basePath %>/css/style.css" />
   <link rel="icon" type="<%= (siteFavicon && siteFavicon.type) || 'image/png' %>" href="<%= basePath %><%= (siteFavicon && siteFavicon.href) || '/logo.png' %>" />
   <link rel="apple-touch-icon" href="<%= basePath %><%= (siteFavicon && siteFavicon.href) || '/logo.png' %>" />
-  <title><%= siteTitle || "Plex-Portal" %></title>
+  <title><%= siteTitle || "portall" %></title>
   <script>
     window.APP_BASE_PATH = "<%= basePath %>";
     window.APP_LOCALE = "<%= locale || 'fr' %>";
@@ -30,12 +30,10 @@
 <% if (user) { %>
   <nav class="navbar">
 
-    <!-- Logo -->
     <a href="<%= basePath %>/dashboard" class="brand">
       <img class="brand-logo" src="<%= basePath %>/logo.png" alt="MonPlex"/>
     </a>
 
-    <!-- Desktop Menu -->
     <div class="nav-center desktop-menu">
       <a href="<%= basePath %>/dashboard" class="nav-link nav-link-dashboard"><%= t("nav.dashboard") %>&nbsp;🏠</a>
       <% (dashboardNavItems || []).forEach(function(item) { %>
@@ -54,7 +52,6 @@
       <% } %>
     </div>
 
-    <!-- Desktop Logout -->
     <div class="nav-right desktop-menu">
       <% if (navSubscriptionPillEnabled) { %>
         <a href="<%= basePath %>/profil" class="nav-sub-pill" id="navSubPill">&#x2014;</a>
@@ -62,19 +59,15 @@
       <a class="logout-btn" href="<%= basePath %>/logout"><%= t("nav.logout") %></a>
     </div>
 
-    <!-- Pill abonnement mobile -->
     <% if (navSubscriptionPillEnabled) { %>
       <a href="<%= basePath %>/profil" class="nav-sub-pill mobile-sub-pill" id="mobileSubPill">&#x2014;</a>
     <% } %>
-    <!-- Burger Mobile -->
     <div class="burger" id="burger">☰</div>
 
   </nav>
 
-  <!-- Overlay -->
   <div class="overlay" id="overlay"></div>
 
-  <!-- Mobile Menu -->
   <div class="mobile-menu" id="mobileMenu">
     <a href="<%= basePath %>/dashboard" class="nav-link-dashboard"><%= t("nav.dashboard") %>&nbsp;🏠</a>
     <% (dashboardNavItems || []).forEach(function(item) { %>
@@ -93,12 +86,46 @@
     <% } %>
     <a href="<%= basePath %>/logout" class="logout-mobile"><%= t("nav.logout") %></a>
   </div>
-
 <% } %>
 
-<main class="content">
+<main class="content<%= typeof contentClass !== 'undefined' && contentClass ? ' ' + contentClass : '' %>">
   <%- body %>
 </main>
+
+<script>
+  (function () {
+    function applyViewportHeight() {
+      const viewport = window.visualViewport;
+      const height = viewport && viewport.height ? viewport.height : window.innerHeight;
+      document.documentElement.style.setProperty("--app-vh", `${height}px`);
+    }
+
+    function syncIframePageState() {
+      const iframePage = !!document.querySelector(".content--iframe");
+      document.documentElement.classList.toggle("html--iframe-page", iframePage);
+      document.body.classList.toggle("body--iframe-page", iframePage);
+    }
+
+    const init = () => {
+      applyViewportHeight();
+      syncIframePageState();
+
+      window.addEventListener("resize", applyViewportHeight, { passive: true });
+      window.addEventListener("orientationchange", applyViewportHeight, { passive: true });
+
+      if (window.visualViewport) {
+        window.visualViewport.addEventListener("resize", applyViewportHeight, { passive: true });
+        window.visualViewport.addEventListener("scroll", applyViewportHeight, { passive: true });
+      }
+    };
+
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", init, { once: true });
+    } else {
+      init();
+    }
+  })();
+</script>
 
 <script>
   (function () {
@@ -267,52 +294,49 @@
       });
     }
 
+  });
+</script>
+
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
     const burger = document.getElementById("burger");
     const mobileMenu = document.getElementById("mobileMenu");
     const overlay = document.getElementById("overlay");
 
-    if (!burger || !mobileMenu || !overlay) return;
+    if (burger && mobileMenu && overlay) {
+      const openMenu = () => {
+        mobileMenu.classList.add("open");
+        overlay.classList.add("active");
+        document.body.style.overflow = "hidden";
+      };
 
-    const openMenu = () => {
-      mobileMenu.classList.add("open");
-      overlay.classList.add("active");
-      document.body.style.overflow = "hidden"; // bloque le scroll
-    };
+      const closeMenu = () => {
+        mobileMenu.classList.remove("open");
+        overlay.classList.remove("active");
+        document.body.style.overflow = "";
+      };
 
-    const closeMenu = () => {
-      mobileMenu.classList.remove("open");
-      overlay.classList.remove("active");
-      document.body.style.overflow = "";
-    };
+      burger.addEventListener("click", () => {
+        if (mobileMenu.classList.contains("open")) closeMenu();
+        else openMenu();
+      });
 
-    // Toggle burger
-    burger.addEventListener("click", () => {
-      if (mobileMenu.classList.contains("open")) {
-        closeMenu();
-      } else {
-        openMenu();
-      }
-    });
+      overlay.addEventListener("click", closeMenu);
 
-    // Click overlay
-    overlay.addEventListener("click", closeMenu);
-
-    // Ferme le menu quand on clique sur un lien
-    document.querySelectorAll(".mobile-menu a").forEach(link => {
-      link.addEventListener("click", closeMenu);
-    });
-
+      document.querySelectorAll(".mobile-menu a").forEach(link => {
+        link.addEventListener("click", closeMenu);
+      });
+    }
   });
 
   <% if (navSubscriptionPillEnabled) { %>
-  // --- Bulle abonnement navbar ---
   (function () {
-    const pill   = document.getElementById('navSubPill');
+    const pill = document.getElementById('navSubPill');
     const userId = document.body.getAttribute('data-user-id') || 'guest';
     if (!pill) return;
 
     const PILL_KEY = 'nav_pill_snap:' + userId;
-    const PILL_TTL = 24 * 60 * 60 * 1000; // 24 h
+    const PILL_TTL = 24 * 60 * 60 * 1000;
 
     function applyPill(data) {
       const numMatch = data.daysLeft && String(data.daysLeft).match(/\d+/);
@@ -328,7 +352,6 @@
       });
     }
 
-    // ⚡ Restaurer instantanément depuis le cache
     try {
       const raw = localStorage.getItem(PILL_KEY);
       if (raw) {
@@ -337,7 +360,6 @@
       }
     } catch (_) {}
 
-    // Puis rafraîchir en arrière-plan
     fetch((window.APP_BASE_PATH || '') + '/api/subscription')
       .then(r => r.ok ? r.json() : null)
       .then(data => {
@@ -348,7 +370,6 @@
       .catch(() => {});
   })();
   <% } %>
-
 </script>
 
 </body>

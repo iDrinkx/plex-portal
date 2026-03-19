@@ -1,6 +1,6 @@
 ﻿
 <p align="center">
-  <img src="./public/img/portall-v2.png" alt="Plex Portal Logo" width="280">
+  <img src="https://github.com/iDrinkx/portall/raw/main/./public/img/portall-v2.png" alt="Portall Logo Complet" width="280">
 </p>
 
 Tableau de bord compagnon non officiel pour les utilisateurs de Plex.
@@ -11,7 +11,7 @@ Application web pour gérer votre accès Plex, afficher abonnements, statistique
 
 ## 📦 Dernière Version & Changelog
 
-**📖 [Voir le CHANGELOG complet](./CHANGELOG.md)** pour l'historique des versions et fonctionnalités
+**📖 [Voir le CHANGELOG complet](https://github.com/iDrinkx/portall/blob/main/CHANGELOG.md)** pour l'historique des versions et fonctionnalités
 
 
 ---
@@ -159,7 +159,7 @@ portall/
 
 ##  Système XP, Succès, Badges et Classement
 
-Plex Portal propose un système de gamification avancé pour encourager l'engagement :
+portall propose un système de gamification avancé pour encourager l'engagement :
 
 - **XP (Points d'expérience)** : Gagnez des points en fonction de votre activité de visionnage (heures, films, séries, sessions).
 - **Badges & Succès** : Débloquez des badges selon des critères variés (nombre de films, séries, heures, collections, événements spéciaux, etc.). Certains badges sont révoqués si les conditions ne sont plus remplies.
@@ -230,7 +230,7 @@ networks:
 
 ##  Intégration Seerr (SSO)
 
-Plex Portal intègre Seerr (ex-Overseerr / Jellyseerr) via **SSO Organizr-style** :
+portall intègre Seerr (ex-Overseerr / Jellyseerr) via **SSO Organizr-style** :
 
 1. Au login Plex  portall contacte Seerr en interne (`SEERR_URL`) et récupère le `connect.sid`
 2. Ce cookie est posé dans le browser avec `domain=.votredomaine.com` (sous-domaine parent commun)
@@ -386,5 +386,5 @@ This project is not affiliated with, endorsed by, or sponsored by Plex Inc.
 "Plex" is a trademark of Plex Inc.
 
 <p align="center">
-  <img src="./public/img/portall-logo.png" alt="Plex Portal Logo" width="280">
+  <img src="https://github.com/iDrinkx/portall/raw/main/./public/img/portall-logo.png" alt="Portall Logo" width="280">
 </p>

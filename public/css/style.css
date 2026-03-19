@@ -37,6 +37,7 @@ html, body { height: 100%; }
   --site-card-soft-opacity: 0.222;
   --site-card-elevated-opacity: 0.242;
   --site-card-input-opacity: 0.362;
+  --app-vh: 100vh;
 }
 
 body {
@@ -521,6 +522,36 @@ body.site-bg-mode-custom .site-bg-image {
   max-width: 1200px;
   margin: 0 auto;
   padding: 60px 40px;
+  min-width: 0;
+}
+
+.content--iframe {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  flex: 1 1 auto;
+  min-height: 0;
+  height: calc(var(--app-vh, 100vh) - var(--nav-h));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.html--iframe-page,
+.body--iframe-page {
+  height: var(--app-vh, 100vh);
+  min-height: var(--app-vh, 100vh);
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+.body--iframe-page {
+  max-height: var(--app-vh, 100vh);
+}
+
+.body--iframe-page .content--iframe {
+  height: auto;
 }
 
 /* =========================
@@ -967,6 +998,8 @@ body.site-bg-mode-custom .site-bg-image {
   background: rgb(8 12 18 / var(--site-card-soft-opacity, 0.222));
   padding: 18px;
   box-shadow: 0 14px 34px rgba(0,0,0,.12);
+  min-width: 0;
+  overflow-x: auto;
 }
 
 .dashboard-custom-html > :first-child {
@@ -1477,6 +1510,9 @@ body.site-bg-mode-custom .site-bg-image {
 ========================= */
 
 @media (max-width: 768px){
+  :root {
+    --nav-h: 65px;
+  }
 
   .navbar{
     height:65px;
@@ -1505,9 +1541,39 @@ body.site-bg-mode-custom .site-bg-image {
     padding:30px 18px;
   }
 
+  .content--iframe {
+    padding: 0;
+    height: auto;
+  }
+
   .dashboard-header {
     gap: 12px;
     margin-bottom: 30px;
+  }
+
+  .hero-cards {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .hero-card {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .hero-card-content {
+    gap: 14px;
+    padding: 18px 16px 18px 20px;
+  }
+
+  .hero-card-title,
+  .hero-card-desc {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .dashboard-custom-html {
+    width: 100%;
   }
 
   .user-avatar {
@@ -1591,6 +1657,7 @@ body.site-bg-mode-custom .site-bg-image {
   right: -100%;
   width: 250px;
   height: 100vh;
+  height: 100dvh;
   background: #111;
   border-left: 1px solid #222;
   display: flex;
@@ -1599,6 +1666,8 @@ body.site-bg-mode-custom .site-bg-image {
   gap: 24px;
   transition: right .3s ease;
   z-index: 999;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .mobile-menu a {
@@ -1655,6 +1724,11 @@ body.site-bg-mode-custom .site-bg-image {
   .mobile-sub-pill {
     display: inline-flex;
     align-items: center;
+  }
+
+  .mobile-menu {
+    width: min(300px, 82vw);
+    padding: calc(var(--nav-h) + 26px) 20px calc(24px + env(safe-area-inset-bottom));
   }
 }
 

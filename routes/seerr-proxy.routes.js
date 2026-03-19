@@ -6,7 +6,7 @@
  * Auth SSO (Organizr style) :
  *   Au login, auth.routes.js  grabSeerrCookie() r�cup�re le connect.sid de Seerr
  *   et le pose dans le browser avec domain=.votredomaine.com (parent commun entre
- *   plex-portal.votredomaine.com et seerr.votredomaine.com).
+ *   portall.votredomaine.com et seerr.votredomaine.com).
  *   Le browser l'envoie automatiquement quand l'iframe charge seerr.votredomaine.com  SSO.
  *
  * Config requise :
@@ -98,11 +98,11 @@ router.get("/seerr", requireAuth, async (req, res) => {
 
   // Rendu sans layout (page standalone full-screen)
   res.render("seerr/index", {
-    layout: false,
     seerrPublicUrl,
+    contentClass: "content--iframe",
     locale: res.locals.locale || "fr",
     basePath: req.basePath || "",
-    siteTitle: res.locals.siteTitle || "Plex-Portal"
+    siteTitle: res.locals.siteTitle || "portall"
   });
 });
 

@@ -3,7 +3,47 @@ const path = require('path');
 const fs = require('fs');
 
 // 🗄️ Utiliser le dossier /config pour la persistance (volumes Docker/Unraid)
-const DB_PATH = process.env.DB_PATH || '/config/plex-portal.db';
+const defaultDbPath = '/config/portall.db';
+const legacyDbName = ['plex', 'portal.db'].join('-');
+const legacyDbPath = path.join('/config', legacyDbName);
+const SQLITE_SIDECAR_SUFFIXES = ['-shm', '-wal'];
+
+function moveFileIfPresent(sourcePath, targetPath) {
+  if (!fs.existsSync(sourcePath) || fs.existsSync(targetPath)) return;
+  fs.renameSync(sourcePath, targetPath);
+}
+
+function removeFileIfPresent(filePath) {
+  if (!fs.existsSync(filePath)) return;
+  fs.unlinkSync(filePath);
+}
+
+function migrateLegacyDatabaseFiles() {
+  if (process.env.DB_PATH) return process.env.DB_PATH;
+
+  if (!fs.existsSync(defaultDbPath) && fs.existsSync(legacyDbPath)) {
+    try {
+      fs.renameSync(legacyDbPath, defaultDbPath);
+      for (const suffix of SQLITE_SIDECAR_SUFFIXES) {
+        moveFileIfPresent(`${legacyDbPath}${suffix}`, `${defaultDbPath}${suffix}`);
+      }
+      return defaultDbPath;
+    } catch (_) {
+      return legacyDbPath;
+    }
+  }
+
+  if (fs.existsSync(defaultDbPath) && !fs.existsSync(legacyDbPath)) {
+    for (const suffix of SQLITE_SIDECAR_SUFFIXES) {
+      removeFileIfPresent(`${legacyDbPath}${suffix}`);
+    }
+  }
+
+  return defaultDbPath;
+}
+
+let DB_PATH = process.env.DB_PATH || defaultDbPath;
+if (DB_PATH === defaultDbPath) DB_PATH = migrateLegacyDatabaseFiles();
 const dataDir = path.dirname(DB_PATH);
 
 // Créer le répertoire config s'il n'existe pas

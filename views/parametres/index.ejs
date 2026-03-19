@@ -904,14 +904,14 @@
         <div class="settings-form">
           <div class="settings-field settings-field--full">
             <label for="siteTitleInput"><%= t("settings.general.siteTitle.label") %></label>
-            <input id="siteTitleInput" type="text" maxlength="80" value="<%= siteTitle || 'Plex-Portal' %>" placeholder="Plex-Portal">
+            <input id="siteTitleInput" type="text" maxlength="80" value="<%= siteTitle || 'portall' %>" placeholder="portall">
           </div>
         </div>
         <div class="settings-actions">
           <button class="settings-btn" id="saveSiteTitleBtn" type="button"><%= t("settings.general.siteTitle.save") %></button>
         </div>
         <div class="settings-state" id="siteTitleState">
-          <strong><%= siteTitle || "Plex-Portal" %></strong>
+          <strong><%= siteTitle || "portall" %></strong>
         </div>
         </div>
 
@@ -1772,7 +1772,7 @@
 
     if (saveSiteTitleBtn && siteTitleInput && siteTitleState) {
       saveSiteTitleBtn.addEventListener("click", async function () {
-        const siteTitle = String(siteTitleInput.value || "").trim() || "Plex-Portal";
+        const siteTitle = String(siteTitleInput.value || "").trim() || "portall";
         saveSiteTitleBtn.disabled = true;
         siteTitleState.textContent = "<%= t('settings.general.siteTitle.saving') %>";
         try {

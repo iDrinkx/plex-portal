@@ -1,6 +1,6 @@
-# 📦 Configuration Unraid - Plex Portal
+# 📦 Configuration Unraid - portall
 
-Guide spécifique pour configurer Plex Portal sur **Unraid** avec **ngx proxy manager**.
+Guide spécifique pour configurer portall sur **Unraid** avec **ngx proxy manager**.
 
 > ✨ **NOUVEAU**: L'app détecte automatiquement la configuration via les headers du reverse proxy!
 
@@ -22,14 +22,14 @@ Guide spécifique pour configurer Plex Portal sur **Unraid** avec **ngx proxy ma
 
 ```
 /mnt/user/appdata/
-├── plex-portal/
+├── portall/
 │   └── config/         # Logo et configuration
 ```
 
 ### Via Terminal Unraid:
 
 ```bash
-mkdir -p /mnt/user/appdata/plex-portal/config
+mkdir -p /mnt/user/appdata/portall/config
 ```
 
 ---
@@ -56,7 +56,7 @@ Les connexions Plex, Seerr, Tautulli, Wizarr, Radarr, Sonarr, Komga, Jellyfin et
 
 ### 2. Ajouter le logo (optionnel)
 
-Placer `logo.png` dans `/mnt/user/appdata/plex-portal/config/`
+Placer `logo.png` dans `/mnt/user/appdata/portall/config/`
 
 Recommandé: 300x300px ou 400x400px
 
@@ -69,8 +69,8 @@ Recommandé: 300x300px ou 400x400px
 1. Aller à **Docker** ➜ **Add Container**
 
 2. **Configuration:**
-   - Name: `plex-portal`
-   - Repository: `ghcr.io/idrinkx/plex-portal:latest`
+   - Name: `portall`
+   - Repository: `ghcr.io/idrinkx/portall:latest`
 
 3. **Ports:**
    - Container Port: `3000`
@@ -79,7 +79,7 @@ Recommandé: 300x300px ou 400x400px
 
 4. **Volumes:**
    - Container Path: `/config`
-   - Host Path: `/mnt/user/appdata/plex-portal/config`
+   - Host Path: `/mnt/user/appdata/portall/config`
    - Access Mode: `RW`
 
 5. **Environment Variables:**
@@ -91,29 +91,29 @@ Recommandé: 300x300px ou 400x400px
 
 ### Option B: Via docker-compose
 
-1. Créer `/mnt/user/appdata/plex-portal/docker-compose.yml`:
+1. Créer `/mnt/user/appdata/portall/docker-compose.yml`:
 
 ```yaml
 version: '3.8'
 
 services:
-  plex-portal:
-    image: ghcr.io/<github-owner>/plex-portal:latest
-    container_name: plex-portal
+   portall:
+      image: ghcr.io/<github-owner>/portall:latest
+      container_name: portall
     ports:
       - "3000:3000"
     environment:
       SESSION_SECRET: "change-me-to-a-secure-key"
       COOKIE_SECURE: "true"   # HTTPS via reverse proxy
     volumes:
-      - /mnt/user/appdata/plex-portal/config:/config
+      - /mnt/user/appdata/portall/config:/config
       - /mnt/user/appdata/tautulli:/tautulli-data  # optionnel
     restart: unless-stopped
 ```
 
 2. Lancer:
    ```bash
-   cd /mnt/user/appdata/plex-portal
+   cd /mnt/user/appdata/portall
    docker-compose up -d
    ```
 
@@ -146,7 +146,7 @@ Les valeurs seront ensuite modifiables dans `Parametres > Connexions`.
 ```
 Domain Names:      example.com
 Scheme:            http
-Forward Hostname:  192.168.10.101    (IP de plex-portal)
+Forward Hostname:  192.168.10.101    (IP de portall)
 Forward Port:      3000
 Cache Assets:      ✅ ON
 Block Common Exploits: ✅ ON
@@ -158,7 +158,7 @@ Websockets Support: ✅ ON (IMPORTANT)
 **Créer une location:**
 
 ```
-Location:          /plex-portal
+Location:          /portall
 Scheme:            http
 Forward Hostname:  192.168.10.101
 Forward Port:      3000
@@ -200,7 +200,7 @@ Vous devriez voir la page login. ✅
 ### 2. Test via reverse proxy
 
 ```
-https://example.com/plex-portal
+https://example.com/portall
 ```
 
 Vous devriez être redirigé vers login. ✅
@@ -236,15 +236,15 @@ DEBUG=true
 Puis vérifier les logs:
 
 ```bash
-docker logs plex-portal
+docker logs portall
 ```
 
 Vous devriez voir:
 
 ```
 🔍 Reverse Proxy Detection:
-   basePath: "/plex-portal"
-   appUrl: "https://example.com/plex-portal"
+   basePath: "/portall"
+   appUrl: "https://example.com/portall"
    isReverseProxy: true
 ```
 
@@ -270,9 +270,9 @@ ngx proxy manager va générer automatiquement un certificat Let's Encrypt. ✅
 
 ### ❌ "Connection refused" sur `192.168.10.101:3000`
 
-- Vérifier que le conteneur plex-portal est en cours d'exécution
+- Vérifier que le conteneur portall est en cours d'exécution
 - Vérifier que le port 3000 n'est pas utilisé
-- Logs: `docker logs plex-portal`
+- Logs: `docker logs portall`
 
 ### ❌ "Plex redirect error"
 
@@ -282,7 +282,7 @@ ngx proxy manager va générer automatiquement un certificat Let's Encrypt. ✅
 
 ### ❌ "Logo ne s'affiche pas"
 
-- Vérifier que `logo.png` est dans `/mnt/user/appdata/plex-portal/config/`
+- Vérifier que `logo.png` est dans `/mnt/user/appdata/portall/config/`
 - Redémarrer le conteneur
 
 ### ❌ "API routes not found (404)"
@@ -329,7 +329,7 @@ TAUTULLI_DB_PATH=/tautulli-data/tautulli.db
 ```
 Container Path    │ Host Path
 ─────────────────┼────────────────────────────────
-/config          │ /mnt/user/appdata/plex-portal/config
+/config          │ /mnt/user/appdata/portall/config
 /tautulli-data   │ /mnt/user/appdata/tautulli          (optionnel, lecture DB directe)
 ```
 
@@ -341,13 +341,13 @@ Container Path    │ Host Path
 
 ```bash
 # Sauvegarder le config
-cp -r /mnt/user/appdata/plex-portal /mnt/backup/
+cp -r /mnt/user/appdata/portall /mnt/backup/
 ```
 
 ### Restaurer après crash
 
 ```bash
-cp -r /mnt/backup/plex-portal /mnt/user/appdata/
+cp -r /mnt/backup/portall /mnt/user/appdata/
 docker-compose up -d
 ```
 
@@ -357,13 +357,13 @@ docker-compose up -d
 
 - ✅ Docker installé
 - ✅ ngx proxy manager installé
-- ✅ Dossier `/mnt/user/appdata/plex-portal/config` créé
+- ✅ Dossier `/mnt/user/appdata/portall/config` créé
 - ✅ SESSION_SECRET configuré
 - ✅ `logo.png` placé dans `config/` (optionnel)
 - ✅ Conteneur Docker créé et en cours d'exécution
 - ✅ Route ngx créée avec "Strip Path: ON"
 - ✅ SSL configuré
-- ✅ Accessible via `https://example.com/plex-portal`
+- ✅ Accessible via `https://example.com/portall`
 - ✅ Authentification Plex fonctionnelle
 - ✅ Auto-détection du reverse proxy fonctionnelle ✨
 
@@ -380,5 +380,5 @@ docker-compose up -d
 
 ## Code source et contributions
 
-Le code source principal de Plex Portal est ce dépôt GitHub.
+Le code source principal de portall est ce dépôt GitHub.
 Pour toute suggestion ou bug, ouvrez une issue ou contactez l'auteur.

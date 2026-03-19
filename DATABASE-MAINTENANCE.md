@@ -2,7 +2,7 @@
 
 ## 📋 Vue d'ensemble
 
-Plex Portal inclut un **système de maintenance automatique** qui nettoie et optimise la base de données SQLite pour garantir une **stabilité à long terme** et prévenir une croissance infinie.
+portall inclut un **système de maintenance automatique** qui nettoie et optimise la base de données SQLite pour garantir une **stabilité à long terme** et prévenir une croissance infinie.
 
 ---
 
@@ -76,7 +76,7 @@ Vous pouvez déclencher une maintenance **à tout moment** :
 ```bash
 curl -X POST \
   http://localhost:3000/api/maintenance/database \
-  -H "Cookie: plex-portal.sid=<votre_session>"
+  -H "Cookie: portall.sid=<votre_session>"
 ```
 
 **Réponse** (200 OK) :
@@ -168,10 +168,10 @@ Exécute **tous** les nettoyages dans l'ordre :
 
 ```bash
 # Copier le fichier DB
-docker exec <container> cp /config/plex-portal.db /config/plex-portal.db.backup
+docker exec <container> cp /config/portall.db /config/portall.db.backup
 
 # Ou télécharger depuis votre système
-cp /volume1/docker/<app>/config/plex-portal.db ./plex-portal.db.backup
+cp /volume1/docker/<app>/config/portall.db ./portall.db.backup
 ```
 
 ### 📊 Vérification après maintenance
@@ -180,8 +180,8 @@ Vous pouvez vérifier que la maintenance ne pose aucun problème :
 
 ```bash
 # Depuis container
-sqlite3 /config/plex-portal.db "SELECT COUNT(*) as total_tautulli FROM tautulli_sessions;"
-sqlite3 /config/plex-portal.db "SELECT COUNT(*) as total_watch FROM watch_history;"
+sqlite3 /config/portall.db "SELECT COUNT(*) as total_tautulli FROM tautulli_sessions;"
+sqlite3 /config/portall.db "SELECT COUNT(*) as total_watch FROM watch_history;"
 ```
 
 ---
@@ -252,10 +252,10 @@ console.log(`[AUDIT] ${count} sessions à supprimer`);
 
 ```bash
 # Depuis le container
-docker exec <container> ls -lh /config/plex-portal.db
+docker exec <container> ls -lh /config/portall.db
 
 # Exemple :
-# -rw-r--r-- 1 root root 512M Nov 10 15:23 /config/plex-portal.db
+# -rw-r--r-- 1 root root 512M Nov 10 15:23 /config/portall.db
 ```
 
 ### Croissance au fil du temps
@@ -264,10 +264,10 @@ Notez la taille avant/après maintenance :
 
 ```bash
 # Avant maintenance
-du -h /config/plex-portal.db
+du -h /config/portall.db
 
 # Après maintenance (quelques jours plus tard)
-du -h /config/plex-portal.db
+du -h /config/portall.db
 ```
 
 ---
@@ -283,7 +283,7 @@ Si le nettoyage dure > 1 minute :
 3. Vérifiez les indices de la table `tautulli_sessions`
 
 ```bash
-sqlite3 /config/plex-portal.db ".indices tautulli_sessions"
+sqlite3 /config/portall.db ".indices tautulli_sessions"
 ```
 
 ### Le DB grandit toujours
@@ -297,7 +297,7 @@ sqlite3 /config/plex-portal.db ".indices tautulli_sessions"
 Si vous voyez `VACUUM: ❌ ÉCHOUÉ` :
 
 1. Vérifiez l'espace disque disponible
-2. Vérifiez les permissions du fichier `/config/plex-portal.db`
+2. Vérifiez les permissions du fichier `/config/portall.db`
 3. Redémarrez le container
 
 ---

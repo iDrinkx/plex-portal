@@ -1,4 +1,4 @@
-# 🚀 Installation Plex Portal - Guide pas à pas
+# 🚀 Installation portall - Guide pas à pas
 
 ## 📋 Prérequis
 
@@ -56,7 +56,7 @@ docker-compose up -d
 ### Vérifier que tout fonctionne
 
 ```bash
-docker-compose logs -f plex-portal
+docker-compose logs -f portall
 ```
 
 Vous devriez voir: `🚀 Server running on port 3000`
@@ -104,7 +104,7 @@ L'app détecte automatiquement le reverse proxy. ✅
 1. Ouvrir ngx proxy manager
 2. **Créer une route:**
    - **Domain**: `example.com`
-   - **Path**: `/plex-portal`
+  - **Path**: `/portall`
    - **Forward Hostname**: `192.168.10.104` (votre IP Unraid)
    - **Forward Port**: `3000`
    - **Websockets**: ✅ ON
@@ -122,7 +122,7 @@ docker-compose up -d
 
 ### 4. Accès
 
-- **Public**: `https://example.com/plex-portal`
+- **Public**: `https://example.com/portall`
 - **Local**: `http://192.168.10.104:3000`
 
 L'app détecte automatiquement chaque environnement! ✨
@@ -190,7 +190,7 @@ Note:
 ## 💡 Tips
 
 - **Logs**: `docker-compose logs -f` pour déboguer
-- **Redémarrer**: `docker-compose restart plex-portal`
+- **Redémarrer**: `docker-compose restart portall`
 - **Rebuild**: `docker-compose up -d --build` après changements du code
 - **Nettoyer**: `docker-compose down -v` pour supprimer aussi les volumes
 
@@ -198,7 +198,7 @@ Note:
 
 ## 🎉 Fait!
 
-Vous devriez maintenant avoir une application Plex Portal fonctionnelle! 
+Vous devriez maintenant avoir une application portall fonctionnelle! 
 
 **En local**: `http://localhost:3000`
 **Production**: Auto-détecté via le reverse proxy! ✨
