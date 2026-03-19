@@ -1,3 +1,13 @@
+## 1.38.0 (2026-03-19)
+
+* Merge branch 'main' into develop ([a071ccb](https://github.com/iDrinkx/portall/commit/a071ccb))
+* Merge pull request #63 from iDrinkx/develop ([7212de1](https://github.com/iDrinkx/portall/commit/7212de1)), closes [#63](https://github.com/iDrinkx/portall/issues/63)
+* fix: add .dockerignore and package-lock.json to workflow paths ([1feb421](https://github.com/iDrinkx/portall/commit/1feb421))
+* fix: remove package-lock.json from .dockerignore ([bc95033](https://github.com/iDrinkx/portall/commit/bc95033))
+* fix: update better-sqlite3 dependency to version 12.8.0 and adjust Dockerfile for package installati ([87117af](https://github.com/iDrinkx/portall/commit/87117af))
+* chore(runtime): upgrade to Node 24 ([c999ff9](https://github.com/iDrinkx/portall/commit/c999ff9))
+* feat: update Node.js version to 24 and adjust package dependencies ([4b71839](https://github.com/iDrinkx/portall/commit/4b71839))
+
 ## 1.37.0 (2026-03-19)
 
 * Merge branch 'main' into develop ([545e746](https://github.com/iDrinkx/portall/commit/545e746))
