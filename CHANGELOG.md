@@ -1,3 +1,26 @@
+## 1.37.0 (2026-03-19)
+
+* Merge branch 'main' into develop ([545e746](https://github.com/iDrinkx/portall/commit/545e746))
+* Merge pull request #59 from iDrinkx/dependabot/npm_and_yarn/multi-cc382f683c ([a1036a4](https://github.com/iDrinkx/portall/commit/a1036a4)), closes [#59](https://github.com/iDrinkx/portall/issues/59)
+* Merge pull request #62 from iDrinkx/develop ([41a45bd](https://github.com/iDrinkx/portall/commit/41a45bd)), closes [#62](https://github.com/iDrinkx/portall/issues/62)
+* feat: add contentClass to response locals and update layout for conditional class rendering ([db197bd](https://github.com/iDrinkx/portall/commit/db197bd))
+* feat: add dynamic viewport height handling and iframe page state synchronization ([4cee6e9](https://github.com/iDrinkx/portall/commit/4cee6e9))
+* feat: add error handling middleware and enhance navigation layout for user roles ([caad2a5](https://github.com/iDrinkx/portall/commit/caad2a5))
+* feat: add version footer and changelog modal for admin users in dashboard ([b952d4b](https://github.com/iDrinkx/portall/commit/b952d4b))
+* feat: enhance iframe page styles and synchronization for improved layout handling ([5b92b3b](https://github.com/iDrinkx/portall/commit/5b92b3b))
+* feat: enhance iframe styles for improved responsiveness and layout consistency ([6df804d](https://github.com/iDrinkx/portall/commit/6df804d))
+* feat: refactor iframe rendering and styles for improved layout consistency ([dd86062](https://github.com/iDrinkx/portall/commit/dd86062))
+* feat: refactor navigation and layout structure for improved responsiveness and maintainability ([7656f7c](https://github.com/iDrinkx/portall/commit/7656f7c))
+* feat(ci): add README.md to workflow paths and update Docker Hub description step ([b65cb71](https://github.com/iDrinkx/portall/commit/b65cb71))
+* chore(deps): bump tar and npm ([552907a](https://github.com/iDrinkx/portall/commit/552907a))
+* fix: enhance legacy database migration logic and file handling ([f26d86b](https://github.com/iDrinkx/portall/commit/f26d86b))
+* fix: update default site title from "Plex-Portal" to "portall" across multiple files ([3662596](https://github.com/iDrinkx/portall/commit/3662596))
+* fix: update references from "Plex Portal" to "portall" in documentation files ([526bdb4](https://github.com/iDrinkx/portall/commit/526bdb4))
+* fix: update references from "plex-portal" to "portall" across documentation and codebase ([490e6cc](https://github.com/iDrinkx/portall/commit/490e6cc))
+* fix(ci): remove redundant semver tag pattern from Docker workflow ([ad6a39e](https://github.com/iDrinkx/portall/commit/ad6a39e))
+* fix(docs): update image URLs in README.md to use absolute paths ([5b7163f](https://github.com/iDrinkx/portall/commit/5b7163f))
+* fix(docs): update image URLs in README.md to use raw GitHub links ([53a5be3](https://github.com/iDrinkx/portall/commit/53a5be3))
+
 ## <small>1.36.4 (2026-03-09)</small>
 
 * Merge pull request #58 from iDrinkx/develop ([2ae5811](https://github.com/iDrinkx/portall/commit/2ae5811)), closes [#58](https://github.com/iDrinkx/portall/issues/58)
