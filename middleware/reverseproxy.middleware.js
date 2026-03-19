@@ -58,7 +58,7 @@ function reverseProxyMiddleware(req, res, next) {
   req.isReverseProxy = !!forwarded.prefix || forwarded.proto !== req.protocol;
 
   // Debug
-  if (process.env.DEBUG) {
+  if (process.env.DEBUG === 'true') {
     console.log('🔍 Reverse Proxy Detection:');
     console.log(`   basePath: "${basePath}"`);
     console.log(`   appUrl: "${appUrl}"`);
