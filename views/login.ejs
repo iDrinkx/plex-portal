@@ -14,11 +14,46 @@
     return "Indisponible";
   }
 
-  function isPlexService(service) {
+  function getServiceLogo(service) {
     const serviceName = String(service?.name || "").trim().toLowerCase();
-    const hasPlexTag = Array.isArray(service?.tags)
-      && service.tags.some(tag => String(tag?.name || "").trim().toLowerCase() === "plex");
-    return serviceName === "plex" || hasPlexTag;
+    const tags = Array.isArray(service?.tags)
+      ? service.tags.map(tag => String(tag?.name || "").trim().toLowerCase()).filter(Boolean)
+      : [];
+    const values = [serviceName, ...tags];
+
+    if (values.includes("plex")) {
+      return {
+        src: `${basePath}/img/plex-alt-light.svg`,
+        alt: "Plex",
+        className: "login-status-item__service-logo login-status-item__service-logo--plex"
+      };
+    }
+
+    if (values.includes("seerr") || values.includes("overseerr")) {
+      return {
+        src: `${basePath}/img/seerr-icon.svg`,
+        alt: "Seerr",
+        className: "login-status-item__service-logo"
+      };
+    }
+
+    if (values.includes("komga")) {
+      return {
+        src: `${basePath}/img/komga-icon.svg`,
+        alt: "Komga",
+        className: "login-status-item__service-logo"
+      };
+    }
+
+    if (values.includes("portall") || values.includes("site web")) {
+      return {
+        src: `${basePath}/img/portall-logo.png`,
+        alt: "Portall",
+        className: "login-status-item__service-logo login-status-item__service-logo--portall"
+      };
+    }
+
+    return null;
   }
 
   function formatSince(isoDate) {
@@ -107,21 +142,22 @@
         <% } %>
 
         <% statusData.services.forEach(service => { %>
+        <% const serviceLogo = getServiceLogo(service); %>
         <article class="login-status-item">
           <div class="login-status-item__row">
             <div class="login-status-item__meta">
               <div class="login-status-item__headline">
-                <% if (isPlexService(service)) { %>
+                <% if (serviceLogo) { %>
                 <img
-                  src="<%= basePath %>/img/plex-alt-light.svg"
-                  alt="Plex"
-                  class="login-status-item__service-logo login-status-item__service-logo--plex"
+                  src="<%= serviceLogo.src %>"
+                  alt="<%= serviceLogo.alt %>"
+                  class="<%= serviceLogo.className %>"
                 />
                 <% } else { %>
                 <strong><%= service.name %></strong>
                 <% } %>
               </div>
-              <% if (!isPlexService(service) && service.tags && service.tags.length) { %>
+              <% if (!serviceLogo && service.tags && service.tags.length) { %>
               <div class="login-status-item__tags">
                 <% service.tags.slice(0, 3).forEach(tag => { %>
                 <span class="login-status-item__tag" style="background-color: <%= tag.color %>;"><%= tag.name %></span>
