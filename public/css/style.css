@@ -823,6 +823,18 @@ body.site-bg-mode-custom .site-bg-image {
   line-height: 1.25;
 }
 
+.login-status-item__service-logo {
+  display: block;
+  width: auto;
+  height: 22px;
+  max-width: 110px;
+  object-fit: contain;
+}
+
+.login-status-item__service-logo--plex {
+  transform: translateY(1px);
+}
+
 .login-status-item__state-block {
   display: flex;
   flex-direction: column;

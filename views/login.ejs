@@ -14,6 +14,13 @@
     return "Indisponible";
   }
 
+  function isPlexService(service) {
+    const serviceName = String(service?.name || "").trim().toLowerCase();
+    const hasPlexTag = Array.isArray(service?.tags)
+      && service.tags.some(tag => String(tag?.name || "").trim().toLowerCase() === "plex");
+    return serviceName === "plex" || hasPlexTag;
+  }
+
   function formatSince(isoDate) {
     if (!isoDate) return "";
     const timestamp = Date.parse(isoDate);
@@ -104,9 +111,17 @@
           <div class="login-status-item__row">
             <div class="login-status-item__meta">
               <div class="login-status-item__headline">
+                <% if (isPlexService(service)) { %>
+                <img
+                  src="<%= basePath %>/img/plex-alt-light.svg"
+                  alt="Plex"
+                  class="login-status-item__service-logo login-status-item__service-logo--plex"
+                />
+                <% } else { %>
                 <strong><%= service.name %></strong>
+                <% } %>
               </div>
-              <% if (service.tags && service.tags.length) { %>
+              <% if (!isPlexService(service) && service.tags && service.tags.length) { %>
               <div class="login-status-item__tags">
                 <% service.tags.slice(0, 3).forEach(tag => { %>
                 <span class="login-status-item__tag" style="background-color: <%= tag.color %>;"><%= tag.name %></span>
