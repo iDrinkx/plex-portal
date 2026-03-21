@@ -824,8 +824,15 @@ body.site-bg-mode-custom .site-bg-image {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 3px;
   min-width: max-content;
+}
+
+.login-status-item__state-line {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: nowrap;
 }
 
 .login-status-item__tags {
@@ -840,6 +847,7 @@ body.site-bg-mode-custom .site-bg-image {
   line-height: 1.1;
   text-align: right;
   color: rgba(205, 219, 233, 0.54);
+  white-space: nowrap;
 }
 
 .login-status-item__tag {
