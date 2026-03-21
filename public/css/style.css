@@ -772,6 +772,16 @@ body.site-bg-mode-custom .site-bg-image {
   border: 1px solid rgba(170, 201, 228, 0.05);
 }
 
+.login-status-error {
+  margin: 0 0 14px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(122, 28, 42, 0.22);
+  border: 1px solid rgba(248, 113, 113, 0.22);
+  color: #fecaca;
+  font-size: 13px;
+}
+
 .login-status-item {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(500px, 48%);
@@ -779,6 +789,10 @@ body.site-bg-mode-custom .site-bg-image {
   align-items: center;
   padding: 18px 10px;
   border-bottom: 1px solid rgba(170, 201, 228, 0.04);
+}
+
+.login-status-item--empty {
+  grid-template-columns: 1fr;
 }
 
 .login-status-item:last-child {

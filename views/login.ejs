@@ -1,5 +1,5 @@
 <%
-  const statusData = uptimeKuma && uptimeKuma.enabled && Array.isArray(uptimeKuma.services) && uptimeKuma.services.length
+  const statusData = uptimeKuma && uptimeKuma.enabled
     ? uptimeKuma
     : null;
   const issueCount = statusData
@@ -43,7 +43,23 @@
         <h3><%= t("login.status.services") %></h3>
       </div>
 
+      <% if (statusData.privateError) { %>
+      <div class="login-status-error"><%= statusData.privateError %></div>
+      <% } %>
+
       <div class="login-status-list">
+        <% if (!statusData.services.length) { %>
+        <article class="login-status-item login-status-item--empty">
+          <div class="login-status-item__meta">
+            <div class="login-status-item__headline">
+              <strong>Uptime Kuma</strong>
+            </div>
+            <div class="login-status-item__tags">
+              <span class="login-status-item__tag">Aucune donnee</span>
+            </div>
+          </div>
+        </article>
+        <% } %>
         <% statusData.services.forEach(service => { %>
         <article class="login-status-item">
           <div class="login-status-item__meta">
