@@ -827,6 +827,12 @@ body.site-bg-mode-custom .site-bg-image {
   margin-top: 8px;
 }
 
+.login-status-item__since {
+  margin-top: 6px;
+  font-size: 12px;
+  color: rgba(205, 219, 233, 0.62);
+}
+
 .login-status-item__tag {
   display: inline-flex;
   align-items: center;
@@ -869,17 +875,26 @@ body.site-bg-mode-custom .site-bg-image {
   box-shadow: 0 0 10px rgba(97, 227, 157, 0.48);
 }
 
-.login-status-state--maintenance,
 .login-status-state--pending {
   color: #ffc979;
   background: rgba(255, 171, 69, 0.10);
   border: 1px solid rgba(255, 171, 69, 0.18);
 }
 
-.login-status-state--maintenance .login-status-state__dot,
 .login-status-state--pending .login-status-state__dot {
   background: #ffab45;
   box-shadow: 0 0 10px rgba(255, 171, 69, 0.42);
+}
+
+.login-status-state--maintenance {
+  color: #8fc0ff;
+  background: rgba(37, 99, 235, 0.12);
+  border: 1px solid rgba(37, 99, 235, 0.22);
+}
+
+.login-status-state--maintenance .login-status-state__dot {
+  background: #2563eb;
+  box-shadow: 0 0 10px rgba(37, 99, 235, 0.42);
 }
 
 .login-status-state--down {

@@ -38,6 +38,17 @@ function normalizeHeartbeatEntry(entry) {
   };
 }
 
+function sortHeartbeatsByTime(history = []) {
+  return history
+    .filter(Boolean)
+    .slice()
+    .sort((a, b) => {
+      const timeA = a?.time ? Date.parse(a.time) : 0;
+      const timeB = b?.time ? Date.parse(b.time) : 0;
+      return timeA - timeB;
+    });
+}
+
 function buildHistoryBars(history, maxBars = 60) {
   const normalized = history.slice(-maxBars).map(entry => ({
     status: getMonitorStatusMeta(entry.status),
@@ -103,6 +114,24 @@ function getLatestHeartbeat(history) {
     if (history[i]) return history[i];
   }
   return null;
+}
+
+function getStatusChangedAt(history) {
+  const normalizedHistory = sortHeartbeatsByTime(history);
+  const latestHeartbeat = getLatestHeartbeat(normalizedHistory);
+  if (!latestHeartbeat) return null;
+
+  let changedAt = latestHeartbeat.time || null;
+  for (let i = normalizedHistory.length - 2; i >= 0; i -= 1) {
+    const entry = normalizedHistory[i];
+    if (!entry) continue;
+    if (Number(entry.status) !== Number(latestHeartbeat.status)) {
+      break;
+    }
+    changedAt = entry.time || changedAt;
+  }
+
+  return changedAt;
 }
 
 function createSocketClient(baseUrl) {
@@ -341,8 +370,9 @@ function buildNormalizedStatus(privateData = {}) {
 
   monitors.forEach((monitor, index) => {
     const id = String(monitor?.id ?? index);
-    const history = Array.isArray(beatsById[id]) ? beatsById[id] : [];
+    const history = sortHeartbeatsByTime(Array.isArray(beatsById[id]) ? beatsById[id] : []);
     const latestHeartbeat = getLatestHeartbeat(history);
+    const statusChangedAt = getStatusChangedAt(history);
     const statusMeta = getMonitorStatusMeta(latestHeartbeat ? latestHeartbeat.status : monitor?.active ? 2 : 0);
     const uptimeEntry = uptimeById[id] || {};
     const uptimeValue = Number(
@@ -367,6 +397,7 @@ function buildNormalizedStatus(privateData = {}) {
       latestMessage: latestHeartbeat?.message || "",
       latestPing: latestHeartbeat?.ping ?? null,
       latestTime: latestHeartbeat?.time || null,
+      statusChangedAt,
       tags: mapTags(monitor?.tags),
       history: buildHistoryBars(history, 60)
     });

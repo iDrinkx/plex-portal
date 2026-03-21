@@ -8,9 +8,36 @@
 
   function getServiceStateLabel(statusClassName) {
     if (statusClassName === "operational") return "En ligne";
-    if (statusClassName === "pending" || statusClassName === "maintenance") return "En attente";
+    if (statusClassName === "pending") return "En attente";
+    if (statusClassName === "maintenance") return "En maintenance";
     if (statusClassName === "down") return "Hors ligne";
     return "Indisponible";
+  }
+
+  function formatSince(isoDate) {
+    if (!isoDate) return "";
+    const timestamp = Date.parse(isoDate);
+    if (Number.isNaN(timestamp)) return "";
+
+    const diffMs = Math.max(0, Date.now() - timestamp);
+    const totalMinutes = Math.floor(diffMs / 60000);
+
+    if (totalMinutes < 1) return "Depuis moins d'une minute";
+    if (totalMinutes < 60) return `Depuis ${totalMinutes} min`;
+
+    const totalHours = Math.floor(totalMinutes / 60);
+    if (totalHours < 24) {
+      const remainingMinutes = totalMinutes % 60;
+      return remainingMinutes > 0
+        ? `Depuis ${totalHours} h ${remainingMinutes} min`
+        : `Depuis ${totalHours} h`;
+    }
+
+    const totalDays = Math.floor(totalHours / 24);
+    const remainingHours = totalHours % 24;
+    return remainingHours > 0
+      ? `Depuis ${totalDays} j ${remainingHours} h`
+      : `Depuis ${totalDays} j`;
   }
 %>
 
@@ -82,6 +109,9 @@
                 <span><%= getServiceStateLabel(service.status.className) %></span>
               </span>
             </div>
+            <% if (service.statusChangedAt) { %>
+            <div class="login-status-item__since"><%= formatSince(service.statusChangedAt) %></div>
+            <% } %>
             <% if (service.tags && service.tags.length) { %>
             <div class="login-status-item__tags">
               <% service.tags.slice(0, 3).forEach(tag => { %>
