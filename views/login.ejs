@@ -148,11 +148,16 @@
             <div class="login-status-item__meta">
               <div class="login-status-item__headline">
                 <% if (serviceLogo) { %>
-                <img
-                  src="<%= serviceLogo.src %>"
-                  alt="<%= serviceLogo.alt %>"
-                  class="<%= serviceLogo.className %>"
-                />
+                <span class="login-status-item__service-brand">
+                  <img
+                    src="<%= serviceLogo.src %>"
+                    alt="<%= serviceLogo.alt %>"
+                    class="<%= serviceLogo.className %>"
+                  />
+                  <% if (service.tags && service.tags.length) { %>
+                  <span class="login-status-item__tag" style="background-color: <%= service.tags[0].color %>;"><%= service.tags[0].name %></span>
+                  <% } %>
+                </span>
                 <% } else { %>
                 <strong><%= service.name %></strong>
                 <% } %>
