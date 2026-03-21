@@ -1,8 +1,5 @@
 <%
   const statusData = uptimeKuma && uptimeKuma.enabled ? uptimeKuma : null;
-  const issueCount = statusData
-    ? ((statusData.summary?.down || 0) + (statusData.summary?.pending || 0) + (statusData.summary?.maintenance || 0))
-    : 0;
   const overallStatusLabel = !statusData
     ? ""
     : (statusData.overall === "operational"
@@ -10,9 +7,16 @@
         : ((statusData.summary?.down || 0) > 0
             ? t("login.status.majorOutage")
             : t("login.status.someIssues")));
+
+  function getServiceStateLabel(statusClassName) {
+    if (statusClassName === "operational") return "En ligne";
+    if (statusClassName === "pending" || statusClassName === "maintenance") return "En attente";
+    if (statusClassName === "down") return "Hors ligne";
+    return "Indisponible";
+  }
 %>
 
-<div class="login-page<%= statusData ? ' login-page--with-status' : '' %>">
+<div class="login-page<%= statusData ? " login-page--with-status" : "" %>">
   <div class="login-logo">
     <img src="<%= basePath %>/logo.png" alt="MonPlex" />
   </div>
@@ -22,7 +26,7 @@
     <% if (typeof error !== "undefined" && error === "unauthorized") { %>
     <div class="login-error"><%= t("login.unauthorized", { serverName: plexServerName }) %></div>
     <% } %>
-    <a class="plex-btn plex-btn--logo" href="<%= basePath %>/login" aria-label="<%= t('login.withPlex') %>">
+    <a class="plex-btn plex-btn--logo" href="<%= basePath %>/login" aria-label="<%= t("login.withPlex") %>">
       <span class="plex-btn-label"><%= locale === "en" ? "Sign in with" : "Se connecter avec" %></span>
       <img src="<%= basePath %>/img/plex-alt-light.svg" alt="Plex" class="plex-btn-logo" />
     </a>
@@ -30,13 +34,11 @@
 
   <% if (statusData) { %>
   <section class="login-status-panel" aria-labelledby="login-status-heading">
-    <div class="login-status-summary login-status-summary--<%= statusData.overall === 'operational' ? 'operational' : 'issues' %>">
+    <div class="login-status-summary login-status-summary--<%= statusData.overall === "operational" ? "operational" : "issues" %>">
       <span
-        class="login-status-summary__icon login-status-summary__icon--<%= statusData.overall === 'operational' ? 'operational' : 'issues' %>"
+        class="login-status-summary__icon login-status-summary__icon--<%= statusData.overall === "operational" ? "operational" : "issues" %>"
         aria-hidden="true"
-      >
-        <%= statusData.overall === "operational" ? "✓" : "!" %>
-      </span>
+      ><%- statusData.overall === "operational" ? "&#10003;" : "!" %></span>
       <div class="login-status-summary__text">
         <h2 id="login-status-heading"><%= overallStatusLabel %></h2>
         <% if (statusData.description) { %>
@@ -60,6 +62,10 @@
           <div class="login-status-item__meta">
             <div class="login-status-item__headline">
               <strong>Uptime Kuma</strong>
+              <span class="login-status-state login-status-state--unknown">
+                <span class="login-status-state__dot" aria-hidden="true"></span>
+                <span>Indisponible</span>
+              </span>
             </div>
             <div class="login-status-item__tags">
               <span class="login-status-item__tag">Aucune donnee</span>
@@ -67,14 +73,16 @@
           </div>
         </article>
         <% } %>
+
         <% statusData.services.forEach(service => { %>
         <article class="login-status-item">
           <div class="login-status-item__meta">
             <div class="login-status-item__headline">
-              <% if (typeof service.uptimePercent === "number" && Number.isFinite(service.uptimePercent)) { %>
-              <span class="login-status-item__uptime login-status-item__uptime--<%= service.status.className %>"><%= service.uptimePercent.toFixed(2).replace(/\.00$/, "") %>%</span>
-              <% } %>
               <strong><%= service.name %></strong>
+              <span class="login-status-state login-status-state--<%= service.status.className %>">
+                <span class="login-status-state__dot" aria-hidden="true"></span>
+                <span><%= getServiceStateLabel(service.status.className) %></span>
+              </span>
             </div>
             <% if (service.tags && service.tags.length) { %>
             <div class="login-status-item__tags">
@@ -84,23 +92,10 @@
             </div>
             <% } %>
           </div>
-
-          <div class="login-status-item__timeline">
-            <div class="login-status-item__history" aria-hidden="true">
-              <% service.history.forEach(point => { %>
-              <span class="login-status-bar login-status-bar--<%= point.status.className %>"></span>
-              <% }) %>
-            </div>
-            <div class="login-status-item__timeline-meta">
-              <span>1h</span>
-              <span><%= t("login.status.now") %></span>
-            </div>
-          </div>
         </article>
         <% }) %>
       </div>
     </div>
-
   </section>
   <% } %>
 </div>
