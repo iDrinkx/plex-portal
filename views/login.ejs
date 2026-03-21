@@ -4,9 +4,7 @@
     ? ""
     : (statusData.overall === "operational"
         ? t("login.status.allOperational")
-        : ((statusData.summary?.down || 0) > 0
-            ? t("login.status.majorOutage")
-            : t("login.status.someIssues")));
+        : t("login.status.someIssues"));
 
   function getServiceStateLabel(statusClassName) {
     if (statusClassName === "operational") return "En ligne";
