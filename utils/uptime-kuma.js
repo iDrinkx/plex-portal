@@ -147,6 +147,58 @@ function emitAsync(socket, eventName, ...args) {
   });
 }
 
+function waitForInitialSnapshot(socket, timeoutMs = REQUEST_TIMEOUT_MS) {
+  return new Promise((resolve, reject) => {
+    const snapshot = {
+      monitorList: null,
+      heartbeatList: null,
+      info: null
+    };
+
+    const maybeResolve = () => {
+      if (snapshot.monitorList && snapshot.heartbeatList) {
+        cleanup();
+        resolve(snapshot);
+      }
+    };
+
+    const onMonitorList = (payload) => {
+      snapshot.monitorList = payload;
+      maybeResolve();
+    };
+    const onHeartbeatList = (payload) => {
+      snapshot.heartbeatList = payload;
+      maybeResolve();
+    };
+    const onInfo = (payload) => {
+      snapshot.info = payload;
+    };
+    const onError = (error) => {
+      cleanup();
+      reject(error instanceof Error ? error : new Error(String(error || "Uptime Kuma snapshot failed")));
+    };
+    const timer = setTimeout(() => {
+      cleanup();
+      reject(new Error("Timed out while waiting for Uptime Kuma initial data"));
+    }, timeoutMs);
+
+    const cleanup = () => {
+      clearTimeout(timer);
+      socket.off("monitorList", onMonitorList);
+      socket.off("heartbeatList", onHeartbeatList);
+      socket.off("info", onInfo);
+      socket.off("connect_error", onError);
+      socket.off("error", onError);
+    };
+
+    socket.on("monitorList", onMonitorList);
+    socket.on("heartbeatList", onHeartbeatList);
+    socket.on("info", onInfo);
+    socket.on("connect_error", onError);
+    socket.on("error", onError);
+  });
+}
+
 function toMonitorArray(value) {
   if (!value) return [];
 
@@ -196,12 +248,22 @@ async function fetchPrivateMonitorData(baseUrl, username, password) {
   try {
     await waitForConnect(socket);
 
+    const snapshotPromise = waitForInitialSnapshot(socket, REQUEST_TIMEOUT_MS);
     const loginResponse = await emitAsync(socket, "login", { username, password, token: "" });
     if (!loginResponse || loginResponse.ok !== true) {
       throw new Error(loginResponse?.msg || "Uptime Kuma login failed");
     }
 
-    const monitorListResponse = await emitAsync(socket, "getMonitorList");
+    let monitorListResponse = null;
+    let heartbeatListResponse = null;
+    try {
+      const snapshot = await snapshotPromise;
+      monitorListResponse = snapshot.monitorList;
+      heartbeatListResponse = snapshot.heartbeatList;
+    } catch (_) {
+      monitorListResponse = await emitAsync(socket, "getMonitorList");
+    }
+
     const monitors = toMonitorArray(monitorListResponse)
       .map(normalizeMonitorRecord)
       .filter(Boolean)
@@ -222,8 +284,17 @@ async function fetchPrivateMonitorData(baseUrl, username, password) {
     const beatEntries = await Promise.all(monitors.map(async monitor => {
       const monitorId = monitor?.id;
       if (monitorId == null) return null;
+
+      const heartbeatKey = String(monitorId);
+      const pushedHeartbeatList = heartbeatListResponse && typeof heartbeatListResponse === "object"
+        ? heartbeatListResponse[heartbeatKey]
+        : null;
+      if (Array.isArray(pushedHeartbeatList)) {
+        return [heartbeatKey, pushedHeartbeatList.map(normalizeHeartbeatEntry).filter(Boolean)];
+      }
+
       try {
-        const response = await emitAsync(socket, "getMonitorBeats", Number(monitorId), 60);
+        const response = await emitAsync(socket, "getMonitorBeats", Number(monitorId), 1);
         const raw = Array.isArray(response) ? response : (response?.data || response?.beats || []);
         return [String(monitorId), raw.map(normalizeHeartbeatEntry).filter(Boolean)];
       } catch (_) {
