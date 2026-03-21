@@ -650,7 +650,7 @@ body.site-bg-mode-custom .site-bg-image {
 }
 
 .login-status-panel {
-  width: min(960px, 100%);
+  width: min(1120px, 100%);
   padding: 34px 34px 28px;
   border-radius: 20px;
   background: rgb(14 22 34 / var(--site-card-opacity, 0.012));
@@ -758,18 +758,21 @@ body.site-bg-mode-custom .site-bg-image {
 
 .login-status-section__header h3 {
   margin: 0;
-  font-size: 15px;
-  font-weight: 600;
+  font-size: 18px;
+  font-weight: 500;
   color: rgba(226, 240, 255, 0.88);
 }
 
 .login-status-list {
   display: grid;
   gap: 0;
-  padding: 12px 22px 10px;
-  border-radius: 14px;
-  background: transparent;
-  border: none;
+  padding: 16px 24px 10px;
+  border-radius: 18px;
+  background: rgba(17, 26, 40, 0.42);
+  border: 1px solid rgba(170, 201, 228, 0.06);
+  box-shadow:
+    0 10px 26px rgba(0,0,0,.10),
+    0 0 0 1px rgba(232, 248, 255, 0.03) inset;
 }
 
 .login-status-error {
@@ -784,17 +787,15 @@ body.site-bg-mode-custom .site-bg-image {
 
 .login-status-item {
   display: grid;
-  grid-template-columns: minmax(240px, 34%) minmax(0, 1fr);
-  gap: 26px;
+  grid-template-columns: minmax(300px, 40%) minmax(0, 1fr);
+  gap: 22px;
   align-items: start;
-  padding: 18px 20px;
-  margin-bottom: 14px;
-  border-radius: 16px;
-  background: rgba(17, 26, 40, 0.52);
-  border: 1px solid rgba(170, 201, 228, 0.08);
-  box-shadow:
-    0 10px 26px rgba(0,0,0,.10),
-    0 0 0 1px rgba(232, 248, 255, 0.04) inset;
+  padding: 18px 0;
+  margin-bottom: 0;
+  border-radius: 0;
+  background: transparent;
+  border: none;
+  box-shadow: none;
 }
 
 .login-status-item--empty {
@@ -812,7 +813,7 @@ body.site-bg-mode-custom .site-bg-image {
 .login-status-item__headline {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   flex-wrap: wrap;
 }
 
@@ -820,7 +821,7 @@ body.site-bg-mode-custom .site-bg-image {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 62px;
+  min-width: 60px;
   padding: 2px 10px;
   border-radius: 999px;
   font-size: 11px;
@@ -856,15 +857,15 @@ body.site-bg-mode-custom .site-bg-image {
 .login-status-item__timeline {
   min-width: 0;
   width: 100%;
-  padding-top: 4px;
+  padding-top: 2px;
 }
 
 .login-status-item__history {
-  display: grid;
-  grid-template-columns: repeat(60, minmax(0, 1fr));
+  display: flex;
   gap: 4px;
   align-items: center;
   width: 100%;
+  flex-wrap: nowrap;
 }
 
 .login-status-item__timeline-meta {
@@ -877,7 +878,10 @@ body.site-bg-mode-custom .site-bg-image {
 }
 
 .login-status-bar {
-  display: block;
+  display: inline-block;
+  flex: 1 1 0;
+  min-width: 4px;
+  max-width: 7px;
   height: 16px;
   border-radius: 2px;
   background: rgba(107, 126, 146, 0.2);
@@ -929,8 +933,8 @@ body.site-bg-mode-custom .site-bg-image {
   .login-status-item {
     grid-template-columns: 1fr;
     gap: 14px;
-    padding-left: 14px;
-    padding-right: 14px;
+    padding-left: 0;
+    padding-right: 0;
   }
 }
 

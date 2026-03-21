@@ -96,21 +96,6 @@
       </div>
     </div>
 
-    <% if (statusData.fetchedAt || statusData.lastUpdatedAt) { %>
-    <p
-      class="login-status-updated"
-      data-uptime-updated-at
-      data-iso="<%= statusData.fetchedAt || statusData.lastUpdatedAt %>"
-      data-label-prefix="<%= t('login.status.updatedAt', { date: '__DATE__' }) %>"
-    ></p>
-    <p
-      class="login-status-refresh"
-      data-uptime-refresh
-      data-fetched-at="<%= statusData.fetchedAt || '' %>"
-      data-refresh-ms="<%= statusData.refreshIntervalMs || 300000 %>"
-      data-label-prefix="<%= t('login.status.refreshIn', { time: '__TIME__' }) %>"
-    ></p>
-    <% } %>
   </section>
   <% } %>
 </div>
@@ -174,47 +159,3 @@
     }
   }
 </style>
-
-<script>
-  (function () {
-    const updatedAtEl = document.querySelector("[data-uptime-updated-at]");
-    const refreshEl = document.querySelector("[data-uptime-refresh]");
-    const pageLocale = "<%= locale === 'en' ? 'en-US' : 'fr-FR' %>";
-
-    if (updatedAtEl) {
-      const iso = updatedAtEl.getAttribute("data-iso");
-      const labelPrefix = updatedAtEl.getAttribute("data-label-prefix") || "__DATE__";
-      const date = iso ? new Date(iso) : null;
-
-      if (date && !Number.isNaN(date.getTime())) {
-        updatedAtEl.textContent = labelPrefix.replace("__DATE__", date.toLocaleString(pageLocale));
-      }
-    }
-
-    if (refreshEl) {
-      const fetchedAt = new Date(refreshEl.getAttribute("data-fetched-at") || "");
-      const refreshMs = Number(refreshEl.getAttribute("data-refresh-ms") || 300000);
-      const labelPrefix = refreshEl.getAttribute("data-label-prefix") || "__TIME__";
-
-      const render = function () {
-        if (Number.isNaN(fetchedAt.getTime()) || !Number.isFinite(refreshMs) || refreshMs <= 0) return;
-
-        const targetTs = Math.ceil(fetchedAt.getTime() / refreshMs) * refreshMs;
-        const remainingMs = Math.max(0, targetTs - Date.now());
-        const totalSeconds = Math.ceil(remainingMs / 1000);
-        const minutes = Math.floor(totalSeconds / 60);
-        const seconds = totalSeconds % 60;
-        const timeLabel = String(minutes).padStart(2, "0") + ":" + String(seconds).padStart(2, "0");
-
-        refreshEl.textContent = labelPrefix.replace("__TIME__", timeLabel);
-
-        if (remainingMs <= 0) {
-          window.location.reload();
-        }
-      };
-
-      render();
-      window.setInterval(render, 1000);
-    }
-  })();
-</script>
