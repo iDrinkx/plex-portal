@@ -837,11 +837,15 @@ body.site-bg-mode-custom .site-bg-image {
   min-width: 136px;
 }
 
+.login-status-item__service-brand > img {
+  width: 44px;
+}
+
 .login-status-item__service-logo {
   display: inline-flex;
   align-items: center;
   justify-content: flex-start;
-  width: auto;
+  width: 44px;
   height: 36px;
   max-width: 140px;
   object-fit: contain;
@@ -852,14 +856,14 @@ body.site-bg-mode-custom .site-bg-image {
 
 .login-status-item__service-logo--plex {
   height: 30px;
-  max-width: 92px;
+  max-width: 44px;
 }
 
 .login-status-item__service-logo--seerr,
 .login-status-item__service-logo--komga {
   height: 34px;
-  width: 34px;
-  max-width: 34px;
+  width: 44px;
+  max-width: 44px;
 }
 
 .login-status-item__service-logo--komga {
@@ -868,7 +872,7 @@ body.site-bg-mode-custom .site-bg-image {
 
 .login-status-item__service-logo--portall {
   height: 38px;
-  max-width: 144px;
+  max-width: 44px;
   transform: translateY(1px);
 }
 
@@ -1008,6 +1012,7 @@ body.site-bg-mode-custom .site-bg-image {
   }
 
   .login-status-item__service-logo {
+    width: 40px;
     height: 30px;
     max-width: 112px;
   }
@@ -1017,21 +1022,25 @@ body.site-bg-mode-custom .site-bg-image {
     gap: 8px;
   }
 
+  .login-status-item__service-brand > img {
+    width: 40px;
+  }
+
   .login-status-item__service-logo--plex {
     height: 24px;
-    max-width: 76px;
+    max-width: 40px;
   }
 
   .login-status-item__service-logo--seerr,
   .login-status-item__service-logo--komga {
     height: 30px;
-    width: 30px;
-    max-width: 30px;
+    width: 40px;
+    max-width: 40px;
   }
 
   .login-status-item__service-logo--portall {
     height: 32px;
-    max-width: 122px;
+    max-width: 40px;
   }
 
   .login-status-item__row {
