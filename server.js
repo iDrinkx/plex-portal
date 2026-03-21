@@ -297,7 +297,8 @@ app.get("/", async (req, res) => {
   try {
     uptimeKuma = await getPublicStatusPageSummary({
       baseUrl: getConfigValue("UPTIME_KUMA_URL", ""),
-      slug: getConfigValue("UPTIME_KUMA_STATUS_PAGE_SLUG", "")
+      username: getConfigValue("UPTIME_KUMA_USERNAME", ""),
+      password: getConfigValue("UPTIME_KUMA_PASSWORD", "")
     });
   } catch (_) {
     uptimeKuma = null;

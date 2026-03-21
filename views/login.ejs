@@ -8,12 +8,6 @@
   const overallStatusLabel = statusData && statusData.overall === "operational"
     ? t("login.status.allOperational")
     : t("login.status.someIssues", { count: issueCount });
-  const statusLabelMap = {
-    operational: t("login.status.operational"),
-    down: t("login.status.down"),
-    maintenance: t("login.status.maintenance"),
-    pending: t("login.status.pending")
-  };
 %>
 
 <div class="login-page<%= statusData ? ' login-page--with-status' : '' %>">
@@ -23,7 +17,7 @@
 
   <div class="login-card">
     <h1>Connectez-vous pour continuer</h1>
-    <% if (typeof error !== 'undefined' && error === 'unauthorized') { %>
+    <% if (typeof error !== "undefined" && error === "unauthorized") { %>
     <div class="login-error"><%= t("login.unauthorized", { serverName: plexServerName }) %></div>
     <% } %>
     <a class="plex-btn plex-btn--logo" href="<%= basePath %>/login" aria-label="<%= t('login.withPlex') %>">
@@ -35,7 +29,7 @@
   <% if (statusData) { %>
   <section class="login-status-panel" aria-labelledby="login-status-heading">
     <div class="login-status-summary login-status-summary--<%= statusData.overall === 'operational' ? 'operational' : 'issues' %>">
-      <span class="login-status-summary__icon" aria-hidden="true"><%= statusData.overall === 'operational' ? '●' : '!' %></span>
+      <span class="login-status-summary__icon" aria-hidden="true"><%= statusData.overall === "operational" ? "✓" : "!" %></span>
       <div class="login-status-summary__text">
         <h2 id="login-status-heading"><%= overallStatusLabel %></h2>
         <% if (statusData.description) { %>
@@ -54,8 +48,8 @@
         <article class="login-status-item">
           <div class="login-status-item__meta">
             <div class="login-status-item__headline">
-              <% if (typeof service.uptimePercent === 'number' && Number.isFinite(service.uptimePercent)) { %>
-              <span class="login-status-item__uptime"><%= service.uptimePercent.toFixed(2).replace(/\.00$/, '') %>%</span>
+              <% if (typeof service.uptimePercent === "number" && Number.isFinite(service.uptimePercent)) { %>
+              <span class="login-status-item__uptime"><%= service.uptimePercent.toFixed(2).replace(/\.00$/, "") %>%</span>
               <% } %>
               <strong><%= service.name %></strong>
             </div>
@@ -84,18 +78,18 @@
       </div>
     </div>
 
-    <% if (statusData.lastUpdatedAt) { %>
+    <% if (statusData.fetchedAt || statusData.lastUpdatedAt) { %>
     <p
       class="login-status-updated"
       data-uptime-updated-at
-      data-iso="<%= statusData.lastUpdatedAt %>"
+      data-iso="<%= statusData.fetchedAt || statusData.lastUpdatedAt %>"
       data-label-prefix="<%= t('login.status.updatedAt', { date: '__DATE__' }) %>"
     ></p>
     <p
       class="login-status-refresh"
       data-uptime-refresh
       data-fetched-at="<%= statusData.fetchedAt || '' %>"
-      data-refresh-ms="<%= statusData.refreshIntervalMs || 120000 %>"
+      data-refresh-ms="<%= statusData.refreshIntervalMs || 300000 %>"
       data-label-prefix="<%= t('login.status.refreshIn', { time: '__TIME__' }) %>"
     ></p>
     <% } %>
@@ -175,24 +169,25 @@
       const date = iso ? new Date(iso) : null;
 
       if (date && !Number.isNaN(date.getTime())) {
-        const formatted = date.toLocaleString(pageLocale);
-        updatedAtEl.textContent = labelPrefix.replace("__DATE__", formatted);
+        updatedAtEl.textContent = labelPrefix.replace("__DATE__", date.toLocaleString(pageLocale));
       }
     }
 
     if (refreshEl) {
       const fetchedAt = new Date(refreshEl.getAttribute("data-fetched-at") || "");
-      const refreshMs = Number(refreshEl.getAttribute("data-refresh-ms") || 120000);
+      const refreshMs = Number(refreshEl.getAttribute("data-refresh-ms") || 300000);
       const labelPrefix = refreshEl.getAttribute("data-label-prefix") || "__TIME__";
 
       const render = function () {
         if (Number.isNaN(fetchedAt.getTime()) || !Number.isFinite(refreshMs) || refreshMs <= 0) return;
-        const targetTs = fetchedAt.getTime() + refreshMs;
+
+        const targetTs = Math.ceil(fetchedAt.getTime() / refreshMs) * refreshMs;
         const remainingMs = Math.max(0, targetTs - Date.now());
         const totalSeconds = Math.ceil(remainingMs / 1000);
         const minutes = Math.floor(totalSeconds / 60);
         const seconds = totalSeconds % 60;
         const timeLabel = String(minutes).padStart(2, "0") + ":" + String(seconds).padStart(2, "0");
+
         refreshEl.textContent = labelPrefix.replace("__TIME__", timeLabel);
 
         if (remainingMs <= 0) {

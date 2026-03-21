@@ -836,6 +836,7 @@ body.site-bg-mode-custom .site-bg-image {
 
 .login-status-item__timeline {
   min-width: 0;
+  width: 100%;
 }
 
 .login-status-item__history {
@@ -843,6 +844,7 @@ body.site-bg-mode-custom .site-bg-image {
   grid-template-columns: repeat(60, minmax(0, 1fr));
   gap: 5px;
   align-items: center;
+  width: 100%;
 }
 
 .login-status-item__timeline-meta {

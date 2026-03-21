@@ -1,45 +1,12 @@
-const fetch = require("node-fetch");
+const { io } = require("socket.io-client");
 
 const CACHE_TTL_MS = 60 * 1000;
 const REQUEST_TIMEOUT_MS = 8000;
-const REFRESH_INTERVAL_MS = 2 * 60 * 1000;
+const REFRESH_INTERVAL_MS = 5 * 60 * 1000;
 const cache = new Map();
 
 function normalizeBaseUrl(value) {
   return String(value || "").trim().replace(/\/+$/, "");
-}
-
-function normalizeSlug(value) {
-  const raw = String(value || "").trim();
-  if (!raw) return "";
-
-  try {
-    const parsed = new URL(raw);
-    const parts = parsed.pathname.split("/").filter(Boolean);
-    const statusIndex = parts.findIndex(part => part.toLowerCase() === "status");
-    if (statusIndex >= 0 && parts[statusIndex + 1]) {
-      return String(parts[statusIndex + 1]).trim();
-    }
-    if (parts.length > 0) {
-      return String(parts[parts.length - 1]).trim();
-    }
-  } catch (_) {}
-
-  const cleaned = raw.replace(/^\/+|\/+$/g, "");
-  const statusMatch = cleaned.match(/(?:^|\/)status\/([^/]+)$/i);
-  if (statusMatch && statusMatch[1]) {
-    return String(statusMatch[1]).trim();
-  }
-
-  return cleaned;
-}
-
-function withTimeout(url, options = {}, timeoutMs = REQUEST_TIMEOUT_MS) {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
-
-  return fetch(url, { ...options, signal: controller.signal })
-    .finally(() => clearTimeout(timeout));
 }
 
 function getMonitorStatusMeta(statusCode) {
@@ -66,18 +33,12 @@ function normalizeHeartbeatEntry(entry) {
     status: Number(entry.status),
     ping: entry.ping,
     message: entry.msg || entry.message || "",
+    important: entry.important === true,
     time: time && !Number.isNaN(time.getTime()) ? time.toISOString() : null
   };
 }
 
-function getLatestHeartbeat(history) {
-  for (let i = history.length - 1; i >= 0; i -= 1) {
-    if (history[i]) return history[i];
-  }
-  return null;
-}
-
-function buildHistoryBars(history, maxBars = 20) {
+function buildHistoryBars(history, maxBars = 60) {
   const normalized = history.slice(-maxBars).map(entry => ({
     status: getMonitorStatusMeta(entry.status),
     time: entry.time
@@ -99,25 +60,20 @@ function normalizeTagColor(rawColor, tagName = "") {
     return color;
   }
 
-  const named = color.toLowerCase();
   const namedMap = {
     blue: "#3b82f6",
     orange: "#fb923c",
     red: "#ef4444",
     green: "#10b981",
     yellow: "#f59e0b",
-    purple: "#8b5cf6",
+    purple: "#7c3aed",
     pink: "#ec4899",
     cyan: "#06b6d4",
-    teal: "#14b8a6",
-    lime: "#84cc16",
-    indigo: "#6366f1",
-    gray: "#64748b",
-    grey: "#64748b"
+    teal: "#14b8a6"
   };
+  const named = color.toLowerCase();
   if (namedMap[named]) return namedMap[named];
 
-  const tagKey = String(tagName || "").trim().toLowerCase();
   const tagMap = {
     portall: "#2563eb",
     plex: "#fb923c",
@@ -127,91 +83,147 @@ function normalizeTagColor(rawColor, tagName = "") {
     jellyfin: "#06b6d4",
     romm: "#ef4444"
   };
-  return tagMap[tagKey] || "#3b82f6";
+  return tagMap[String(tagName || "").trim().toLowerCase()] || "#3b82f6";
 }
 
-async function fetchStatusPageData(baseUrl, slug) {
-  const [pageRes, heartbeatRes] = await Promise.all([
-    withTimeout(`${baseUrl}/api/status-page/${encodeURIComponent(slug)}`, {
-      headers: { Accept: "application/json" }
-    }),
-    withTimeout(`${baseUrl}/api/status-page/heartbeat/${encodeURIComponent(slug)}`, {
-      headers: { Accept: "application/json" }
-    })
-  ]);
-
-  if (!pageRes.ok) {
-    throw new Error(`Uptime Kuma status page HTTP ${pageRes.status}`);
-  }
-  if (!heartbeatRes.ok) {
-    throw new Error(`Uptime Kuma heartbeat HTTP ${heartbeatRes.status}`);
-  }
-
-  const [pageData, heartbeatData] = await Promise.all([pageRes.json(), heartbeatRes.json()]);
-  return { pageData, heartbeatData };
+function mapTags(tags) {
+  return Array.isArray(tags)
+    ? tags
+        .map(tag => {
+          const name = String(tag?.name || tag?.label || tag || "").trim();
+          if (!name) return null;
+          return { name, color: normalizeTagColor(tag?.color, name) };
+        })
+        .filter(Boolean)
+    : [];
 }
 
-function buildNormalizedStatus(pageData = {}, heartbeatData = {}) {
-  const groups = Array.isArray(pageData.publicGroupList)
-    ? pageData.publicGroupList
-    : (Array.isArray(pageData.monitorList)
-        ? [{ name: pageData.title || "Services", monitorList: pageData.monitorList }]
-        : []);
-  const heartbeatList = heartbeatData.heartbeatList && typeof heartbeatData.heartbeatList === "object"
-    ? heartbeatData.heartbeatList
-    : {};
-  const uptimeList = heartbeatData.uptimeList && typeof heartbeatData.uptimeList === "object"
-    ? heartbeatData.uptimeList
+function getLatestHeartbeat(history) {
+  for (let i = history.length - 1; i >= 0; i -= 1) {
+    if (history[i]) return history[i];
+  }
+  return null;
+}
+
+function createSocketClient(baseUrl) {
+  return io(baseUrl, {
+    transports: ["websocket", "polling"],
+    reconnection: false,
+    timeout: REQUEST_TIMEOUT_MS
+  });
+}
+
+function waitForConnect(socket) {
+  return new Promise((resolve, reject) => {
+    const onConnect = () => {
+      cleanup();
+      resolve();
+    };
+    const onError = (error) => {
+      cleanup();
+      reject(error instanceof Error ? error : new Error(String(error || "Socket connection failed")));
+    };
+    const cleanup = () => {
+      socket.off("connect", onConnect);
+      socket.off("connect_error", onError);
+      socket.off("error", onError);
+    };
+
+    socket.once("connect", onConnect);
+    socket.once("connect_error", onError);
+    socket.once("error", onError);
+  });
+}
+
+function emitAsync(socket, eventName, ...args) {
+  return new Promise((resolve, reject) => {
+    socket.timeout(REQUEST_TIMEOUT_MS).emit(eventName, ...args, (err, response) => {
+      if (err) {
+        reject(err instanceof Error ? err : new Error(String(err || `Socket event ${eventName} failed`)));
+        return;
+      }
+      resolve(response);
+    });
+  });
+}
+
+async function fetchPrivateMonitorData(baseUrl, username, password) {
+  const socket = createSocketClient(baseUrl);
+
+  try {
+    await waitForConnect(socket);
+
+    const loginResponse = await emitAsync(socket, "login", { username, password, token: "" });
+    if (!loginResponse || loginResponse.ok !== true) {
+      throw new Error(loginResponse?.msg || "Uptime Kuma login failed");
+    }
+
+    const monitorListResponse = await emitAsync(socket, "getMonitorList");
+    const monitorListMap = monitorListResponse?.monitorList || monitorListResponse || {};
+    const monitors = Object.values(monitorListMap)
+      .filter(Boolean)
+      .filter(monitor => monitor.active !== false)
+      .sort((a, b) => {
+        const weightA = Number.isFinite(Number(a.weight)) ? Number(a.weight) : Number.MAX_SAFE_INTEGER;
+        const weightB = Number.isFinite(Number(b.weight)) ? Number(b.weight) : Number.MAX_SAFE_INTEGER;
+        if (weightA !== weightB) return weightA - weightB;
+        const idA = Number.isFinite(Number(a.id)) ? Number(a.id) : Number.MAX_SAFE_INTEGER;
+        const idB = Number.isFinite(Number(b.id)) ? Number(b.id) : Number.MAX_SAFE_INTEGER;
+        return idA - idB;
+      });
+
+    const beatEntries = await Promise.all(monitors.map(async monitor => {
+      const monitorId = monitor?.id;
+      if (monitorId == null) return null;
+      try {
+        const response = await emitAsync(socket, "getMonitorBeats", Number(monitorId), 60);
+        const raw = Array.isArray(response) ? response : (response?.data || response?.beats || []);
+        return [String(monitorId), raw.map(normalizeHeartbeatEntry).filter(Boolean)];
+      } catch (_) {
+        return [String(monitorId), []];
+      }
+    }));
+
+    return {
+      monitors,
+      beatsById: Object.fromEntries(beatEntries.filter(Boolean))
+    };
+  } finally {
+    socket.close();
+  }
+}
+
+function buildNormalizedStatus(privateData = {}) {
+  const monitors = Array.isArray(privateData.monitors) ? privateData.monitors : [];
+  const beatsById = privateData.beatsById && typeof privateData.beatsById === "object"
+    ? privateData.beatsById
     : {};
 
   const services = [];
   let latestUpdatedAt = null;
 
-  groups.forEach((group, groupIndex) => {
-    const monitors = Array.isArray(group.monitorList) ? group.monitorList : [];
-    monitors.forEach((monitor, monitorIndex) => {
-      const id = String(
-        monitor.id ??
-        monitor.monitorID ??
-        monitor.monitorId ??
-        `${groupIndex}-${monitorIndex}`
-      );
-      const rawHistory = Array.isArray(heartbeatList[id]) ? heartbeatList[id] : [];
-      const normalizedHistory = rawHistory
-        .map(normalizeHeartbeatEntry)
-        .filter(Boolean);
-      const latestHeartbeat = getLatestHeartbeat(normalizedHistory);
-      const statusMeta = getMonitorStatusMeta(latestHeartbeat ? latestHeartbeat.status : 0);
-      const uptimeValue = Number(uptimeList[id]);
-      const tags = Array.isArray(monitor.tags)
-        ? monitor.tags
-            .map(tag => {
-              const name = String(tag?.name || tag?.label || tag || "").trim();
-              if (!name) return null;
-              return {
-                name,
-                color: normalizeTagColor(tag?.color, name)
-              };
-            })
-            .filter(Boolean)
-        : [];
+  monitors.forEach((monitor, index) => {
+    const id = String(monitor?.id ?? index);
+    const history = Array.isArray(beatsById[id]) ? beatsById[id] : [];
+    const latestHeartbeat = getLatestHeartbeat(history);
+    const statusMeta = getMonitorStatusMeta(latestHeartbeat ? latestHeartbeat.status : monitor?.active ? 2 : 0);
+    const uptimeValue = Number(monitor?.uptime ?? monitor?.upside ?? monitor?.availability);
 
-      if (latestHeartbeat?.time && (!latestUpdatedAt || latestHeartbeat.time > latestUpdatedAt)) {
-        latestUpdatedAt = latestHeartbeat.time;
-      }
+    if (latestHeartbeat?.time && (!latestUpdatedAt || latestHeartbeat.time > latestUpdatedAt)) {
+      latestUpdatedAt = latestHeartbeat.time;
+    }
 
-      services.push({
-        id,
-        name: String(monitor.name || monitor.title || `Monitor ${id}`),
-        group: String(group.name || pageData.title || "Services"),
-        status: statusMeta,
-        uptimePercent: Number.isFinite(uptimeValue) ? uptimeValue : null,
-        latestMessage: latestHeartbeat?.message || "",
-        latestPing: latestHeartbeat?.ping ?? null,
-        latestTime: latestHeartbeat?.time || null,
-        tags,
-        history: buildHistoryBars(normalizedHistory, 60)
-      });
+    services.push({
+      id,
+      name: String(monitor?.name || `Monitor ${id}`),
+      group: "Services",
+      status: statusMeta,
+      uptimePercent: Number.isFinite(uptimeValue) ? uptimeValue : null,
+      latestMessage: latestHeartbeat?.message || "",
+      latestPing: latestHeartbeat?.ping ?? null,
+      latestTime: latestHeartbeat?.time || null,
+      tags: mapTags(monitor?.tags),
+      history: buildHistoryBars(history, 60)
     });
   });
 
@@ -225,8 +237,8 @@ function buildNormalizedStatus(pageData = {}, heartbeatData = {}) {
   }, { total: 0, up: 0, down: 0, maintenance: 0, pending: 0 });
 
   return {
-    title: String(pageData.title || pageData.config?.title || "Status"),
-    description: String(pageData.description || pageData.config?.description || "").trim(),
+    title: "Uptime Kuma",
+    description: "",
     services,
     summary,
     overall: summary.total > 0 && summary.down === 0 && summary.pending === 0 && summary.maintenance === 0
@@ -238,15 +250,14 @@ function buildNormalizedStatus(pageData = {}, heartbeatData = {}) {
   };
 }
 
-async function getPublicStatusPageSummary({ baseUrl, slug }) {
+async function getPublicStatusPageSummary({ baseUrl, username = "", password = "" }) {
   const normalizedBaseUrl = normalizeBaseUrl(baseUrl);
-  const normalizedSlug = normalizeSlug(slug);
 
-  if (!normalizedBaseUrl || !normalizedSlug) {
+  if (!normalizedBaseUrl || !username || !password) {
     return { enabled: false, services: [], summary: { total: 0, up: 0, down: 0, maintenance: 0, pending: 0 } };
   }
 
-  const cacheKey = `${normalizedBaseUrl}::${normalizedSlug}`;
+  const cacheKey = `${normalizedBaseUrl}::${username}`;
   const now = Date.now();
   const cached = cache.get(cacheKey);
 
@@ -255,12 +266,12 @@ async function getPublicStatusPageSummary({ baseUrl, slug }) {
   }
 
   try {
-    const { pageData, heartbeatData } = await fetchStatusPageData(normalizedBaseUrl, normalizedSlug);
-    const normalized = buildNormalizedStatus(pageData, heartbeatData);
+    const privateData = await fetchPrivateMonitorData(normalizedBaseUrl, username, password);
+    const normalized = buildNormalizedStatus(privateData);
     const value = {
       enabled: true,
       sourceUrl: normalizedBaseUrl,
-      slug: normalizedSlug,
+      privateError: null,
       ...normalized
     };
     cache.set(cacheKey, { timestamp: now, value });
@@ -271,22 +282,22 @@ async function getPublicStatusPageSummary({ baseUrl, slug }) {
         ...cached.value,
         cached: true,
         stale: true,
-        error: error.message
+        privateError: error.message
       };
     }
 
     return {
       enabled: true,
       sourceUrl: normalizedBaseUrl,
-      slug: normalizedSlug,
-      title: "Status",
+      title: "Uptime Kuma",
       description: "",
       services: [],
       summary: { total: 0, up: 0, down: 0, maintenance: 0, pending: 0 },
       overall: "unknown",
       lastUpdatedAt: null,
       fetchedAt: new Date().toISOString(),
-      error: error.message
+      refreshIntervalMs: REFRESH_INTERVAL_MS,
+      privateError: error.message
     };
   }
 }
