@@ -152,7 +152,8 @@ function waitForInitialSnapshot(socket, timeoutMs = REQUEST_TIMEOUT_MS) {
     const snapshot = {
       monitorList: null,
       heartbeatList: null,
-      info: null
+      info: null,
+      uptimeById: {}
     };
 
     const maybeResolve = () => {
@@ -173,6 +174,16 @@ function waitForInitialSnapshot(socket, timeoutMs = REQUEST_TIMEOUT_MS) {
     const onInfo = (payload) => {
       snapshot.info = payload;
     };
+    const onUptime = (payload) => {
+      const monitorID = payload?.monitorID ?? payload?.monitorId ?? payload?.id;
+      const periodKey = String(payload?.periodKey || "");
+      const percentage = Number(payload?.percentage);
+      if (monitorID == null || !periodKey || !Number.isFinite(percentage)) return;
+      if (!snapshot.uptimeById[String(monitorID)]) {
+        snapshot.uptimeById[String(monitorID)] = {};
+      }
+      snapshot.uptimeById[String(monitorID)][periodKey] = percentage;
+    };
     const onError = (error) => {
       cleanup();
       reject(error instanceof Error ? error : new Error(String(error || "Uptime Kuma snapshot failed")));
@@ -187,6 +198,7 @@ function waitForInitialSnapshot(socket, timeoutMs = REQUEST_TIMEOUT_MS) {
       socket.off("monitorList", onMonitorList);
       socket.off("heartbeatList", onHeartbeatList);
       socket.off("info", onInfo);
+      socket.off("uptime", onUptime);
       socket.off("connect_error", onError);
       socket.off("error", onError);
     };
@@ -194,6 +206,7 @@ function waitForInitialSnapshot(socket, timeoutMs = REQUEST_TIMEOUT_MS) {
     socket.on("monitorList", onMonitorList);
     socket.on("heartbeatList", onHeartbeatList);
     socket.on("info", onInfo);
+    socket.on("uptime", onUptime);
     socket.on("connect_error", onError);
     socket.on("error", onError);
   });
@@ -256,10 +269,12 @@ async function fetchPrivateMonitorData(baseUrl, username, password) {
 
     let monitorListResponse = null;
     let heartbeatListResponse = null;
+    let uptimeById = {};
     try {
       const snapshot = await snapshotPromise;
       monitorListResponse = snapshot.monitorList;
       heartbeatListResponse = snapshot.heartbeatList;
+      uptimeById = snapshot.uptimeById || {};
     } catch (_) {
       monitorListResponse = await emitAsync(socket, "getMonitorList");
     }
@@ -304,7 +319,8 @@ async function fetchPrivateMonitorData(baseUrl, username, password) {
 
     return {
       monitors,
-      beatsById: Object.fromEntries(beatEntries.filter(Boolean))
+      beatsById: Object.fromEntries(beatEntries.filter(Boolean)),
+      uptimeById
     };
   } finally {
     socket.close();
@@ -316,6 +332,9 @@ function buildNormalizedStatus(privateData = {}) {
   const beatsById = privateData.beatsById && typeof privateData.beatsById === "object"
     ? privateData.beatsById
     : {};
+  const uptimeById = privateData.uptimeById && typeof privateData.uptimeById === "object"
+    ? privateData.uptimeById
+    : {};
 
   const services = [];
   let latestUpdatedAt = null;
@@ -325,7 +344,15 @@ function buildNormalizedStatus(privateData = {}) {
     const history = Array.isArray(beatsById[id]) ? beatsById[id] : [];
     const latestHeartbeat = getLatestHeartbeat(history);
     const statusMeta = getMonitorStatusMeta(latestHeartbeat ? latestHeartbeat.status : monitor?.active ? 2 : 0);
-    const uptimeValue = Number(monitor?.uptime ?? monitor?.upside ?? monitor?.availability);
+    const uptimeEntry = uptimeById[id] || {};
+    const uptimeValue = Number(
+      uptimeEntry["24"] ??
+      uptimeEntry["24h"] ??
+      uptimeEntry["720"] ??
+      monitor?.uptime ??
+      monitor?.upside ??
+      monitor?.availability
+    );
 
     if (latestHeartbeat?.time && (!latestUpdatedAt || latestHeartbeat.time > latestUpdatedAt)) {
       latestUpdatedAt = latestHeartbeat.time;
