@@ -1,3 +1,10 @@
+## [1.39.7](https://github.com/iDrinkx/portall/compare/v1.39.6...v1.39.7) (2026-03-22)
+
+### Corrections de bugs
+
+* collection fast et startrek ([38315a3](https://github.com/iDrinkx/portall/commit/38315a3a0b3210ef8bc9df63b278a178fd2f3de0))
+* list trakt ([e3d9de9](https://github.com/iDrinkx/portall/commit/e3d9de96a6d553d1d93066433e5e272142aa9ea0))
+
 ## [1.39.6](https://github.com/iDrinkx/portall/compare/v1.39.5...v1.39.6) (2026-03-22)
 
 ### Corrections de bugs
