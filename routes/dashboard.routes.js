@@ -1320,10 +1320,7 @@ router.get('/api/badges-eval', requireAuth, async (req, res) => {
 
     if (secretsToCheck.length > 0 && isTautulliReady()) {
       try {
-        const evalResult = await Promise.race([
-          evaluateSecretAchievements(username, joinedAtTs, secretsToCheck, req.session.user.id),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('EVAL_TIMEOUT')), 20000))
-        ]);
+        const evalResult = await evaluateSecretAchievements(username, joinedAtTs, secretsToCheck, req.session.user.id);
         const { unlocked: evalUnlocked, progress: evalProgress } = evalResult;
         for (const [id, date] of Object.entries(evalUnlocked)) {
           if (dbUserId) try { UserAchievementQueries.unlock(dbUserId, id, date, 'auto'); } catch(e) {}
@@ -1350,8 +1347,7 @@ router.get('/api/badges-eval', requireAuth, async (req, res) => {
         if (Object.keys(newlyUnlocked).length > 0)
           logBadges.info(`Débloqués pour ${username}:`, Object.keys(newlyUnlocked).join(', '));
       } catch (err) {
-        if (err.message === 'EVAL_TIMEOUT') logBadges.warn(`Timeout eval ${username}`);
-        else logBadges.error('badges-eval:', err.message);
+        logBadges.error('badges-eval:', err.message);
       }
     }
 

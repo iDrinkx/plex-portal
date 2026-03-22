@@ -294,6 +294,24 @@ function getSessionHistoryMetadataGuidColumns(alias = 'shm') {
   return columns;
 }
 
+function getRowTitleCandidates(row = {}) {
+  return [row.raw_title, row.original_title, row.full_title, row.sort_title]
+    .filter(Boolean)
+    .map(value => String(value).trim())
+    .filter(Boolean);
+}
+
+function findMatchingPlexEntriesForWatchedRow(index = [], row = {}, mediaType = 'movie') {
+  const rowTitles = getRowTitleCandidates(row);
+  if (!rowTitles.length) return [];
+  return index.filter(entry =>
+    entry.type === mediaType &&
+    (entry.titles || [entry.title]).some(entryTitle =>
+      rowTitles.some(rowTitle => collectionTitleMatches(entryTitle, rowTitle, entry.year, row.year))
+    )
+  );
+}
+
 function isReleasedTraktItem(item) {
   const rawDate = item?.type === 'movie'
     ? item?.movie?.released
@@ -853,6 +871,7 @@ async function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckId
   const userFilter = plexUserId
     ? { clause: 'sh.user_id = ?', param: plexUserId }
     : { clause: 'LOWER(sh.user) = ?', param: norm };
+  const plexIndex = await getPlexLibraryIndex();
 
   /**
    * Compte les films regardés par l'utilisateur via une liste de {title, year}.
@@ -885,15 +904,19 @@ async function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckId
         const matched = watchedRows.find(row =>
           (
             movieIds.size > 0 &&
-            [...movieIds].some(id =>
-              mergeIdSets(
-                extractIdsFromRawGuidValue(row.guid),
-                extractIdsFromRawGuidValue(row.guids),
-                extractIdsFromRawGuidValue(row.parent_guid),
-                extractIdsFromRawGuidValue(row.parent_guids),
-                extractIdsFromRawGuidValue(row.grandparent_guid),
-                extractIdsFromRawGuidValue(row.grandparent_guids)
-              ).has(id)
+            (
+              [...movieIds].some(id =>
+                mergeIdSets(
+                  extractIdsFromRawGuidValue(row.guid),
+                  extractIdsFromRawGuidValue(row.guids),
+                  extractIdsFromRawGuidValue(row.parent_guid),
+                  extractIdsFromRawGuidValue(row.parent_guids),
+                  extractIdsFromRawGuidValue(row.grandparent_guid),
+                  extractIdsFromRawGuidValue(row.grandparent_guids)
+                ).has(id)
+              ) ||
+              (Array.isArray(plexIndex) && findMatchingPlexEntriesForWatchedRow(plexIndex, row, 'movie')
+                .some(entry => [...movieIds].some(id => entry.ids?.has(id))))
             )
           ) || [row.raw_title, row.original_title, row.full_title, row.sort_title]
             .filter(Boolean)
@@ -941,15 +964,19 @@ async function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckId
         const matched = watchedRows.find(row =>
           (
             showIds.size > 0 &&
-            [...showIds].some(id =>
-              mergeIdSets(
-                extractIdsFromRawGuidValue(row.guid),
-                extractIdsFromRawGuidValue(row.guids),
-                extractIdsFromRawGuidValue(row.parent_guid),
-                extractIdsFromRawGuidValue(row.parent_guids),
-                extractIdsFromRawGuidValue(row.grandparent_guid),
-                extractIdsFromRawGuidValue(row.grandparent_guids)
-              ).has(id)
+            (
+              [...showIds].some(id =>
+                mergeIdSets(
+                  extractIdsFromRawGuidValue(row.guid),
+                  extractIdsFromRawGuidValue(row.guids),
+                  extractIdsFromRawGuidValue(row.parent_guid),
+                  extractIdsFromRawGuidValue(row.parent_guids),
+                  extractIdsFromRawGuidValue(row.grandparent_guid),
+                  extractIdsFromRawGuidValue(row.grandparent_guids)
+                ).has(id)
+              ) ||
+              (Array.isArray(plexIndex) && findMatchingPlexEntriesForWatchedRow(plexIndex, row, 'show')
+                .some(entry => [...showIds].some(id => entry.ids?.has(id))))
             )
           ) || [row.raw_title, row.original_title, row.full_title, row.sort_title]
             .filter(Boolean)
