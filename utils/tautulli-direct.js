@@ -23,10 +23,10 @@ const COLLECTION_CACHE_TTL = 24 * 60 * 60 * 1000;
 const COLLECTION_MOVIE_MIN_PERCENT = 50;
 
 const TRAKT_LISTS = {
-  'potter-head': 'https://app.trakt.tv/users/machadodg/lists/wizarding-world',
+  'potter-head': 'https://app.trakt.tv/users/arachn0id/lists/wizarding-world',
   'jurassic-survivor': 'https://app.trakt.tv/users/shaneleexcx1234/lists/jurassic-park-world-franchise',
-  'marvel-fan': 'https://trakt.tv/users/donxy/lists/marvel-cinematic-universe',
-  'black-knight': 'https://app.trakt.tv/users/feeltheduck/lists/star-wars-collection',
+  'marvel-fan': 'https://app.trakt.tv/users/pygospa/lists/mcu-chronological-order',
+  'black-knight': 'https://app.trakt.tv/users/sonicwarrior/lists/star-wars-canon-timeline',
   'tolkiendil': 'https://app.trakt.tv/users/bobbymarshal/lists/middle-earth',
   'evolutionist': 'https://app.trakt.tv/lists/official/1531',
   'agent-007': 'https://app.trakt.tv/users/maiki01/lists/james-bond-collection',
@@ -1463,17 +1463,17 @@ async function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckId
           break;
         }
 
-        // 🦸 Marvel Fan — Toute la collection MCU
+        // 🦸 Marvel Fan — Films + séries de la collection Marvel
         case 'marvel-fan': {
-          const r = await checkCollection(id);
+          const r = await checkMixedCollection(id);
           if (r.date) results[id] = r.date;
           if (r.total > 0) progress[id] = { current: r.current, total: r.total };
           break;
         }
 
-        // 🧑‍⚖️ Maître Jedi — 7 films Star Wars minimum
+        // 🧑‍⚖️ Maître Jedi — Collection Star Wars disponible localement
         case 'black-knight': {
-          const r = await checkMixedCollection(id, 7, 0);
+          const r = await checkCollection(id);
           if (r.date) results[id] = r.date;
           if (r.total > 0) progress[id] = { current: r.current, total: r.total };
           break;
@@ -1513,15 +1513,15 @@ async function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckId
 
         // 🏎️ Fast Family — Toute la collection Fast and Furious
         case 'fast-family': {
-          const r = await checkCollection(id, 10);
+          const r = await checkCollection(id);
           if (r.date) results[id] = r.date;
           if (r.total > 0) progress[id] = { current: r.current, total: r.total };
           break;
         }
 
-        // 🖖 Star Trek Universe — Toutes les séries de la collection
+        // 🖖 Star Trek Universe — Films + séries de la collection
         case 'star-trek-universe': {
-          const r = await checkMixedCollection(id, 0);
+          const r = await checkMixedCollection(id);
           if (r.date) results[id] = r.date;
           if (r.total > 0) progress[id] = { current: r.current, total: r.total };
           break;
