@@ -15,9 +15,9 @@ let tautulliDb = null;
 const traktListCache = {};
 const tautulliSchemaCache = {};
 const plexAvailabilityCache = {};
+const plexLibraryIndexCache = { items: null, ts: 0, failedAt: 0 };
 const COLLECTION_CACHE_TTL = 24 * 60 * 60 * 1000;
 const COLLECTION_MOVIE_MIN_PERCENT = 50;
-let plexSearchEndpointCache = null;
 
 const TRAKT_LISTS = {
   'potter-head': 'https://app.trakt.tv/users/machadodg/lists/wizarding-world',
@@ -140,40 +140,6 @@ function getPlexAvailabilityCacheKey(item) {
   return `${item.type || 'unknown'}:${String(item.title || '').toLowerCase()}::${item.year || ''}`;
 }
 
-function buildPlexSearchCandidates(plexUrl, plexToken, item) {
-  const title = String(item?.title || '').trim();
-  const type = item?.type === 'show' ? 2 : 1;
-  const candidates = [];
-
-  const libraryAllUrl = new URL(`${plexUrl}/library/all`);
-  libraryAllUrl.searchParams.set('type', String(type));
-  libraryAllUrl.searchParams.set('title', title);
-  if (item?.year) libraryAllUrl.searchParams.set('year', String(item.year));
-  libraryAllUrl.searchParams.set('X-Plex-Token', plexToken);
-  candidates.push({
-    key: 'library-all',
-    url: libraryAllUrl.toString(),
-    extract: (json) => json?.MediaContainer?.Metadata || []
-  });
-
-  const hubsSearchUrl = new URL(`${plexUrl}/hubs/search/all`);
-  hubsSearchUrl.searchParams.set('query', title);
-  hubsSearchUrl.searchParams.set('limit', '20');
-  hubsSearchUrl.searchParams.set('includeCollections', '1');
-  hubsSearchUrl.searchParams.set('includeExternalMedia', '0');
-  hubsSearchUrl.searchParams.set('X-Plex-Token', plexToken);
-  candidates.push({
-    key: 'hubs-search-all',
-    url: hubsSearchUrl.toString(),
-    extract: (json) => {
-      const hubs = json?.MediaContainer?.Hub || [];
-      return hubs.flatMap(hub => hub?.Metadata || []);
-    }
-  });
-
-  return candidates;
-}
-
 function isReleasedTraktItem(item) {
   const rawDate = item?.type === 'movie'
     ? item?.movie?.released
@@ -185,6 +151,72 @@ function isReleasedTraktItem(item) {
   if (Number.isNaN(releaseTs)) return true;
 
   return releaseTs <= Date.now();
+}
+
+async function getPlexLibraryIndex() {
+  const now = Date.now();
+  if (plexLibraryIndexCache.items && (now - plexLibraryIndexCache.ts) < COLLECTION_CACHE_TTL) {
+    return plexLibraryIndexCache.items;
+  }
+  if (plexLibraryIndexCache.failedAt && (now - plexLibraryIndexCache.failedAt) < 5 * 60 * 1000) {
+    return null;
+  }
+
+  const plexUrl = String(getConfigValue('PLEX_URL', '') || '').trim();
+  const plexToken = String(getConfigValue('PLEX_TOKEN', '') || '').trim();
+  if (!plexUrl || !plexToken) return null;
+
+  try {
+    const sectionsUrl = `${plexUrl}/library/sections?X-Plex-Token=${plexToken}`;
+    const sectionsResp = await fetch(sectionsUrl, { headers: { Accept: 'application/json' } });
+    if (!sectionsResp.ok) throw new Error(`sections HTTP ${sectionsResp.status}`);
+
+    const sections = (await sectionsResp.json())?.MediaContainer?.Directory || [];
+    const targetSections = sections.filter(section => section?.type === 'movie' || section?.type === 'show');
+    const indexedItems = new Set();
+
+    for (const section of targetSections) {
+      const type = section.type === 'show' ? 2 : 1;
+      let start = 0;
+      const size = 200;
+
+      while (true) {
+        const url = new URL(`${plexUrl}/library/sections/${section.key}/all`);
+        url.searchParams.set('type', String(type));
+        url.searchParams.set('X-Plex-Container-Start', String(start));
+        url.searchParams.set('X-Plex-Container-Size', String(size));
+        url.searchParams.set('X-Plex-Token', plexToken);
+
+        const resp = await fetch(url.toString(), { headers: { Accept: 'application/json' } });
+        if (!resp.ok) throw new Error(`section ${section.key} HTTP ${resp.status}`);
+
+        const metadata = (await resp.json())?.MediaContainer?.Metadata || [];
+        for (const entry of metadata) {
+          const title = String(entry?.title || '').trim();
+          if (!title) continue;
+          const cacheKey = getPlexAvailabilityCacheKey({
+            type: section.type === 'show' ? 'show' : 'movie',
+            title,
+            year: entry?.year ?? null
+          });
+          indexedItems.add(cacheKey);
+        }
+
+        if (metadata.length < size) break;
+        start += size;
+      }
+    }
+
+    plexLibraryIndexCache.items = indexedItems;
+    plexLibraryIndexCache.ts = now;
+    plexLibraryIndexCache.failedAt = 0;
+    log.info(`Index Plex collections: ${indexedItems.size} éléments référencés`);
+    return indexedItems;
+  } catch (err) {
+    plexLibraryIndexCache.failedAt = now;
+    log.warn(`Index Plex collections: ${err.message}`);
+    return null;
+  }
 }
 
 async function isItemAvailableInPlex(item) {
@@ -203,47 +235,10 @@ async function isItemAvailableInPlex(item) {
   if (!plexUrl || !plexToken) return false;
 
   try {
-    const candidates = buildPlexSearchCandidates(plexUrl, plexToken, item);
-    const orderedCandidates = plexSearchEndpointCache
-      ? [
-          ...candidates.filter(candidate => candidate.key === plexSearchEndpointCache),
-          ...candidates.filter(candidate => candidate.key !== plexSearchEndpointCache)
-        ]
-      : candidates;
+    const index = await getPlexLibraryIndex();
+    if (!index) return true;
 
-    let metadata = [];
-    let lastError = null;
-
-    for (const candidate of orderedCandidates) {
-      try {
-        const resp = await fetch(candidate.url, {
-          headers: { Accept: 'application/json' }
-        });
-
-        if (!resp.ok) {
-          lastError = new Error(`${candidate.key} HTTP ${resp.status}`);
-          continue;
-        }
-
-        const json = await resp.json();
-        metadata = candidate.extract(json);
-        plexSearchEndpointCache = candidate.key;
-        lastError = null;
-        break;
-      } catch (err) {
-        lastError = new Error(`${candidate.key} ${err.message}`);
-      }
-    }
-
-    if (lastError) throw lastError;
-
-    const normalizedTitle = title.toLowerCase();
-    const targetYear = item.year ?? null;
-    const available = metadata.some(entry => {
-      const entryTitle = String(entry?.title || '').toLowerCase();
-      const yearMatches = targetYear == null || entry?.year == null || Number(entry.year) === Number(targetYear);
-      return entryTitle === normalizedTitle && yearMatches;
-    });
+    const available = index.has(cacheKey);
 
     plexAvailabilityCache[cacheKey] = { available, ts: now };
     return available;

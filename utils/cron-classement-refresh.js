@@ -182,19 +182,24 @@ async function refreshClassementCache() {
       });
       if (xmlResp.ok) {
         const xml = await xmlResp.text();
-        const userMatches = xml.match(/<User[^>]*>/g) || [];
+        const userBlocks = xml.match(/<User\b[\s\S]*?<\/User>/gi) || [];
+        const selfClosingUsers = xml.match(/<User\b[^>]*\/>/gi) || [];
+        const allUserEntries = userBlocks.length ? userBlocks : selfClosingUsers;
 
-        userMatches.forEach(tag => {
-          const usernameMatch = tag.match(/username="([^"]*)"/i) || tag.match(/title="([^"]*)"/i);
-          const thumbMatch    = tag.match(/thumb="([^"]*)"/i)    || tag.match(/avatar="([^"]*)"/i);
-          const joinedAtMatch = tag.match(/joined_at="([^"]*)"/i);
-          const emailMatch    = tag.match(/\bemail="([^"]*)"/i);
+        allUserEntries.forEach(block => {
+          const openTagMatch = block.match(/<User\b([^>]*)>/i) || block.match(/<User\b([^>]*)\/>/i);
+          const source = openTagMatch?.[1] ? `${openTagMatch[1]} ${block}` : block;
+          const usernameMatch = source.match(/username="([^"]*)"/i) || source.match(/title="([^"]*)"/i);
+          const thumbMatch    = source.match(/thumb="([^"]*)"/i)    || source.match(/avatar="([^"]*)"/i) || source.match(/photo="([^"]*)"/i);
+          const joinedAtMatch = source.match(/joined_at="([^"]*)"/i);
+          const emailMatch    = source.match(/\bemail="([^"]*)"/i);
 
           if (usernameMatch?.[1]) {
-            const name = usernameMatch[1].toLowerCase();
+            const rawUsername = usernameMatch[1];
+            const name = rawUsername.toLowerCase();
             if (thumbMatch?.[1])    { thumbMap[name] = thumbMatch[1]; thumbsFetched++; }
             if (joinedAtMatch?.[1]) { const ts = Number(joinedAtMatch[1]); if (ts > 0) plexJoinedAtMap[name] = ts; }
-            if (emailMatch?.[1])    { emailToUsername[emailMatch[1].toLowerCase()] = usernameMatch[1]; }
+            if (emailMatch?.[1])    { emailToUsername[emailMatch[1].toLowerCase()] = rawUsername; }
           }
         });
       }
