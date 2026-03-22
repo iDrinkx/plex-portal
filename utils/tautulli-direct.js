@@ -175,6 +175,35 @@ function extractPlexGuidIds(guidEntries = []) {
   return ids;
 }
 
+function extractIdsFromRawGuidValue(rawValue) {
+  const ids = new Set();
+  const text = String(rawValue || '');
+  if (!text) return ids;
+
+  const patterns = [
+    /\b(imdb|tmdb|tvdb):\/\/([^"',|\s\]}]+)/gi,
+    /\b(imdb|tmdb|tvdb):([^"',|\s\]}]+)/gi
+  ];
+
+  for (const pattern of patterns) {
+    let match;
+    while ((match = pattern.exec(text)) !== null) {
+      ids.add(`${String(match[1]).toLowerCase()}:${String(match[2]).toLowerCase()}`);
+    }
+  }
+
+  return ids;
+}
+
+function mergeIdSets(...sets) {
+  const merged = new Set();
+  for (const set of sets) {
+    if (!set) continue;
+    for (const value of set) merged.add(value);
+  }
+  return merged;
+}
+
 function getPreferredPlexServerToken() {
   try {
     const { AppSettingQueries } = require('./database');
@@ -213,10 +242,6 @@ function collectionTitleMatches(a, b, yearA = null, yearB = null) {
   if (!normA || !normB) return false;
   if (normA === normB) return true;
 
-  if (normA.includes(normB) || normB.includes(normA)) {
-    return true;
-  }
-
   return false;
 }
 
@@ -244,6 +269,17 @@ function getSessionHistoryMetadataShowTitleColumns(alias = 'shm') {
   if (hasTableColumn('session_history_metadata', 'original_title')) columns.push(`${alias}.original_title AS original_title`);
   if (hasTableColumn('session_history_metadata', 'full_title')) columns.push(`${alias}.full_title AS full_title`);
   if (hasTableColumn('session_history_metadata', 'sort_title')) columns.push(`${alias}.sort_title AS sort_title`);
+  return columns;
+}
+
+function getSessionHistoryMetadataGuidColumns(alias = 'shm') {
+  const columns = [];
+  if (hasTableColumn('session_history_metadata', 'guid')) columns.push(`${alias}.guid AS guid`);
+  if (hasTableColumn('session_history_metadata', 'guids')) columns.push(`${alias}.guids AS guids`);
+  if (hasTableColumn('session_history_metadata', 'grandparent_guid')) columns.push(`${alias}.grandparent_guid AS grandparent_guid`);
+  if (hasTableColumn('session_history_metadata', 'grandparent_guids')) columns.push(`${alias}.grandparent_guids AS grandparent_guids`);
+  if (hasTableColumn('session_history_metadata', 'parent_guid')) columns.push(`${alias}.parent_guid AS parent_guid`);
+  if (hasTableColumn('session_history_metadata', 'parent_guids')) columns.push(`${alias}.parent_guids AS parent_guids`);
   return columns;
 }
 
@@ -807,8 +843,9 @@ async function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckId
     try {
       const completionSql = getMovieCompletionSql('sh', 'shm');
       const movieTitleColumns = getSessionHistoryMetadataMovieTitleColumns('shm');
+      const movieGuidColumns = getSessionHistoryMetadataGuidColumns('shm');
       const watchedRows = tautulliDb.prepare(`
-        SELECT ${movieTitleColumns.join(', ')},
+        SELECT ${[...movieTitleColumns, ...movieGuidColumns].join(', ')},
                shm.year as year,
                MAX(sh.stopped) as last_stopped
         FROM session_history sh
@@ -824,8 +861,21 @@ async function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckId
       let lastStopped = 0;
       for (const movie of movies) {
         const movieTitles = [movie.plexTitle, movie.title].filter(Boolean);
+        const movieIds = buildExternalIds(movie.ids || {});
         const matched = watchedRows.find(row =>
-          [row.raw_title, row.original_title, row.full_title, row.sort_title]
+          (
+            movieIds.size > 0 &&
+            [...movieIds].some(id =>
+              mergeIdSets(
+                extractIdsFromRawGuidValue(row.guid),
+                extractIdsFromRawGuidValue(row.guids),
+                extractIdsFromRawGuidValue(row.parent_guid),
+                extractIdsFromRawGuidValue(row.parent_guids),
+                extractIdsFromRawGuidValue(row.grandparent_guid),
+                extractIdsFromRawGuidValue(row.grandparent_guids)
+              ).has(id)
+            )
+          ) || [row.raw_title, row.original_title, row.full_title, row.sort_title]
             .filter(Boolean)
             .some(candidate => movieTitles.some(movieTitle =>
               collectionTitleMatches(candidate, movieTitle, row.year, movie.year)
@@ -851,8 +901,9 @@ async function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckId
     if (!shows || !shows.length) return { cnt: 0, last_stopped: null };
     try {
       const showTitleColumns = getSessionHistoryMetadataShowTitleColumns('shm');
+      const showGuidColumns = getSessionHistoryMetadataGuidColumns('shm');
       const watchedRows = tautulliDb.prepare(`
-        SELECT ${showTitleColumns.join(', ')},
+        SELECT ${[...showTitleColumns, ...showGuidColumns].join(', ')},
                MAX(sh.stopped) as last_stopped
         FROM session_history sh
         JOIN session_history_metadata shm ON sh.id = shm.id
@@ -866,8 +917,21 @@ async function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckId
       let lastStopped = 0;
       for (const show of shows) {
         const showTitles = [show.plexTitle, show.title].filter(Boolean);
+        const showIds = buildExternalIds(show.ids || {});
         const matched = watchedRows.find(row =>
-          [row.raw_title, row.original_title, row.full_title, row.sort_title]
+          (
+            showIds.size > 0 &&
+            [...showIds].some(id =>
+              mergeIdSets(
+                extractIdsFromRawGuidValue(row.guid),
+                extractIdsFromRawGuidValue(row.guids),
+                extractIdsFromRawGuidValue(row.parent_guid),
+                extractIdsFromRawGuidValue(row.parent_guids),
+                extractIdsFromRawGuidValue(row.grandparent_guid),
+                extractIdsFromRawGuidValue(row.grandparent_guids)
+              ).has(id)
+            )
+          ) || [row.raw_title, row.original_title, row.full_title, row.sort_title]
             .filter(Boolean)
             .some(candidate => showTitles.some(showTitle =>
               collectionTitleMatches(candidate, showTitle)
