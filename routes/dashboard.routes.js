@@ -1322,7 +1322,7 @@ router.get('/api/badges-eval', requireAuth, async (req, res) => {
       try {
         const evalResult = await Promise.race([
           evaluateSecretAchievements(username, joinedAtTs, secretsToCheck, req.session.user.id),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('EVAL_TIMEOUT')), 5000))
+          new Promise((_, reject) => setTimeout(() => reject(new Error('EVAL_TIMEOUT')), 20000))
         ]);
         const { unlocked: evalUnlocked, progress: evalProgress } = evalResult;
         for (const [id, date] of Object.entries(evalUnlocked)) {

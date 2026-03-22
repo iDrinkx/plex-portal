@@ -15,7 +15,8 @@ let tautulliDb = null;
 const traktListCache = {};
 const tautulliSchemaCache = {};
 const plexAvailabilityCache = {};
-const plexLibraryIndexCache = { items: null, ts: 0, failedAt: 0 };
+const traktListInflight = {};
+const plexLibraryIndexCache = { items: null, ts: 0, failedAt: 0, promise: null };
 const COLLECTION_CACHE_TTL = 24 * 60 * 60 * 1000;
 const COLLECTION_MOVIE_MIN_PERCENT = 50;
 
@@ -64,11 +65,15 @@ async function getTraktListItems(achievementId) {
   if (cached && (now - cached.ts) < COLLECTION_CACHE_TTL) {
     return cached.items;
   }
+  if (traktListInflight[achievementId]) {
+    return traktListInflight[achievementId];
+  }
 
   const apiUrl = getTraktApiListUrl(traktListUrl);
   if (!apiUrl) return null;
 
-  try {
+  const loadPromise = (async () => {
+    try {
     const items = [];
     let page = 1;
     const limit = 100;
@@ -122,10 +127,16 @@ async function getTraktListItems(achievementId) {
     traktListCache[achievementId] = { items: availableItems, ts: now };
     log.info(`Trakt ${achievementId}: ${availableItems.length}/${normalized.length} éléments disponibles sur Plex`);
     return availableItems;
-  } catch (err) {
+    } catch (err) {
     log.warn(`Trakt ${achievementId}:`, err.message);
     return null;
+  } finally {
+    delete traktListInflight[achievementId];
   }
+  })();
+
+  traktListInflight[achievementId] = loadPromise;
+  return loadPromise;
 }
 
 function getTableColumns(tableName) {
@@ -301,6 +312,9 @@ async function getPlexLibraryIndex() {
   if (plexLibraryIndexCache.items && (now - plexLibraryIndexCache.ts) < COLLECTION_CACHE_TTL) {
     return plexLibraryIndexCache.items;
   }
+  if (plexLibraryIndexCache.promise) {
+    return plexLibraryIndexCache.promise;
+  }
   if (plexLibraryIndexCache.failedAt && (now - plexLibraryIndexCache.failedAt) < 5 * 60 * 1000) {
     return null;
   }
@@ -309,7 +323,8 @@ async function getPlexLibraryIndex() {
   const plexToken = getPreferredPlexServerToken();
   if (!plexUrl || !plexToken) return null;
 
-  try {
+  plexLibraryIndexCache.promise = (async () => {
+    try {
     const sectionsUrl = `${plexUrl}/library/sections?X-Plex-Token=${plexToken}`;
     const sectionsResp = await fetch(sectionsUrl, { headers: { Accept: 'application/json' } });
     if (!sectionsResp.ok) throw new Error(`sections HTTP ${sectionsResp.status}`);
@@ -369,7 +384,12 @@ async function getPlexLibraryIndex() {
     plexLibraryIndexCache.failedAt = now;
     log.warn(`Index Plex collections: ${err.message}`);
     return null;
+  } finally {
+    plexLibraryIndexCache.promise = null;
   }
+  })();
+
+  return plexLibraryIndexCache.promise;
 }
 
 async function isItemAvailableInPlex(item) {
