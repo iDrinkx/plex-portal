@@ -1,4 +1,25 @@
 // Système d'Achievements/Trophées
+const { getConfigValue } = require("./config");
+
+function areCollectionAchievementsEnabled() {
+  return String(getConfigValue("TRAKT_CLIENT_ID", "") || "").trim().length > 0;
+}
+
+function getCollectionsIfEnabled(collections) {
+  return areCollectionAchievementsEnabled() ? collections : [];
+}
+
+function getAchievementXp(achievement, progressEntry = null) {
+  if (!achievement) return 0;
+
+  if (achievement.category === "collections" && areCollectionAchievementsEnabled()) {
+    const total = Number(progressEntry?.total || 0);
+    if (total > 0) return total * 250;
+  }
+
+  return achievement.xp || 0;
+}
+
 const ACHIEVEMENTS = {
   // 🎁 TEMPORELS
   temporels: [
@@ -622,7 +643,7 @@ const ACHIEVEMENTS = {
       ...this.films,
       ...this.series,
       ...this.mensuels,
-      ...this.collections,
+      ...getCollectionsIfEnabled(this.collections),
       ...this.secrets
     ];
   },
@@ -668,4 +689,4 @@ function hydrateAchievementTexts(achievement, serverName) {
     conditionText: replaceServerName(achievement.conditionText, serverName)
   };
 }
-module.exports = { ACHIEVEMENTS, hydrateAchievementTexts };
+module.exports = { ACHIEVEMENTS, hydrateAchievementTexts, areCollectionAchievementsEnabled, getAchievementXp };

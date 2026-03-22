@@ -12,7 +12,7 @@ const { getSeerrStats } = require("../utils/seerr");
 const { getPlexJoinDate, getServerOwnerId } = require("../utils/plex");
 const { getRadarrCalendar, getSonarrCalendar } = require("../utils/radarr-sonarr");
 const { XP_SYSTEM } = require("../utils/xp-system");
-const { ACHIEVEMENTS, hydrateAchievementTexts } = require("../utils/achievements");
+const { ACHIEVEMENTS, hydrateAchievementTexts, areCollectionAchievementsEnabled, getAchievementXp } = require("../utils/achievements");
 const {
   UserAchievementQueries,
   UserQueries,
@@ -1069,10 +1069,11 @@ router.get("/profil", requireAuth, async (req, res) => {
       req.session.user.joinedAt || req.session.user.joinedAtTimestamp || null
     );
     const userUnlockedMap = dbUser ? UserAchievementQueries.getForUser(dbUser.id) : {};
+    const progressMap = dbUser ? AchievementProgressQueries.getForUser(dbUser.id) : {};
     const allAchievements = ACHIEVEMENTS.getAll();
     const unlockedAchievementIds = new Set(Object.keys(userUnlockedMap || {}));
     const unlockedAchievements = allAchievements.filter(a => unlockedAchievementIds.has(a.id));
-    const totalAchievementsXp = unlockedAchievements.reduce((sum, ach) => sum + (ach.xp || 0), 0);
+    const totalAchievementsXp = unlockedAchievements.reduce((sum, ach) => sum + getAchievementXp(ach, progressMap[ach.id]), 0);
 
     res.render("profil/index", {
       user: req.session.user,
@@ -1116,6 +1117,7 @@ router.get("/mes-stats", requireAuth, (req, res) => {
 
 router.get("/succes", requireAuth, async (req, res) => {
   try {
+    const collectionsEnabled = areCollectionAchievementsEnabled();
     // ? Rendu instantané depuis la DB uniquement — l'évaluation Tautulli
     //    se fait en arrière-plan via /api/badges-eval (appelé par le client)
     const achievementsByCategory = {
@@ -1124,9 +1126,10 @@ router.get("/succes", requireAuth, async (req, res) => {
       films:       { icon: "🎬", name: "Films",       achievements: ACHIEVEMENTS.films },
       series:      { icon: "📺", name: "Séries",      achievements: ACHIEVEMENTS.series },
       mensuels:    { icon: "📅", name: "Mensuels",    achievements: ACHIEVEMENTS.mensuels },
-      collections: { icon: "🎬", name: "Collections", achievements: ACHIEVEMENTS.collections },
+      collections: { icon: "🎬", name: "Collections", achievements: collectionsEnabled ? ACHIEVEMENTS.collections : [] },
       secrets:     { icon: "🔒", name: "Secrets",     achievements: ACHIEVEMENTS.secrets }
     };
+    if (!collectionsEnabled) delete achievementsByCategory.collections;
 
     const username   = req.session.user.username;
     const joinedAtTs = req.session.user.joinedAtTimestamp;
@@ -1153,6 +1156,7 @@ router.get("/succes", requireAuth, async (req, res) => {
     for (const category in achievementsByCategory) {
       achievementsByCategory[category].achievements = achievementsByCategory[category].achievements.map(a => ({
         ...hydrateAchievementTexts(a, res.locals.siteTitle),
+        xp: getAchievementXp(a, progressMap[a.id]),
         unlocked:     !!userUnlockedMap[a.id],
         unlockedDate: userUnlockedMap[a.id] || null
       }));
@@ -1303,10 +1307,11 @@ router.get('/api/badges-eval', requireAuth, async (req, res) => {
     }
 
     // 3. Collections + secrets Tautulli
-    const secretsToCheck = [...ACHIEVEMENTS.collections, ...ACHIEVEMENTS.secrets]
+    const collectionsToCheck = collectionsEnabled ? ACHIEVEMENTS.collections : [];
+    const secretsToCheck = [...collectionsToCheck, ...ACHIEVEMENTS.secrets]
       .filter(a => !a.isSecret && (!userUnlockedMap[a.id] || a.revocable)).map(a => a.id);
     const revocableUnlocked = new Set(
-      [...ACHIEVEMENTS.collections, ...ACHIEVEMENTS.secrets]
+      [...collectionsToCheck, ...ACHIEVEMENTS.secrets]
         .filter(a => a.revocable && userUnlockedMap[a.id]).map(a => a.id)
     );
     const newProgress = {};

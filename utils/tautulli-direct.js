@@ -12,9 +12,11 @@ const { getConfigValue } = require('./config');
 let tautulliDb = null;
 
 // ── Cache mémoire des rating_keys par collection (durée: 24h)
-const collectionCache = {};
 const traktListCache = {};
+const tautulliSchemaCache = {};
+const plexAvailabilityCache = {};
 const COLLECTION_CACHE_TTL = 24 * 60 * 60 * 1000;
+const COLLECTION_MOVIE_MIN_PERCENT = 50;
 
 const TRAKT_LISTS = {
   'potter-head': 'https://app.trakt.tv/users/machadodg/lists/wizarding-world',
@@ -29,68 +31,6 @@ const TRAKT_LISTS = {
   'arrowverse': 'https://trakt.tv/users/dudeimtired/lists/arrowverse-collection',
   'monsterverse': 'https://trakt.tv/users/pullsa/lists/the-monsterverse'
 };
-
-/**
- * 🗂️ Registry des collections Tautulli par achievement ID
- * rating_key = identifiant Tautulli de la collection (visible dans l'URL /info?rating_key=...)
- */
-const COLLECTION_KEYS = {
-  'potter-head':  { ratingKey: 325490 }, // Wizarding World
-  'jurassic-survivor': { ratingKey: 12634 },  // Jurassic Park - Saga
-  'marvel-fan':   { ratingKey: 306781 }, // Marvel Cinematic Universe
-  'black-knight': { ratingKey: 14715 },  // Star Wars (7 films min)
-  'tolkiendil':   { ratingKey: 325498 }, // Middle Earth
-  'evolutionist': { ratingKey: 15344 },  // La Planète des Singes
-  'agent-007':    { ratingKey: 4095 },   // James Bond 007
-  'fast-family':  { ratingKey: 8607 },   // Fast and Furious
-  'star-trek-universe': { seriesRatingKey: 306622 }, // Star Trek Universe
-  'arrowverse':   { seriesRatingKey: 306801 }, // Arrowverse
-  'monsterverse': { movieRatingKey: 306783, seriesRatingKey: 306625 }, // MonsterVerse (films + séries)
-};
-
-// Seuil minimum pour black-knight sur la collection Star Wars
-const COLLECTION_MIN = {
-  'black-knight': 7,
-};
-
-/**
- * Récupère les éléments d'une collection Plex sous forme {title, year, type}.
- * title+year est stable même si le rating_key ou le GUID change après ré-indexation.
- * Résultat mis en cache 24h.
- */
-async function getCollectionItems(collectionRatingKey) {
-  const now = Date.now();
-  const cached = collectionCache[collectionRatingKey];
-  if (cached && (now - cached.ts) < COLLECTION_CACHE_TTL) {
-    return cached.items;
-  }
-
-  const PLEX_URL = getConfigValue('PLEX_URL');
-  const PLEX_TOKEN = getConfigValue('PLEX_TOKEN');
-
-  if (!PLEX_URL || !PLEX_TOKEN) {
-    return null;
-  }
-
-  try {
-    const url = `${PLEX_URL}/library/collections/${collectionRatingKey}/children?X-Plex-Token=${PLEX_TOKEN}`;
-    const resp = await fetch(url, { headers: { Accept: 'application/json' } });
-    const json = await resp.json();
-    const items = json?.MediaContainer?.Metadata || [];
-    // Extraire titre + année + type (movie/show)
-    const normalizedItems = items.map(item => ({
-      title: item.title,
-      year: item.year ?? null,
-      type: item.type || null,
-    })).filter(m => m.title);
-    collectionCache[collectionRatingKey] = { items: normalizedItems, ts: now };
-    log.debug(`Collection ${collectionRatingKey}: ${normalizedItems.length} éléments en cache`);
-    return normalizedItems;
-  } catch(e) {
-    log.warn(`Collection ${collectionRatingKey}:`, e.message);
-    return null;
-  }
-}
 
 function getTraktApiListUrl(traktListUrl) {
   if (!traktListUrl) return null;
@@ -153,23 +93,150 @@ async function getTraktListItems(achievementId) {
       page += 1;
     }
 
-    const normalized = items.map(item => {
-      if (item?.type === 'movie' && item.movie?.title) {
-        return { type: 'movie', title: item.movie.title, year: item.movie.year ?? null };
-      }
-      if (item?.type === 'show' && item.show?.title) {
-        return { type: 'show', title: item.show.title, year: item.show.year ?? null };
-      }
-      return null;
-    }).filter(Boolean);
+    const normalized = items
+      .filter(isReleasedTraktItem)
+      .map(item => {
+        if (item?.type === 'movie' && item.movie?.title) {
+          return { type: 'movie', title: item.movie.title, year: item.movie.year ?? null };
+        }
+        if (item?.type === 'show' && item.show?.title) {
+          return { type: 'show', title: item.show.title, year: item.show.year ?? null };
+        }
+        return null;
+      })
+      .filter(Boolean);
 
-    traktListCache[achievementId] = { items: normalized, ts: now };
-    log.info(`Trakt ${achievementId}: ${normalized.length} éléments chargés`);
-    return normalized;
+    const availableItems = await filterItemsAvailableInPlex(normalized);
+
+    traktListCache[achievementId] = { items: availableItems, ts: now };
+    log.info(`Trakt ${achievementId}: ${availableItems.length}/${normalized.length} éléments disponibles sur Plex`);
+    return availableItems;
   } catch (err) {
     log.warn(`Trakt ${achievementId}:`, err.message);
     return null;
   }
+}
+
+function getTableColumns(tableName) {
+  if (!tautulliDb) return [];
+  if (tautulliSchemaCache[tableName]) return tautulliSchemaCache[tableName];
+  try {
+    const rows = tautulliDb.prepare(`PRAGMA table_info(${tableName})`).all();
+    const columns = rows.map(row => row.name);
+    tautulliSchemaCache[tableName] = columns;
+    return columns;
+  } catch (_) {
+    tautulliSchemaCache[tableName] = [];
+    return [];
+  }
+}
+
+function hasTableColumn(tableName, columnName) {
+  return getTableColumns(tableName).includes(columnName);
+}
+
+function getPlexAvailabilityCacheKey(item) {
+  return `${item.type || 'unknown'}:${String(item.title || '').toLowerCase()}::${item.year || ''}`;
+}
+
+function isReleasedTraktItem(item) {
+  const rawDate = item?.type === 'movie'
+    ? item?.movie?.released
+    : item?.show?.first_aired;
+
+  if (!rawDate) return true;
+
+  const releaseTs = Date.parse(rawDate);
+  if (Number.isNaN(releaseTs)) return true;
+
+  return releaseTs <= Date.now();
+}
+
+async function isItemAvailableInPlex(item) {
+  const title = String(item?.title || '').trim();
+  if (!title) return false;
+
+  const cacheKey = getPlexAvailabilityCacheKey(item);
+  const now = Date.now();
+  const cached = plexAvailabilityCache[cacheKey];
+  if (cached && (now - cached.ts) < COLLECTION_CACHE_TTL) {
+    return cached.available;
+  }
+
+  const plexUrl = String(getConfigValue('PLEX_URL', '') || '').trim();
+  const plexToken = String(getConfigValue('PLEX_TOKEN', '') || '').trim();
+  if (!plexUrl || !plexToken) return false;
+
+  try {
+    const type = item.type === 'show' ? 2 : 1;
+    const searchUrl = new URL(`${plexUrl}/library/sections/all/search`);
+    searchUrl.searchParams.set('type', String(type));
+    searchUrl.searchParams.set('title', title);
+    if (item.year) searchUrl.searchParams.set('year', String(item.year));
+    searchUrl.searchParams.set('X-Plex-Token', plexToken);
+
+    const resp = await fetch(searchUrl.toString(), {
+      headers: { Accept: 'application/json' }
+    });
+
+    if (!resp.ok) throw new Error(`Plex search HTTP ${resp.status}`);
+
+    const metadata = (await resp.json())?.MediaContainer?.Metadata || [];
+    const normalizedTitle = title.toLowerCase();
+    const targetYear = item.year ?? null;
+    const available = metadata.some(entry => {
+      const entryTitle = String(entry?.title || '').toLowerCase();
+      const yearMatches = targetYear == null || entry?.year == null || Number(entry.year) === Number(targetYear);
+      return entryTitle === normalizedTitle && yearMatches;
+    });
+
+    plexAvailabilityCache[cacheKey] = { available, ts: now };
+    return available;
+  } catch (err) {
+    log.warn(`Plex disponibilité ${title}:`, err.message);
+    return true;
+  }
+}
+
+async function filterItemsAvailableInPlex(items) {
+  if (!Array.isArray(items) || !items.length) return [];
+
+  const availableItems = [];
+  for (const item of items) {
+    if (await isItemAvailableInPlex(item)) {
+      availableItems.push(item);
+    }
+  }
+  return availableItems;
+}
+
+function getMovieCompletionSql(historyAlias = 'sh', metadataAlias = 'shm') {
+  if (hasTableColumn('session_history', 'percent_complete')) {
+    return `COALESCE(${historyAlias}.percent_complete, 0) >= ${COLLECTION_MOVIE_MIN_PERCENT}`;
+  }
+
+  if (hasTableColumn('session_history', 'watched_status')) {
+    return `(
+      COALESCE(${historyAlias}.watched_status, 0) = 1
+      OR COALESCE(${historyAlias}.watched_status, 0) >= ${COLLECTION_MOVIE_MIN_PERCENT}
+      OR (
+        COALESCE(${historyAlias}.watched_status, 0) > 0
+        AND COALESCE(${historyAlias}.watched_status, 0) < 1
+        AND COALESCE(${historyAlias}.watched_status, 0) >= ${COLLECTION_MOVIE_MIN_PERCENT / 100}
+      )
+    )`;
+  }
+
+  if (hasTableColumn('session_history_metadata', 'duration')) {
+    return `CAST((${historyAlias}.stopped - ${historyAlias}.started) AS REAL) >= (
+      CASE
+        WHEN COALESCE(${metadataAlias}.duration, 0) > 100000 THEN ${metadataAlias}.duration / 1000.0
+        ELSE ${metadataAlias}.duration
+      END
+    ) * ${COLLECTION_MOVIE_MIN_PERCENT / 100}`;
+  }
+
+  return `${historyAlias}.stopped > ${historyAlias}.started`;
 }
 
 /**
@@ -548,32 +615,6 @@ async function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckId
     : { clause: 'LOWER(sh.user) = ?', param: norm };
 
   /**
-   * Compte les films regardés par l'utilisateur via le titre (LIKE patterns).
-   * session_history_metadata = lookup rating_key, session_history = sessions user.
-   */
-  const countMoviesByLike = (patterns) => {
-    try {
-      const orClauses = patterns.map(() => 'LOWER(shm.title) LIKE ?').join(' OR ');
-      const keys = tautulliDb.prepare(`
-        SELECT DISTINCT rating_key FROM session_history_metadata shm WHERE ${orClauses}
-      `).all(...patterns.map(p => p.toLowerCase()));
-      if (!keys.length) return { cnt: 0, last_stopped: null };
-      const ratingKeys = keys.map(k => k.rating_key);
-      const ph = ratingKeys.map(() => '?').join(', ');
-      const row = tautulliDb.prepare(`
-        SELECT COUNT(DISTINCT sh.rating_key) as cnt, MAX(sh.stopped) as last_stopped
-        FROM session_history sh
-        WHERE ${userFilter.clause} AND sh.stopped > sh.started
-          AND sh.media_type = 'movie' AND sh.rating_key IN (${ph})
-      `).get(userFilter.param, ...ratingKeys);
-      return row || { cnt: 0, last_stopped: null };
-    } catch(e) {
-      log.warn('countMoviesByLike:', e.message);
-      return { cnt: 0, last_stopped: null };
-    }
-  };
-
-  /**
    * Compte les films regardés par l'utilisateur via une liste de {title, year}.
    * Le matching par titre+année est robuste aux re-scans Plex qui changent les GUIDs.
    */
@@ -581,6 +622,7 @@ async function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckId
     if (!movies || !movies.length) return { cnt: 0, last_stopped: null };
     try {
       const orClauses = movies.map(() => '(LOWER(shm.title) = ? AND shm.year = ?)').join(' OR ');
+      const completionSql = getMovieCompletionSql('sh', 'shm');
       const params = [userFilter.param, ...movies.flatMap(m => [m.title.toLowerCase(), m.year])];
       const row = tautulliDb.prepare(`
         SELECT COUNT(DISTINCT LOWER(shm.title) || COALESCE(shm.year,'')) as cnt,
@@ -591,6 +633,7 @@ async function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckId
           AND sh.stopped > sh.started
           AND sh.media_type = 'movie'
           AND (${orClauses})
+          AND ${completionSql}
       `).get(...params);
       return row || { cnt: 0, last_stopped: null };
     } catch(e) {
@@ -626,41 +669,20 @@ async function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckId
 
   /**
    * Évalue un succès de type "toute la collection regardée".
-   * Priorité : liste Trakt → collection Plex/Tautulli locale → fallback titres LIKE.
+   * Source unique : liste Trakt.
    */
-  const checkCollection = async (id, fallbackPatterns, minRequired = null) => {
-    const conf = COLLECTION_KEYS[id];
+  const checkCollection = async (id) => {
     const traktItems = await getTraktListItems(id);
     if (traktItems && traktItems.length > 0) {
       const traktMovies = traktItems.filter(item => item.type === 'movie');
       if (traktMovies.length > 0) {
         const row = countMoviesByTitleYear(traktMovies);
-        const required = minRequired ?? traktMovies.length;
+        const required = traktMovies.length;
         const current = Math.min(row.cnt, required);
         log.debug(`${id} (trakt films): ${current}/${required}`);
         if (current >= required) return { date: fmt(row.last_stopped) || today, current, total: required };
         return { date: null, current, total: required };
       }
-    }
-    // Essai via API Plex (titre+année, stable même après re-scans)
-    if (conf?.ratingKey) {
-      const movies = await getCollectionItems(conf.ratingKey);
-      if (movies && movies.length > 0) {
-        const row = countMoviesByTitleYear(movies);
-        const required = minRequired ?? movies.length;
-        const current = Math.min(row.cnt, required);
-        log.debug(`${id} (collection): ${current}/${required}`);
-        if (current >= required) return { date: fmt(row.last_stopped) || today, current, total: required };
-        return { date: null, current, total: required };
-      }
-    }
-    // Fallback : matching par titre LIKE
-    if (fallbackPatterns && minRequired) {
-      const row = countMoviesByLike(fallbackPatterns);
-      const current = Math.min(row.cnt, minRequired);
-      log.debug(`${id} (fallback titre): ${current}/${minRequired}`);
-      if (current >= minRequired) return { date: fmt(row.last_stopped) || today, current, total: minRequired };
-      return { date: null, current, total: minRequired };
     }
     return { date: null, current: 0, total: 0 };
   };
@@ -668,10 +690,9 @@ async function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckId
   /**
    * Évalue un succès collection mixte films + séries.
    * Condition: films requis + séries requises (au moins un épisode/série).
-   * Priorité : liste Trakt → collections Plex/Tautulli locales → fallback.
+   * Source unique : liste Trakt.
    */
-  const checkMixedCollection = async (id, movieFallbackPatterns = null, seriesFallbackPatterns = null, minMovies = null, minShows = null) => {
-    const conf = COLLECTION_KEYS[id] || {};
+  const checkMixedCollection = async (id, minMovies = null, minShows = null) => {
     let movieItems = [];
     let showItems = [];
 
@@ -681,26 +702,13 @@ async function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckId
       showItems = traktItems.filter(i => i.type === 'show');
     }
 
-    if (!movieItems.length && conf.movieRatingKey) {
-      const items = await getCollectionItems(conf.movieRatingKey);
-      movieItems = Array.isArray(items) ? items.filter(i => !i.type || i.type === 'movie') : [];
-    }
-    if (!showItems.length && conf.seriesRatingKey) {
-      const items = await getCollectionItems(conf.seriesRatingKey);
-      showItems = Array.isArray(items) ? items.filter(i => !i.type || i.type === 'show') : [];
-    }
-
     const requiredMovies = minMovies ?? movieItems.length;
     const requiredShows = minShows ?? showItems.length;
 
     let movieRow = { cnt: 0, last_stopped: null };
     let showRow = { cnt: 0, last_stopped: null };
 
-    if (movieItems.length > 0) {
-      movieRow = countMoviesByTitleYear(movieItems);
-    } else if (movieFallbackPatterns && requiredMovies > 0) {
-      movieRow = countMoviesByLike(movieFallbackPatterns);
-    }
+    if (movieItems.length > 0) movieRow = countMoviesByTitleYear(movieItems);
 
     if (showItems.length > 0) {
       showRow = countShowsByTitle(showItems);
@@ -728,7 +736,7 @@ async function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckId
 
         // 🦕 Survivant du Parc — Toute la saga Jurassic
         case 'jurassic-survivor': {
-          const r = await checkCollection(id, ['%jurassic%'], 7);
+          const r = await checkCollection(id);
           if (r.date) results[id] = r.date;
           if (r.total > 0) progress[id] = { current: r.current, total: r.total };
           break;
@@ -736,7 +744,7 @@ async function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckId
 
         // ⚡ Wizarding World — Collection Wizarding World
         case 'potter-head': {
-          const r = await checkCollection(id, ['%wizarding world%', 'harry potter%', '%fantastic beasts%'], 11);
+          const r = await checkCollection(id);
           if (r.date) results[id] = r.date;
           if (r.total > 0) progress[id] = { current: r.current, total: r.total };
           break;
@@ -744,7 +752,7 @@ async function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckId
 
         // 🦸 Marvel Fan — Toute la collection MCU
         case 'marvel-fan': {
-          const r = await checkCollection(id, ['%marvel%', '%avengers%']);
+          const r = await checkCollection(id);
           if (r.date) results[id] = r.date;
           if (r.total > 0) progress[id] = { current: r.current, total: r.total };
           break;
@@ -752,7 +760,7 @@ async function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckId
 
         // 🧑‍⚖️ Maître Jedi — 7 films Star Wars minimum
         case 'black-knight': {
-          const r = await checkCollection(id, ['%star wars%'], COLLECTION_MIN['black-knight']);
+          const r = await checkCollection(id);
           if (r.date) results[id] = r.date;
           if (r.total > 0) progress[id] = { current: r.current, total: r.total };
           break;
@@ -760,7 +768,7 @@ async function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckId
 
         // 👑 Middle Earth — Collection Middle Earth
         case 'tolkiendil': {
-          const r = await checkCollection(id, ['%middle earth%', '%lord of the rings%', '%seigneur des anneaux%', '%hobbit%'], 6);
+          const r = await checkCollection(id);
           if (r.date) results[id] = r.date;
           if (r.total > 0) progress[id] = { current: r.current, total: r.total };
           break;
@@ -768,7 +776,7 @@ async function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckId
 
         // 🐵 Évolutionniste — Trilogie Planète des Singes
         case 'evolutionist': {
-          const r = await checkCollection(id, ['%planet of the apes%', '%planète des singes%'], 4);
+          const r = await checkCollection(id);
           if (r.date) results[id] = r.date;
           if (r.total > 0) progress[id] = { current: r.current, total: r.total };
           break;
@@ -776,13 +784,7 @@ async function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckId
 
         // 🦖 MonsterVerse — Collections films + séries
         case 'monsterverse': {
-          const r = await checkMixedCollection(
-            id,
-            ['%godzilla%', '%kong%', '%monsterverse%'],
-            ['%monarch%'],
-            null,
-            null
-          );
+          const r = await checkMixedCollection(id);
           if (r.date) results[id] = r.date;
           if (r.total > 0) progress[id] = { current: r.current, total: r.total };
           break;
@@ -790,7 +792,7 @@ async function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckId
 
         // 🕴️ Agent 007 — Toute la collection James Bond 007
         case 'agent-007': {
-          const r = await checkCollection(id, null, 26);
+          const r = await checkCollection(id);
           if (r.date) results[id] = r.date;
           if (r.total > 0) progress[id] = { current: r.current, total: r.total };
           break;
@@ -798,7 +800,7 @@ async function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckId
 
         // 🏎️ Fast Family — Toute la collection Fast and Furious
         case 'fast-family': {
-          const r = await checkCollection(id, null, 10);
+          const r = await checkCollection(id);
           if (r.date) results[id] = r.date;
           if (r.total > 0) progress[id] = { current: r.current, total: r.total };
           break;
@@ -806,7 +808,7 @@ async function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckId
 
         // 🖖 Star Trek Universe — Toutes les séries de la collection
         case 'star-trek-universe': {
-          const r = await checkMixedCollection(id, null, null, 0, 9);
+          const r = await checkMixedCollection(id, 0);
           if (r.date) results[id] = r.date;
           if (r.total > 0) progress[id] = { current: r.current, total: r.total };
           break;
@@ -814,7 +816,7 @@ async function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckId
 
         // 🏹 Arrowverse — Toutes les séries de la collection
         case 'arrowverse': {
-          const r = await checkMixedCollection(id, null, null, 0, 8);
+          const r = await checkMixedCollection(id, 0);
           if (r.date) results[id] = r.date;
           if (r.total > 0) progress[id] = { current: r.current, total: r.total };
           break;
