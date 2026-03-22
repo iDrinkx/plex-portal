@@ -215,13 +215,21 @@ function mergeIdSets(...sets) {
   return merged;
 }
 
+function normalizeRatingKey(value) {
+  if (value === undefined || value === null) return null;
+  const normalized = String(value).trim();
+  return normalized ? normalized : null;
+}
+
 function getPreferredPlexServerToken() {
+  const configuredToken = String(getConfigValue('PLEX_TOKEN', '') || '').trim();
+  if (configuredToken) return configuredToken;
   try {
     const { AppSettingQueries } = require('./database');
     const runtimeToken = String(AppSettingQueries.get('runtime_plex_cloud_token', '') || '').trim();
     if (runtimeToken) return runtimeToken;
   } catch (_) {}
-  return String(getConfigValue('PLEX_TOKEN', '') || '').trim();
+  return '';
 }
 
 function normalizeCollectionTitle(value) {
@@ -252,6 +260,21 @@ function collectionTitleMatches(a, b, yearA = null, yearB = null) {
   const normB = normalizeCollectionTitle(rawB);
   if (!normA || !normB) return false;
   if (normA === normB) return true;
+
+  if (hasYears) {
+    const shorter = normA.length <= normB.length ? normA : normB;
+    const longer = shorter === normA ? normB : normA;
+    if (
+      shorter.length >= 8 &&
+      (
+        longer.startsWith(`${shorter} `) ||
+        longer.startsWith(`${shorter}:`) ||
+        longer.startsWith(`${shorter} -`)
+      )
+    ) {
+      return true;
+    }
+  }
 
   return false;
 }
@@ -310,6 +333,49 @@ function findMatchingPlexEntriesForWatchedRow(index = [], row = {}, mediaType = 
       rowTitles.some(rowTitle => collectionTitleMatches(entryTitle, rowTitle, entry.year, row.year))
     )
   );
+}
+
+function getMatchingPlexEntriesForCollectionItem(index = [], item = {}) {
+  if (!Array.isArray(index) || !index.length || !item?.type) return [];
+
+  const itemIds = buildExternalIds(item.ids || {});
+  const matchingByIds = itemIds.size > 0
+    ? index.filter(entry =>
+        entry.type === item.type &&
+        [...itemIds].some(id => entry.ids?.has(id))
+      )
+    : [];
+  if (matchingByIds.length) return matchingByIds;
+
+  return index.filter(entry =>
+    entry.type === item.type &&
+    (entry.titles || [entry.title]).some(candidate =>
+      collectionTitleMatches(candidate, item.title, entry.year, item.year)
+    )
+  );
+}
+
+function getRowRatingKeys(row = {}, mediaType = 'movie') {
+  if (mediaType === 'show') {
+    return mergeIdSets(
+      new Set([normalizeRatingKey(row.grandparent_rating_key)].filter(Boolean)),
+      new Set([normalizeRatingKey(row.parent_rating_key)].filter(Boolean)),
+      new Set([normalizeRatingKey(row.rating_key)].filter(Boolean))
+    );
+  }
+
+  return mergeIdSets(
+    new Set([normalizeRatingKey(row.rating_key)].filter(Boolean)),
+    new Set([normalizeRatingKey(row.parent_rating_key)].filter(Boolean))
+  );
+}
+
+function getSessionHistoryRatingKeyColumns(alias = 'sh') {
+  const columns = [];
+  if (hasTableColumn('session_history', 'rating_key')) columns.push(`${alias}.rating_key AS rating_key`);
+  if (hasTableColumn('session_history', 'grandparent_rating_key')) columns.push(`${alias}.grandparent_rating_key AS grandparent_rating_key`);
+  if (hasTableColumn('session_history', 'parent_rating_key')) columns.push(`${alias}.parent_rating_key AS parent_rating_key`);
+  return columns;
 }
 
 function isReleasedTraktItem(item) {
@@ -384,6 +450,7 @@ async function getPlexLibraryIndex() {
             titles: titleCandidates,
             normalizedTitle: normalizeCollectionTitle(primaryTitle),
             year: entry?.year ?? null,
+            ratingKey: normalizeRatingKey(entry?.ratingKey ?? entry?.rating_key),
             ids: extractPlexGuidIds(entry?.Guid || entry?.Guids || [])
           });
         }
@@ -883,8 +950,9 @@ async function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckId
       const completionSql = getMovieCompletionSql('sh', 'shm');
       const movieTitleColumns = getSessionHistoryMetadataMovieTitleColumns('shm');
       const movieGuidColumns = getSessionHistoryMetadataGuidColumns('shm');
+      const movieRatingKeyColumns = getSessionHistoryRatingKeyColumns('sh');
       const watchedRows = tautulliDb.prepare(`
-        SELECT ${[...movieTitleColumns, ...movieGuidColumns].join(', ')},
+        SELECT ${[...movieTitleColumns, ...movieGuidColumns, ...movieRatingKeyColumns].join(', ')},
                shm.year as year,
                MAX(sh.stopped) as last_stopped
         FROM session_history sh
@@ -896,16 +964,35 @@ async function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckId
         GROUP BY ${hasTableColumn('session_history_metadata', 'title') ? 'shm.title' : 'shm.id'}, shm.year
       `).all(userFilter.param);
 
+      const preparedMovies = movies.map(movie => {
+        const matchingEntries = Array.isArray(plexIndex)
+          ? getMatchingPlexEntriesForCollectionItem(plexIndex, movie)
+          : [];
+        const matchingRatingKeys = new Set(
+          matchingEntries
+            .map(entry => normalizeRatingKey(entry.ratingKey))
+            .filter(Boolean)
+        );
+        return {
+          movie,
+          movieTitles: [movie.plexTitle, movie.title].filter(Boolean),
+          movieIds: buildExternalIds(movie.ids || {}),
+          matchingEntries,
+          matchingRatingKeys
+        };
+      });
+
       let cnt = 0;
       let lastStopped = 0;
-      for (const movie of movies) {
-        const movieTitles = [movie.plexTitle, movie.title].filter(Boolean);
-        const movieIds = buildExternalIds(movie.ids || {});
+      for (const preparedMovie of preparedMovies) {
         const matched = watchedRows.find(row =>
           (
-            movieIds.size > 0 &&
+            preparedMovie.matchingRatingKeys.size > 0 &&
+            [...getRowRatingKeys(row, 'movie')].some(key => preparedMovie.matchingRatingKeys.has(key))
+          ) || (
+            preparedMovie.movieIds.size > 0 &&
             (
-              [...movieIds].some(id =>
+              [...preparedMovie.movieIds].some(id =>
                 mergeIdSets(
                   extractIdsFromRawGuidValue(row.guid),
                   extractIdsFromRawGuidValue(row.guids),
@@ -915,13 +1002,13 @@ async function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckId
                   extractIdsFromRawGuidValue(row.grandparent_guids)
                 ).has(id)
               ) ||
-              (Array.isArray(plexIndex) && findMatchingPlexEntriesForWatchedRow(plexIndex, row, 'movie')
-                .some(entry => [...movieIds].some(id => entry.ids?.has(id))))
+              preparedMovie.matchingEntries
+                .some(entry => [...preparedMovie.movieIds].some(id => entry.ids?.has(id)))
             )
           ) || [row.raw_title, row.original_title, row.full_title, row.sort_title]
             .filter(Boolean)
-            .some(candidate => movieTitles.some(movieTitle =>
-              collectionTitleMatches(candidate, movieTitle, row.year, movie.year)
+            .some(candidate => preparedMovie.movieTitles.some(movieTitle =>
+              collectionTitleMatches(candidate, movieTitle, row.year, preparedMovie.movie.year)
             ))
         );
         if (matched) {
@@ -945,8 +1032,9 @@ async function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckId
     try {
       const showTitleColumns = getSessionHistoryMetadataShowTitleColumns('shm');
       const showGuidColumns = getSessionHistoryMetadataGuidColumns('shm');
+      const showRatingKeyColumns = getSessionHistoryRatingKeyColumns('sh');
       const watchedRows = tautulliDb.prepare(`
-        SELECT ${[...showTitleColumns, ...showGuidColumns].join(', ')},
+        SELECT ${[...showTitleColumns, ...showGuidColumns, ...showRatingKeyColumns].join(', ')},
                MAX(sh.stopped) as last_stopped
         FROM session_history sh
         JOIN session_history_metadata shm ON sh.id = shm.id
@@ -956,16 +1044,35 @@ async function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckId
         GROUP BY ${hasTableColumn('session_history_metadata', 'grandparent_title') ? 'shm.grandparent_title' : 'shm.id'}
       `).all(userFilter.param);
 
+      const preparedShows = shows.map(show => {
+        const matchingEntries = Array.isArray(plexIndex)
+          ? getMatchingPlexEntriesForCollectionItem(plexIndex, show)
+          : [];
+        const matchingRatingKeys = new Set(
+          matchingEntries
+            .map(entry => normalizeRatingKey(entry.ratingKey))
+            .filter(Boolean)
+        );
+        return {
+          show,
+          showTitles: [show.plexTitle, show.title].filter(Boolean),
+          showIds: buildExternalIds(show.ids || {}),
+          matchingEntries,
+          matchingRatingKeys
+        };
+      });
+
       let cnt = 0;
       let lastStopped = 0;
-      for (const show of shows) {
-        const showTitles = [show.plexTitle, show.title].filter(Boolean);
-        const showIds = buildExternalIds(show.ids || {});
+      for (const preparedShow of preparedShows) {
         const matched = watchedRows.find(row =>
           (
-            showIds.size > 0 &&
+            preparedShow.matchingRatingKeys.size > 0 &&
+            [...getRowRatingKeys(row, 'show')].some(key => preparedShow.matchingRatingKeys.has(key))
+          ) || (
+            preparedShow.showIds.size > 0 &&
             (
-              [...showIds].some(id =>
+              [...preparedShow.showIds].some(id =>
                 mergeIdSets(
                   extractIdsFromRawGuidValue(row.guid),
                   extractIdsFromRawGuidValue(row.guids),
@@ -975,12 +1082,12 @@ async function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckId
                   extractIdsFromRawGuidValue(row.grandparent_guids)
                 ).has(id)
               ) ||
-              (Array.isArray(plexIndex) && findMatchingPlexEntriesForWatchedRow(plexIndex, row, 'show')
-                .some(entry => [...showIds].some(id => entry.ids?.has(id))))
+              preparedShow.matchingEntries
+                .some(entry => [...preparedShow.showIds].some(id => entry.ids?.has(id)))
             )
           ) || [row.raw_title, row.original_title, row.full_title, row.sort_title]
             .filter(Boolean)
-            .some(candidate => showTitles.some(showTitle =>
+            .some(candidate => preparedShow.showTitles.some(showTitle =>
               collectionTitleMatches(candidate, showTitle)
             ))
         );
