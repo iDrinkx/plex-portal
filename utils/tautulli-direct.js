@@ -711,6 +711,7 @@ async function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckId
       const watchedRows = tautulliDb.prepare(`
         SELECT LOWER(shm.title) as title,
                shm.title as raw_title,
+               sh.title as history_title,
                shm.year as year,
                MAX(sh.stopped) as last_stopped
         FROM session_history sh
@@ -727,7 +728,9 @@ async function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckId
       for (const movie of movies) {
         const matched = watchedRows.find(row =>
           collectionTitleMatches(row.raw_title || row.title, movie.plexTitle || movie.title, row.year, movie.year)
+          || collectionTitleMatches(row.history_title || row.raw_title || row.title, movie.plexTitle || movie.title, row.year, movie.year)
           || collectionTitleMatches(row.raw_title || row.title, movie.title, row.year, movie.year)
+          || collectionTitleMatches(row.history_title || row.raw_title || row.title, movie.title, row.year, movie.year)
         );
         if (matched) {
           cnt += 1;
@@ -751,6 +754,7 @@ async function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckId
       const watchedRows = tautulliDb.prepare(`
         SELECT LOWER(shm.grandparent_title) as title,
                shm.grandparent_title as raw_title,
+               sh.title as history_title,
                MAX(sh.stopped) as last_stopped
         FROM session_history sh
         JOIN session_history_metadata shm ON sh.id = shm.id
@@ -765,7 +769,9 @@ async function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckId
       for (const show of shows) {
         const matched = watchedRows.find(row =>
           collectionTitleMatches(row.raw_title || row.title, show.plexTitle || show.title)
+          || collectionTitleMatches(row.history_title || row.raw_title || row.title, show.plexTitle || show.title)
           || collectionTitleMatches(row.raw_title || row.title, show.title)
+          || collectionTitleMatches(row.history_title || row.raw_title || row.title, show.title)
         );
         if (matched) {
           cnt += 1;

@@ -1341,6 +1341,12 @@ router.get('/api/badges-eval', requireAuth, async (req, res) => {
             newProgress[id] = prog;
           }
         }
+        if (dbUserId) {
+          for (const id of secretsToCheck) {
+            if (evalProgress?.[id]) continue;
+            try { AchievementProgressQueries.remove(dbUserId, id); } catch(e) {}
+          }
+        }
         if (Object.keys(newlyUnlocked).length > 0)
           logBadges.info(`Débloqués pour ${username}:`, Object.keys(newlyUnlocked).join(', '));
       } catch (err) {

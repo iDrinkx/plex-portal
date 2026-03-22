@@ -726,6 +726,13 @@ const AchievementProgressQueries = {
     `).run(userId, achievementId, current, total);
   },
 
+  remove(userId, achievementId) {
+    const db = getDb();
+    return db.prepare(`
+      DELETE FROM achievement_progress WHERE user_id = ? AND achievement_id = ?
+    `).run(userId, achievementId);
+  },
+
   getForUser(userId) {
     const db = getDb();
     const rows = db.prepare(`
