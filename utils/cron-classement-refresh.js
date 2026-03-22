@@ -6,6 +6,7 @@ const { XP_SYSTEM } = require('./xp-system');
 const { getUserStatsFromTautulli, getAllUserStatsFromTautulli, isTautulliReady } = require('./tautulli-direct');
 const { calculateUserXp } = require('./xp-calculator');  // 🎯 Fonction centralisée XP
 const { getAllWizarrUsers } = require('./wizarr');       // 🔑 Source de vérité
+const { getConfigValue } = require('./config');
 
 const logCR = log.create('[Classement-Refresh]');
 
@@ -120,7 +121,7 @@ function validateCacheData(users, stats) {
   }
 
   // Vérifier 5: Au moins 1 user avec photo (si Plex est configuré)
-  const hasPlexToken = process.env.PLEX_TOKEN && process.env.PLEX_TOKEN.length > 0;
+  const hasPlexToken = String(getConfigValue('PLEX_TOKEN', '') || '').trim().length > 0;
   if (hasPlexToken && noPhotoCount === users.length) {
     issues.push(`⚠️ Aucune photo Plex trouvée (Plex API probablement inaccessible)`);
   }
@@ -147,7 +148,7 @@ async function refreshClassementCache() {
     //   plexJoinedAtMap  : username → joined_at (secondes Unix)
     //   emailToUsername  : email    → plex username  ← pont Wizarr→Tautulli
     // ══════════════════════════════════════════════════════════════════
-    const plexToken = process.env.PLEX_TOKEN || '';
+    const plexToken = String(getConfigValue('PLEX_TOKEN', '') || '').trim();
     const thumbMap        = {};
     const plexJoinedAtMap = {};
     const emailToUsername = {};  // 🔗 Corrélation email → plex username (fiable)
@@ -206,8 +207,10 @@ async function refreshClassementCache() {
     // ══════════════════════════════════════════════════════════════════
     // ÉTAPE 2: Récupérer les users Wizarr, puis persister en DB
     // ══════════════════════════════════════════════════════════════════
-    const wizarrConfigured = !!(process.env.WIZARR_URL && process.env.WIZARR_API_KEY);
-    let wizarrUsers = await getAllWizarrUsers(process.env.WIZARR_URL, process.env.WIZARR_API_KEY);
+    const wizarrUrl = String(getConfigValue('WIZARR_URL', '') || '').trim();
+    const wizarrApiKey = String(getConfigValue('WIZARR_API_KEY', '') || '').trim();
+    const wizarrConfigured = !!(wizarrUrl && wizarrApiKey);
+    let wizarrUsers = await getAllWizarrUsers(wizarrUrl, wizarrApiKey);
     const hadInitialWizarrUsers = wizarrUsers.length > 0;
 
     if (wizarrUsers.length > 0) {
@@ -399,11 +402,18 @@ async function refreshClassementCache() {
       issues.forEach(issue => logCR.warn('   ' + issue));
       corruptionCount++;
 
-      // ⚠️ Stratégie agressive: si problèmes critiques, rejeter les données
+      const hasOnlyPhotoIssues = issues.every(i =>
+        i.includes('sans photo') || i.includes('Aucune photo Plex trouvée')
+      );
+      if (hasOnlyPhotoIssues) {
+        logCR.warn('ℹ️ Absence de photos Plex détectée - le classement continue sans avatars');
+      }
+
+      // ⚠️ Stratégie: seuls les problèmes de cohérence des niveaux/XP doivent
+      // bloquer le cache. L'absence de photos Plex ne doit plus casser le classement.
       // NOTE: 'sans joinedAt' n'est PAS critique grâce au fallback intelligent
       const hasCriticalIssue = issues.some(i =>
-        i.includes('incohérent') ||
-        i.includes('inaccessible')
+        i.includes('incohérent')
       );
 
       if (hasCriticalIssue) {

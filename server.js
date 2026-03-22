@@ -455,10 +455,10 @@ app.listen(PORT, async () => {
   const allUsers = await initializeAllUsersForCron();
   
   startSessionCronJob(
-    process.env.TAUTULLI_URL,
-    process.env.TAUTULLI_API_KEY,
-    process.env.PLEX_URL,
-    process.env.PLEX_TOKEN,
+    getConfigValue("TAUTULLI_URL"),
+    getConfigValue("TAUTULLI_API_KEY"),
+    getConfigValue("PLEX_URL"),
+    getConfigValue("PLEX_TOKEN"),
     allUsers // ✅ Liste réelle de tous les utilisateurs
   );
 
@@ -473,7 +473,10 @@ app.listen(PORT, async () => {
     const { getAllWizarrUsers } = require("./utils/wizarr");
     const { UserQueries } = require("./utils/database");
 
-    const wizarrUsers = await getAllWizarrUsers(process.env.WIZARR_URL, process.env.WIZARR_API_KEY);
+    const wizarrUsers = await getAllWizarrUsers(
+      getConfigValue("WIZARR_URL"),
+      getConfigValue("WIZARR_API_KEY")
+    );
     if (wizarrUsers.length > 0) {
       let upserted = 0;
       for (const wUser of wizarrUsers) {

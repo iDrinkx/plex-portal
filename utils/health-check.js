@@ -5,6 +5,7 @@
 
 const SessionStatsCache = require('./session-stats-cache-db');  // 🗄️ Utiliser SQLite
 const TautulliEvents = require('./tautulli-events');  // 📢 EventEmitter
+const { getConfigValue } = require('./config');
 
 async function runHealthCheck() {
   console.log("\n========== [HEALTH-CHECK] 🏥 VÉRIFICATION SYSTÈME ==========\n");
@@ -60,12 +61,12 @@ async function runHealthCheck() {
   // ✅ Vérifier les variables d'environnement
   console.log("[HC] ⚙️  Vérification configuration...");
   const configChecks = {
-    TAUTULLI_URL: process.env.TAUTULLI_URL ? "✅" : "❌",
-    TAUTULLI_API_KEY: process.env.TAUTULLI_API_KEY ? "✅" : "❌",
-    PLEX_URL: process.env.PLEX_URL ? "✅" : "❌",
-    PLEX_TOKEN: process.env.PLEX_TOKEN ? "✅" : "❌",
-    WIZARR_URL: process.env.WIZARR_URL ? "✅" : "⚠️",
-    SEERR_URL: process.env.SEERR_URL ? "✅" : "⚠️",
+    TAUTULLI_URL: getConfigValue('TAUTULLI_URL') ? "✅" : "❌",
+    TAUTULLI_API_KEY: getConfigValue('TAUTULLI_API_KEY') ? "✅" : "❌",
+    PLEX_URL: getConfigValue('PLEX_URL') ? "✅" : "❌",
+    PLEX_TOKEN: getConfigValue('PLEX_TOKEN') ? "✅" : "❌",
+    WIZARR_URL: getConfigValue('WIZARR_URL') ? "✅" : "⚠️",
+    SEERR_URL: getConfigValue('SEERR_URL') ? "✅" : "⚠️",
   };
 
   for (const [key, status] of Object.entries(configChecks)) {

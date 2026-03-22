@@ -52,7 +52,12 @@ function normalizeValue(field, value) {
 }
 
 function getStoredConfigMap() {
-  const rows = AppSettingQueries.listPrefix(CONFIG_PREFIX);
+  let rows = [];
+  try {
+    rows = AppSettingQueries.listPrefix(CONFIG_PREFIX);
+  } catch (_) {
+    rows = [];
+  }
   const map = {};
   rows.forEach(row => {
     map[row.key.slice(CONFIG_PREFIX.length)] = row.value;
@@ -61,7 +66,12 @@ function getStoredConfigMap() {
 }
 
 function getConfigValue(key, defaultValue = "") {
-  const stored = AppSettingQueries.get(settingKey(key), null);
+  let stored = null;
+  try {
+    stored = AppSettingQueries.get(settingKey(key), null);
+  } catch (_) {
+    stored = null;
+  }
   if (stored !== null && stored !== undefined) return stored;
   const envValue = process.env[key];
   return envValue !== undefined ? envValue : defaultValue;
