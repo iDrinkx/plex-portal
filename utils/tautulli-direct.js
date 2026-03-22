@@ -18,6 +18,7 @@ const tautulliSchemaCache = {};
 const plexAvailabilityCache = {};
 const traktListInflight = {};
 const plexLibraryIndexCache = { items: null, ts: 0, failedAt: 0, promise: null };
+const tautulliLibraryIndexCache = { items: null, ts: 0 };
 const COLLECTION_CACHE_TTL = 24 * 60 * 60 * 1000;
 const COLLECTION_MOVIE_MIN_PERCENT = 50;
 
@@ -123,12 +124,24 @@ async function getTraktListItems(achievementId) {
       })
       .filter(Boolean);
 
-    const availableItems = normalized;
+    const availableItems = await filterItemsAvailableInPlex(normalized);
+    if (availableItems === null) {
+      if (cached?.items?.length) {
+        log.warn(`Trakt ${achievementId}: inventaire local indisponible, reutilisation du dernier cache (${cached.items.length} elements)`);
+        return cached.items;
+      }
+      log.warn(`Trakt ${achievementId}: inventaire local indisponible, liste collection ignoree pour ce calcul`);
+      return null;
+    }
     traktListCache[achievementId] = { items: availableItems, ts: now };
     log.info(`Trakt ${achievementId}: ${availableItems.length}/${normalized.length} éléments disponibles sur Plex`);
     return availableItems;
     } catch (err) {
-    log.warn(`Trakt ${achievementId}:`, err.message);
+    log.warn(`Trakt ${achievementId}: ${err.message}`);
+    if (cached?.items?.length) {
+      log.warn(`Trakt ${achievementId}: reutilisation du cache stale (${cached.items.length} elements)`);
+      return cached.items;
+    }
     return null;
   } finally {
     delete traktListInflight[achievementId];
@@ -240,15 +253,41 @@ function normalizeRatingKey(value) {
   return normalized ? normalized : null;
 }
 
+function isLikelyPlexServerToken(token) {
+  const value = String(token || '').trim();
+  return value.length >= 16;
+}
+
+function getTautulliServerTokenFallback() {
+  if (!tautulliDb) return '';
+  try {
+    const adminRow = tautulliDb.prepare(`
+      SELECT server_token
+      FROM users
+      WHERE server_token IS NOT NULL
+        AND TRIM(server_token) <> ''
+      ORDER BY is_admin DESC, CASE WHEN user_id = 0 THEN 1 ELSE 0 END ASC, username ASC
+      LIMIT 1
+    `).get();
+    return String(adminRow?.server_token || '').trim();
+  } catch (_) {
+    return '';
+  }
+}
+
 function getPreferredPlexServerToken() {
   const configuredToken = String(getConfigValue('PLEX_TOKEN', '') || '').trim();
-  if (configuredToken) return configuredToken;
+  if (isLikelyPlexServerToken(configuredToken)) return configuredToken;
+
+  const tautulliServerToken = getTautulliServerTokenFallback();
+  if (isLikelyPlexServerToken(tautulliServerToken)) return tautulliServerToken;
+
   try {
     const { AppSettingQueries } = require('./database');
     const runtimeToken = String(AppSettingQueries.get('runtime_plex_cloud_token', '') || '').trim();
     if (runtimeToken) return runtimeToken;
   } catch (_) {}
-  return '';
+  return configuredToken || '';
 }
 
 function normalizeCollectionTitle(value) {
@@ -391,6 +430,87 @@ function getMatchingPlexEntriesForCollectionItem(index = [], item = {}) {
       collectionTitleMatches(candidate, item.title, entry.year, item.year)
     )
   );
+}
+
+function getMatchingLocalEntriesForCollectionItem(index = [], item = {}, mapping = null) {
+  if (!Array.isArray(index) || !index.length || !item?.type) return [];
+
+  const mappedGuidIds = extractIdsFromRawGuidValue(mapping?.matched_guid);
+  const allIds = mergeIdSets(buildExternalIds(item.ids || {}), mappedGuidIds);
+  const idMatches = allIds.size > 0
+    ? index.filter(entry =>
+        entry.type === item.type &&
+        [...allIds].some(id => entry.ids?.has(id))
+      )
+    : [];
+  if (idMatches.length) return idMatches;
+
+  const titles = [
+    String(mapping?.matched_title || '').trim(),
+    String(item.title || '').trim()
+  ].filter(Boolean);
+
+  return index.filter(entry =>
+    entry.type === item.type &&
+    (entry.titles || [entry.title]).some(candidate =>
+      titles.some(title => collectionTitleMatches(candidate, title, entry.year, item.year))
+    )
+  );
+}
+
+function getTautulliLibraryIndex() {
+  if (!tautulliDb) return [];
+  const now = Date.now();
+  if (tautulliLibraryIndexCache.items && (now - tautulliLibraryIndexCache.ts) < COLLECTION_CACHE_TTL) {
+    return tautulliLibraryIndexCache.items;
+  }
+
+  try {
+    const titleColumns = getSessionHistoryMetadataMovieTitleColumns('shm');
+    const showTitleColumns = getSessionHistoryMetadataShowTitleColumns('shm');
+    const guidColumns = getSessionHistoryMetadataGuidColumns('shm');
+    const sectionFilter = hasTableColumn('session_history', 'section_id')
+      ? `AND sh.section_id IN (
+          SELECT section_id
+          FROM library_sections
+          WHERE is_active = 1 AND deleted_section = 0 AND section_type IN ('movie', 'show')
+        )`
+      : '';
+
+    const movieRows = tautulliDb.prepare(`
+      SELECT ${[...titleColumns, ...guidColumns].join(', ')},
+             shm.year as year,
+             'movie' as item_type
+      FROM session_history_metadata shm
+      JOIN session_history sh ON sh.id = shm.id
+      WHERE sh.media_type = 'movie'
+        ${sectionFilter}
+      GROUP BY shm.rating_key
+    `).all();
+
+    const showRows = tautulliDb.prepare(`
+      SELECT ${[...showTitleColumns, ...guidColumns].join(', ')},
+             NULL as year,
+             'show' as item_type
+      FROM session_history_metadata shm
+      JOIN session_history sh ON sh.id = shm.id
+      WHERE sh.media_type = 'episode'
+        ${sectionFilter}
+      GROUP BY COALESCE(shm.grandparent_rating_key, shm.rating_key), COALESCE(shm.grandparent_title, shm.title)
+    `).all();
+
+    tautulliLibraryIndexCache.items = [...movieRows, ...showRows].map(row => ({
+      type: row.item_type,
+      year: row.year ?? null,
+      titles: getRowTitleCandidates(row),
+      ids: extractRowGuidIds(row)
+    }));
+    tautulliLibraryIndexCache.ts = now;
+    return tautulliLibraryIndexCache.items;
+  } catch (err) {
+    log.warn(`Index Tautulli collections: ${err.message}`);
+    return [];
+  }
 }
 
 function getRowRatingKeys(row = {}, mediaType = 'movie') {
@@ -1232,13 +1352,13 @@ async function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckId
    * Évalue un succès de type "toute la collection regardée".
    * Source unique : liste Trakt.
    */
-  const checkCollection = async (id) => {
+  const checkCollection = async (id, requiredCount = null) => {
     const traktItems = await getTraktListItems(id);
     if (traktItems && traktItems.length > 0) {
       const traktMovies = traktItems.filter(item => item.type === 'movie');
       if (traktMovies.length > 0) {
         const row = countMoviesByTitleYear(id, traktMovies);
-        const required = traktMovies.length;
+        const required = requiredCount ?? traktMovies.length;
         const current = Math.min(row.cnt, required);
         log.debug(`${id} (trakt films): ${current}/${required}`);
         if (current >= required) return { date: fmt(row.last_stopped) || today, current, total: required };
@@ -1385,7 +1505,7 @@ async function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckId
 
         // 🏎️ Fast Family — Toute la collection Fast and Furious
         case 'fast-family': {
-          const r = await checkCollection(id);
+          const r = await checkCollection(id, 10);
           if (r.date) results[id] = r.date;
           if (r.total > 0) progress[id] = { current: r.current, total: r.total };
           break;
