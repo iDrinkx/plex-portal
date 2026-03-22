@@ -1365,6 +1365,8 @@ async function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckId
           matchedMovies: row.matchedItems || [],
           unmatchedMovies: row.unmatchedItems || []
         };
+        log.debug(`${id} detail: films vus [${details.matchedMovies.join(' | ')}]`);
+        log.debug(`${id} detail: films manquants [${details.unmatchedMovies.join(' | ')}]`);
         if (current >= required) return { date: fmt(row.last_stopped) || today, current, total: required, details };
         return { date: null, current, total: required, details };
       }
@@ -1406,6 +1408,12 @@ async function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckId
     const maxStopped = Math.max(movieRow.last_stopped || 0, showRow.last_stopped || 0);
 
     log.debug(`${id} (mixte): films ${currentMovies}/${requiredMovies}, séries ${currentShows}/${requiredShows}`);
+    log.debug(`${id} detail: films vus [${(movieRow.matchedItems || []).join(' | ')}]`);
+    log.debug(`${id} detail: films manquants [${(movieRow.unmatchedItems || []).join(' | ')}]`);
+    if (showItems.length > 0) {
+      log.debug(`${id} detail: series vues [${(showRow.matchedItems || []).join(' | ')}]`);
+      log.debug(`${id} detail: series manquantes [${(showRow.unmatchedItems || []).join(' | ')}]`);
+    }
 
     if (totalRequired > 0 && currentMovies >= requiredMovies && currentShows >= requiredShows) {
       return {
@@ -1442,8 +1450,6 @@ async function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckId
         // 🦕 Survivant du Parc — Toute la saga Jurassic
         case 'jurassic-survivor': {
           const r = await checkCollection(id);
-          log.info(`jurassic detail: films vus [${(r.details?.matchedMovies || []).join(' | ')}]`);
-          log.info(`jurassic detail: films manquants [${(r.details?.unmatchedMovies || []).join(' | ')}]`);
           if (r.date) results[id] = r.date;
           if (r.total > 0) progress[id] = { current: r.current, total: r.total };
           break;
@@ -1492,10 +1498,6 @@ async function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckId
         // 🦖 MonsterVerse — Collections films + séries
         case 'monsterverse': {
           const r = await checkMixedCollection(id);
-          log.info(`monsterverse detail: films vus [${(r.details?.matchedMovies || []).join(' | ')}]`);
-          log.info(`monsterverse detail: films manquants [${(r.details?.unmatchedMovies || []).join(' | ')}]`);
-          log.info(`monsterverse detail: series vues [${(r.details?.matchedShows || []).join(' | ')}]`);
-          log.info(`monsterverse detail: series manquantes [${(r.details?.unmatchedShows || []).join(' | ')}]`);
           if (r.date) results[id] = r.date;
           if (r.total > 0) progress[id] = { current: r.current, total: r.total };
           break;
