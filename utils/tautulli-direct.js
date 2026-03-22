@@ -220,6 +220,33 @@ function collectionTitleMatches(a, b, yearA = null, yearB = null) {
   return false;
 }
 
+function plexEntryTitleCandidates(entry = {}) {
+  return [
+    entry?.title,
+    entry?.originalTitle,
+    entry?.titleSort,
+    entry?.originalTitleSort
+  ].filter(Boolean);
+}
+
+function getSessionHistoryMetadataMovieTitleColumns(alias = 'shm') {
+  const columns = [];
+  if (hasTableColumn('session_history_metadata', 'title')) columns.push(`${alias}.title AS raw_title`);
+  if (hasTableColumn('session_history_metadata', 'original_title')) columns.push(`${alias}.original_title AS original_title`);
+  if (hasTableColumn('session_history_metadata', 'full_title')) columns.push(`${alias}.full_title AS full_title`);
+  if (hasTableColumn('session_history_metadata', 'sort_title')) columns.push(`${alias}.sort_title AS sort_title`);
+  return columns;
+}
+
+function getSessionHistoryMetadataShowTitleColumns(alias = 'shm') {
+  const columns = [];
+  if (hasTableColumn('session_history_metadata', 'grandparent_title')) columns.push(`${alias}.grandparent_title AS raw_title`);
+  if (hasTableColumn('session_history_metadata', 'original_title')) columns.push(`${alias}.original_title AS original_title`);
+  if (hasTableColumn('session_history_metadata', 'full_title')) columns.push(`${alias}.full_title AS full_title`);
+  if (hasTableColumn('session_history_metadata', 'sort_title')) columns.push(`${alias}.sort_title AS sort_title`);
+  return columns;
+}
+
 function isReleasedTraktItem(item) {
   const rawDate = item?.type === 'movie'
     ? item?.movie?.released
@@ -273,18 +300,20 @@ async function getPlexLibraryIndex() {
 
         const metadata = (await resp.json())?.MediaContainer?.Metadata || [];
         for (const entry of metadata) {
-          const title = String(entry?.title || '').trim();
-          if (!title) continue;
+          const titleCandidates = plexEntryTitleCandidates(entry).map(value => String(value || '').trim()).filter(Boolean);
+          const primaryTitle = titleCandidates[0];
+          if (!primaryTitle) continue;
           const cacheKey = getPlexAvailabilityCacheKey({
             type: section.type === 'show' ? 'show' : 'movie',
-            title,
+            title: primaryTitle,
             year: entry?.year ?? null
           });
           indexedItems.push({
             cacheKey,
             type: section.type === 'show' ? 'show' : 'movie',
-            title,
-            normalizedTitle: normalizeCollectionTitle(title),
+            title: primaryTitle,
+            titles: titleCandidates,
+            normalizedTitle: normalizeCollectionTitle(primaryTitle),
             year: entry?.year ?? null,
             ids: extractPlexGuidIds(entry?.Guid || entry?.Guids || [])
           });
@@ -339,7 +368,9 @@ async function isItemAvailableInPlex(item) {
     if (!available) {
       available = index.some(entry =>
         entry.type === item.type &&
-        collectionTitleMatches(entry.title, item.title, entry.year, item.year)
+        (entry.titles || [entry.title]).some(candidate =>
+          collectionTitleMatches(candidate, item.title, entry.year, item.year)
+        )
       );
     }
 
@@ -775,9 +806,9 @@ async function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckId
     if (!movies || !movies.length) return { cnt: 0, last_stopped: null };
     try {
       const completionSql = getMovieCompletionSql('sh', 'shm');
+      const movieTitleColumns = getSessionHistoryMetadataMovieTitleColumns('shm');
       const watchedRows = tautulliDb.prepare(`
-        SELECT LOWER(shm.title) as title,
-               shm.title as raw_title,
+        SELECT ${movieTitleColumns.join(', ')},
                shm.year as year,
                MAX(sh.stopped) as last_stopped
         FROM session_history sh
@@ -786,15 +817,19 @@ async function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckId
           AND sh.stopped > sh.started
           AND sh.media_type = 'movie'
           AND ${completionSql}
-        GROUP BY LOWER(shm.title), shm.year
+        GROUP BY ${hasTableColumn('session_history_metadata', 'title') ? 'shm.title' : 'shm.id'}, shm.year
       `).all(userFilter.param);
 
       let cnt = 0;
       let lastStopped = 0;
       for (const movie of movies) {
+        const movieTitles = [movie.plexTitle, movie.title].filter(Boolean);
         const matched = watchedRows.find(row =>
-          collectionTitleMatches(row.raw_title || row.title, movie.plexTitle || movie.title, row.year, movie.year)
-          || collectionTitleMatches(row.raw_title || row.title, movie.title, row.year, movie.year)
+          [row.raw_title, row.original_title, row.full_title, row.sort_title]
+            .filter(Boolean)
+            .some(candidate => movieTitles.some(movieTitle =>
+              collectionTitleMatches(candidate, movieTitle, row.year, movie.year)
+            ))
         );
         if (matched) {
           cnt += 1;
@@ -815,24 +850,28 @@ async function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckId
   const countShowsByTitle = (shows) => {
     if (!shows || !shows.length) return { cnt: 0, last_stopped: null };
     try {
+      const showTitleColumns = getSessionHistoryMetadataShowTitleColumns('shm');
       const watchedRows = tautulliDb.prepare(`
-        SELECT LOWER(shm.grandparent_title) as title,
-               shm.grandparent_title as raw_title,
+        SELECT ${showTitleColumns.join(', ')},
                MAX(sh.stopped) as last_stopped
         FROM session_history sh
         JOIN session_history_metadata shm ON sh.id = shm.id
         WHERE ${userFilter.clause}
           AND sh.stopped > sh.started
           AND sh.media_type = 'episode'
-        GROUP BY LOWER(shm.grandparent_title)
+        GROUP BY ${hasTableColumn('session_history_metadata', 'grandparent_title') ? 'shm.grandparent_title' : 'shm.id'}
       `).all(userFilter.param);
 
       let cnt = 0;
       let lastStopped = 0;
       for (const show of shows) {
+        const showTitles = [show.plexTitle, show.title].filter(Boolean);
         const matched = watchedRows.find(row =>
-          collectionTitleMatches(row.raw_title || row.title, show.plexTitle || show.title)
-          || collectionTitleMatches(row.raw_title || row.title, show.title)
+          [row.raw_title, row.original_title, row.full_title, row.sort_title]
+            .filter(Boolean)
+            .some(candidate => showTitles.some(showTitle =>
+              collectionTitleMatches(candidate, showTitle)
+            ))
         );
         if (matched) {
           cnt += 1;
