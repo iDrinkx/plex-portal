@@ -480,26 +480,29 @@ app.listen(PORT, async () => {
     const { UserQueries } = require("./utils/database");
     const wizarrUrl = getConfigValue("WIZARR_URL");
     const wizarrApiKey = getConfigValue("WIZARR_API_KEY");
-    let wizarrUsers = [];
-    let lastWizarrResult = null;
-    const maxAttempts = 3;
+    if (!wizarrUrl || !wizarrApiKey) {
+      console.log("[SETUP] ℹ️  Wizarr désactivé — import ignoré");
+    } else {
+      let wizarrUsers = [];
+      let lastWizarrResult = null;
+      const maxAttempts = 3;
 
-    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-      lastWizarrResult = await getAllWizarrUsersDetailed(wizarrUrl, wizarrApiKey);
-      wizarrUsers = lastWizarrResult.users || [];
+      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        lastWizarrResult = await getAllWizarrUsersDetailed(wizarrUrl, wizarrApiKey);
+        wizarrUsers = lastWizarrResult.users || [];
 
+        if (wizarrUsers.length > 0) {
+          console.log(`[SETUP] ✅ Wizarr prêt (tentative ${attempt}/${maxAttempts}) via ${lastWizarrResult.source}`);
+          break;
+        }
+
+        console.warn(`[SETUP] ⚠️  Wizarr indisponible/vide (tentative ${attempt}/${maxAttempts}) — ${lastWizarrResult?.reason || "raison inconnue"}`);
+        if (attempt < maxAttempts) {
+          console.log("[SETUP] ⏳ Nouvelle tentative Wizarr dans 5 secondes...");
+          await delay(5000);
+        }
+      }
       if (wizarrUsers.length > 0) {
-        console.log(`[SETUP] ✅ Wizarr prêt (tentative ${attempt}/${maxAttempts}) via ${lastWizarrResult.source}`);
-        break;
-      }
-
-      console.warn(`[SETUP] ⚠️  Wizarr indisponible/vide (tentative ${attempt}/${maxAttempts}) — ${lastWizarrResult?.reason || "raison inconnue"}`);
-      if (attempt < maxAttempts) {
-        console.log("[SETUP] ⏳ Nouvelle tentative Wizarr dans 5 secondes...");
-        await delay(5000);
-      }
-    }
-    if (wizarrUsers.length > 0) {
       let upserted = 0;
       for (const wUser of wizarrUsers) {
         try {
@@ -509,9 +512,10 @@ app.listen(PORT, async () => {
           }
         } catch (_) {}
       }
-      console.log(`[SETUP] ✅ Import Wizarr: ${upserted}/${wizarrUsers.length} users synchronisés en DB`);
-    } else {
-      console.warn(`[SETUP] ⚠️  Import Wizarr ignoré après ${maxAttempts} tentatives — ${lastWizarrResult?.reason || "Wizarr non configuré ou inaccessible"}`);
+        console.log(`[SETUP] ✅ Import Wizarr: ${upserted}/${wizarrUsers.length} users synchronisés en DB`);
+      } else {
+        console.warn(`[SETUP] ⚠️  Import Wizarr ignoré après ${maxAttempts} tentatives — ${lastWizarrResult?.reason || "Wizarr non configuré ou inaccessible"}`);
+      }
     }
   } catch (err) {
     console.warn(`[SETUP] ⚠️  Erreur import Wizarr: ${err.message}`);

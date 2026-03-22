@@ -220,6 +220,7 @@ async function refreshClassementCache() {
         logCR.debug(`📋 Wizarr classement: ${wizarrUsers.length} users via ${wizarrResult.source}`);
       }
     } else {
+      logCR.debug('Wizarr désactivé — classement sans source Wizarr');
       wizarrUsers = await getAllWizarrUsers(wizarrUrl, wizarrApiKey);
     }
     const hadInitialWizarrUsers = wizarrUsers.length > 0;

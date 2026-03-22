@@ -980,7 +980,7 @@ async function getWizarrSubscription(user) {
     const apiKey = getConfigValue("WIZARR_API_KEY", "");
 
     if (!wizarrUrl || !apiKey) {
-      logWizarr.warn('WIZARR_URL ou WIZARR_API_KEY manquant');
+      logWizarr.info('Wizarr désactivé — configuration vide');
       return computeSubscription(null);
     }
 
