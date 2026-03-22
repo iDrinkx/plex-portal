@@ -10,6 +10,7 @@ const { getTautulliStats } = require("./tautulli");
 const { XP_SYSTEM } = require("./xp-system");
 const { ACHIEVEMENTS } = require("./achievements");
 const { UserAchievementQueries, UserQueries } = require("./database");
+const { getConfigValue } = require("./config");
 const log = require("./logger");
 
 const logXP = log.create('[XP-Calculator]');
@@ -26,6 +27,10 @@ async function calculateUserXp(username, joinedAtTimestamp = null, precomputedHo
   try {
     const now = Date.now();
     let statsData = precomputedStats ? { ...precomputedStats } : {};
+    const tautulliUrl = getConfigValue("TAUTULLI_URL");
+    const tautulliApiKey = getConfigValue("TAUTULLI_API_KEY");
+    const plexUrl = getConfigValue("PLEX_URL");
+    const plexToken = getConfigValue("PLEX_TOKEN");
 
     // 1️⃣ Récupérer les heures Tautulli
     let totalHours = 0;
@@ -39,11 +44,11 @@ async function calculateUserXp(username, joinedAtTimestamp = null, precomputedHo
         const stats = await Promise.race([
           getTautulliStats(
             username,
-            process.env.TAUTULLI_URL,
-            process.env.TAUTULLI_API_KEY,
+            tautulliUrl,
+            tautulliApiKey,
             null,
-            process.env.PLEX_URL,
-            process.env.PLEX_TOKEN,
+            plexUrl,
+            plexToken,
             joinedAtTimestamp
           ),
             new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), 5000))
@@ -93,11 +98,11 @@ async function calculateUserXp(username, joinedAtTimestamp = null, precomputedHo
           const stats = await Promise.race([
             getTautulliStats(
               username,
-              process.env.TAUTULLI_URL,
-              process.env.TAUTULLI_API_KEY,
+              tautulliUrl,
+              tautulliApiKey,
               null,
-              process.env.PLEX_URL,
-              process.env.PLEX_TOKEN,
+              plexUrl,
+              plexToken,
               null  // Pas de joinedAtTimestamp au départ
             ),
             new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), 3000))

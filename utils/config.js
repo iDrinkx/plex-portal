@@ -52,7 +52,12 @@ function normalizeValue(field, value) {
 }
 
 function getStoredConfigMap() {
-  const rows = AppSettingQueries.listPrefix(CONFIG_PREFIX);
+  let rows = [];
+  try {
+    rows = AppSettingQueries.listPrefix(CONFIG_PREFIX);
+  } catch (_) {
+    rows = [];
+  }
   const map = {};
   rows.forEach(row => {
     map[row.key.slice(CONFIG_PREFIX.length)] = row.value;
@@ -60,8 +65,25 @@ function getStoredConfigMap() {
   return map;
 }
 
+function buildRuntimeConfigValues(overrides = {}) {
+  const values = {};
+  CONFIG_FIELDS.forEach(field => {
+    if (Object.prototype.hasOwnProperty.call(overrides, field.key)) {
+      values[field.key] = normalizeValue(field, overrides[field.key]);
+      return;
+    }
+    values[field.key] = getConfigValue(field.key, field.type === "boolean" ? "false" : "");
+  });
+  return values;
+}
+
 function getConfigValue(key, defaultValue = "") {
-  const stored = AppSettingQueries.get(settingKey(key), null);
+  let stored = null;
+  try {
+    stored = AppSettingQueries.get(settingKey(key), null);
+  } catch (_) {
+    stored = null;
+  }
   if (stored !== null && stored !== undefined) return stored;
   const envValue = process.env[key];
   return envValue !== undefined ? envValue : defaultValue;
@@ -126,6 +148,7 @@ function isSetupComplete() {
 
 function saveEditableConfig(input = {}, { markSetupComplete = false } = {}) {
   const values = {};
+  const runtimeOverrides = {};
 
   CONFIG_FIELDS.forEach(field => {
     if (!Object.prototype.hasOwnProperty.call(input, field.key)) return;
@@ -133,11 +156,11 @@ function saveEditableConfig(input = {}, { markSetupComplete = false } = {}) {
     const existingValue = getConfigValue(field.key, "");
 
     if (field.secret && normalized === "" && String(existingValue || "").trim()) {
-      values[field.key] = "";
       return;
     }
 
     values[field.key] = normalized;
+    runtimeOverrides[field.key] = normalized;
 
     if (normalized === "") {
       AppSettingQueries.remove(settingKey(field.key));
@@ -150,7 +173,7 @@ function saveEditableConfig(input = {}, { markSetupComplete = false } = {}) {
     AppSettingQueries.setBool("setup_completed", true);
   }
 
-  applyRuntimeConfig(getEditableConfigValues());
+  applyRuntimeConfig(buildRuntimeConfigValues(runtimeOverrides));
   return values;
 }
 

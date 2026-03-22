@@ -293,15 +293,21 @@ app.get("/", async (req, res) => {
     return res.redirect(redirectUrl);
   }
 
+  const uptimeKumaUrl = String(getConfigValue("UPTIME_KUMA_URL", "") || "").trim();
+  const uptimeKumaUsername = String(getConfigValue("UPTIME_KUMA_USERNAME", "") || "").trim();
+  const uptimeKumaPassword = String(getConfigValue("UPTIME_KUMA_PASSWORD", "") || "").trim();
+
   let uptimeKuma = null;
-  try {
-    uptimeKuma = await getPublicStatusPageSummary({
-      baseUrl: getConfigValue("UPTIME_KUMA_URL", ""),
-      username: getConfigValue("UPTIME_KUMA_USERNAME", ""),
-      password: getConfigValue("UPTIME_KUMA_PASSWORD", "")
-    });
-  } catch (_) {
-    uptimeKuma = null;
+  if (uptimeKumaUrl && uptimeKumaUsername && uptimeKumaPassword) {
+    try {
+      uptimeKuma = await getPublicStatusPageSummary({
+        baseUrl: uptimeKumaUrl,
+        username: uptimeKumaUsername,
+        password: uptimeKumaPassword
+      });
+    } catch (_) {
+      uptimeKuma = null;
+    }
   }
 
   res.render("login", {
@@ -455,10 +461,10 @@ app.listen(PORT, async () => {
   const allUsers = await initializeAllUsersForCron();
   
   startSessionCronJob(
-    process.env.TAUTULLI_URL,
-    process.env.TAUTULLI_API_KEY,
-    process.env.PLEX_URL,
-    process.env.PLEX_TOKEN,
+    getConfigValue("TAUTULLI_URL"),
+    getConfigValue("TAUTULLI_API_KEY"),
+    getConfigValue("PLEX_URL"),
+    getConfigValue("PLEX_TOKEN"),
     allUsers // ✅ Liste réelle de tous les utilisateurs
   );
 
@@ -473,7 +479,10 @@ app.listen(PORT, async () => {
     const { getAllWizarrUsers } = require("./utils/wizarr");
     const { UserQueries } = require("./utils/database");
 
-    const wizarrUsers = await getAllWizarrUsers(process.env.WIZARR_URL, process.env.WIZARR_API_KEY);
+    const wizarrUsers = await getAllWizarrUsers(
+      getConfigValue("WIZARR_URL"),
+      getConfigValue("WIZARR_API_KEY")
+    );
     if (wizarrUsers.length > 0) {
       let upserted = 0;
       for (const wUser of wizarrUsers) {

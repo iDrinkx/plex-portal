@@ -7,6 +7,7 @@
 const Database = require('better-sqlite3');
 const path = require('path');
 const log = require('./logger').create('[Tautulli DB]');
+const { getConfigValue } = require('./config');
 
 let tautulliDb = null;
 
@@ -50,8 +51,8 @@ async function getCollectionItems(collectionRatingKey) {
     return cached.items;
   }
 
-  const PLEX_URL = process.env.PLEX_URL;
-  const PLEX_TOKEN = process.env.PLEX_TOKEN;
+  const PLEX_URL = getConfigValue('PLEX_URL');
+  const PLEX_TOKEN = getConfigValue('PLEX_TOKEN');
 
   if (!PLEX_URL || !PLEX_TOKEN) {
     return null;
@@ -82,7 +83,7 @@ async function getCollectionItems(collectionRatingKey) {
  * En lecture seule pour éviter tout risque de corruption
  */
 function initTautulliDatabase() {
-  const TAUTULLI_DB_PATH = process.env.TAUTULLI_DB_PATH;
+  const TAUTULLI_DB_PATH = getConfigValue('TAUTULLI_DB_PATH');
   
   if (!TAUTULLI_DB_PATH) {
     log.warn('TAUTULLI_DB_PATH non configuré — fonctionnalités désactivées');

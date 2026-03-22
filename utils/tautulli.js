@@ -455,8 +455,9 @@ function updateUserWatchStats(db, userId, username) {
  * @param {boolean} forceFullSync - Forcer un refresh complet (ignorer last_timestamp)
  */
 async function syncTautulliHistoryToDatabase(maxSessions = 5000, forceFullSync = false) {
-  const TAUTULLI_URL = process.env.TAUTULLI_URL;
-  const TAUTULLI_API_KEY = process.env.TAUTULLI_API_KEY;
+  const { getConfigValue } = require('./config');
+  const TAUTULLI_URL = getConfigValue('TAUTULLI_URL');
+  const TAUTULLI_API_KEY = getConfigValue('TAUTULLI_API_KEY');
   const pageSize = 500;
   const db = getDb();
   const startTime = Date.now();
