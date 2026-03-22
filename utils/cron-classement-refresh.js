@@ -5,7 +5,7 @@ const { UserQueries } = require('./database');
 const { XP_SYSTEM } = require('./xp-system');
 const { getUserStatsFromTautulli, getAllUserStatsFromTautulli, isTautulliReady } = require('./tautulli-direct');
 const { calculateUserXp } = require('./xp-calculator');  // 🎯 Fonction centralisée XP
-const { getAllWizarrUsers } = require('./wizarr');       // 🔑 Source de vérité
+const { getAllWizarrUsers, getAllWizarrUsersDetailed } = require('./wizarr');       // 🔑 Source de vérité
 const { getConfigValue } = require('./config');
 
 const logCR = log.create('[Classement-Refresh]');
@@ -210,7 +210,18 @@ async function refreshClassementCache() {
     const wizarrUrl = String(getConfigValue('WIZARR_URL', '') || '').trim();
     const wizarrApiKey = String(getConfigValue('WIZARR_API_KEY', '') || '').trim();
     const wizarrConfigured = !!(wizarrUrl && wizarrApiKey);
-    let wizarrUsers = await getAllWizarrUsers(wizarrUrl, wizarrApiKey);
+    let wizarrUsers = [];
+    if (wizarrConfigured) {
+      const wizarrResult = await getAllWizarrUsersDetailed(wizarrUrl, wizarrApiKey);
+      wizarrUsers = wizarrResult.users || [];
+      if (!wizarrUsers.length) {
+        logCR.warn(`Wizarr indisponible/vide pour classement — ${wizarrResult.reason || 'raison inconnue'}`);
+      } else {
+        logCR.debug(`📋 Wizarr classement: ${wizarrUsers.length} users via ${wizarrResult.source}`);
+      }
+    } else {
+      wizarrUsers = await getAllWizarrUsers(wizarrUrl, wizarrApiKey);
+    }
     const hadInitialWizarrUsers = wizarrUsers.length > 0;
 
     if (wizarrUsers.length > 0) {

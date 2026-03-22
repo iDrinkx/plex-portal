@@ -3,6 +3,36 @@ const log = require('./logger').create('[Wizarr]');
 
 const MS_PER_DAY = 1000 * 60 * 60 * 24;
 
+function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function extractTs(u) {
+  const raw = u.joinedAtTimestamp || u.created_at || u.date_created || u.created || u.dateCreated || null;
+  if (!raw) return null;
+  if (typeof raw === 'number') return raw < 1e12 ? raw : Math.floor(raw / 1000);
+  const ms = new Date(raw).getTime();
+  return isNaN(ms) ? null : Math.floor(ms / 1000);
+}
+
+function normalizeList(payload) {
+  return Array.isArray(payload)        ? payload :
+         Array.isArray(payload?.data)  ? payload.data :
+         Array.isArray(payload?.users) ? payload.users :
+         [];
+}
+
+function mapUser(u) {
+  return {
+    id:                u.id || null,
+    username:          u.username || u.plexUsername || u.plex_username || null,
+    plexUserId:        u.plexUserId || u.plex_user_id || u.plexId || null,
+    email:             u.email || null,
+    joinedAtTimestamp: extractTs(u),
+    expires:           u.expires || null
+  };
+}
+
 function computeSubscription(user) {
 
   // ❌ Aucun utilisateur trouvé
@@ -188,42 +218,16 @@ async function checkWizarrAccess(user, wizarrUrl, apiKey) {
  * @param {string} apiKey - Clé API Wizarr
  * @returns {Promise<Array<{id, username, plexUserId, email, joinedAtTimestamp}>>}
  */
-async function getAllWizarrUsers(wizarrUrl, apiKey) {
-  if (!wizarrUrl || !apiKey) return [];
-
-  // Extraire un timestamp Unix (secondes) depuis plusieurs noms de champs possibles
-  function extractTs(u) {
-    const raw = u.joinedAtTimestamp || u.created_at || u.date_created || u.created || u.dateCreated || null;
-    if (!raw) return null;
-    if (typeof raw === 'number') return raw < 1e12 ? raw : Math.floor(raw / 1000);
-    const ms = new Date(raw).getTime();
-    return isNaN(ms) ? null : Math.floor(ms / 1000);
+async function getAllWizarrUsersDetailed(wizarrUrl, apiKey) {
+  if (!wizarrUrl || !apiKey) {
+    return { users: [], ok: false, reason: 'Wizarr non configuré', source: 'config' };
   }
 
-  function normalizeList(payload) {
-    return Array.isArray(payload)        ? payload :
-           Array.isArray(payload?.data)  ? payload.data :
-           Array.isArray(payload?.users) ? payload.users :
-           [];
-  }
-
-  function mapUser(u) {
-    return {
-      id:                u.id || null,
-      username:          u.username || u.plexUsername || u.plex_username || null,
-      plexUserId:        u.plexUserId || u.plex_user_id || u.plexId || null,
-      email:             u.email || null,
-      joinedAtTimestamp: extractTs(u),
-      expires:           u.expires || null
-    };
-  }
-
-  // Essayer d'abord /api/users (endpoint confirmé opérationnel dans cette installation)
-  // On essaie avec un grand limit pour éviter une pagination par défaut restrictive
   const apiUsersEndpoints = [
     `${wizarrUrl}/api/users?limit=1000`,
     `${wizarrUrl}/api/users`,
   ];
+  let lastError = null;
 
   for (const url of apiUsersEndpoints) {
     try {
@@ -231,34 +235,49 @@ async function getAllWizarrUsers(wizarrUrl, apiKey) {
         headers: { Accept: 'application/json', 'X-API-Key': apiKey },
         timeout: 8000
       });
-      if (resp.ok) {
-        const payload = await resp.json();
-        const list = normalizeList(payload);
-        if (list.length > 0) {
-          const filtered = list.map(mapUser).filter(u => u.username);
-          // Si on a moins de résultats filtrés que bruts, c'est que certains n'ont pas de username (invitation en attente)
-          return filtered;
-        }
+
+      if (!resp.ok) {
+        const body = await resp.text().catch(() => "");
+        lastError = `HTTP ${resp.status} sur ${url}${body ? ` — ${body.slice(0, 160)}` : ''}`;
+        continue;
       }
-    } catch (_) {}
+
+      const payload = await resp.json();
+      const list = normalizeList(payload);
+      if (list.length > 0) {
+        const filtered = list.map(mapUser).filter(u => u.username);
+        return { users: filtered, ok: true, reason: null, source: url };
+      }
+
+      lastError = `Réponse vide sur ${url}`;
+    } catch (err) {
+      lastError = `${url} — ${err.message}`;
+    }
   }
 
-  // Fallback: /api/v1/user avec pagination (Wizarr v4+)
   const users = [];
   const take = 50;
   let skip = 0;
   let hasMore = true;
+  let pageCount = 0;
 
   while (hasMore) {
     try {
-      const resp = await fetch(`${wizarrUrl}/api/v1/user?skip=${skip}&take=${take}`, {
+      const url = `${wizarrUrl}/api/v1/user?skip=${skip}&take=${take}`;
+      const resp = await fetch(url, {
         headers: { Accept: 'application/json', 'X-API-Key': apiKey },
         timeout: 8000
       });
-      if (!resp.ok) break;
+
+      if (!resp.ok) {
+        const body = await resp.text().catch(() => "");
+        lastError = `HTTP ${resp.status} sur ${url}${body ? ` — ${body.slice(0, 160)}` : ''}`;
+        break;
+      }
 
       const payload = await resp.json();
       const page = normalizeList(payload);
+      pageCount += 1;
 
       if (page.length === 0) {
         hasMore = false;
@@ -268,12 +287,33 @@ async function getAllWizarrUsers(wizarrUrl, apiKey) {
         const total = payload?.total ?? payload?.pageInfo?.results ?? null;
         if ((total !== null && users.length >= total) || page.length < take) hasMore = false;
       }
-    } catch (_) {
+    } catch (err) {
+      lastError = `/api/v1/user — ${err.message}`;
       hasMore = false;
     }
   }
 
-  return users.filter(u => u.username);
+  const filtered = users.filter(u => u.username);
+  if (filtered.length > 0) {
+    return {
+      users: filtered,
+      ok: true,
+      reason: null,
+      source: `/api/v1/user (${pageCount} page${pageCount > 1 ? 's' : ''})`
+    };
+  }
+
+  return {
+    users: [],
+    ok: false,
+    reason: lastError || 'Aucun utilisateur retourné par Wizarr',
+    source: 'none'
+  };
 }
 
-module.exports = { computeSubscription, checkWizarrAccess, getAllWizarrUsers };
+async function getAllWizarrUsers(wizarrUrl, apiKey) {
+  const result = await getAllWizarrUsersDetailed(wizarrUrl, apiKey);
+  return result.users;
+}
+
+module.exports = { computeSubscription, checkWizarrAccess, getAllWizarrUsers, getAllWizarrUsersDetailed, delay };
