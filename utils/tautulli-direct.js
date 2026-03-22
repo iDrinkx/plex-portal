@@ -140,6 +140,42 @@ function getPlexAvailabilityCacheKey(item) {
   return `${item.type || 'unknown'}:${String(item.title || '').toLowerCase()}::${item.year || ''}`;
 }
 
+function normalizeCollectionTitle(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/&/g, ' and ')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/\b(the|a|an|le|la|les|un|une|des|du|de)\b/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function collectionTitleMatches(a, b, yearA = null, yearB = null) {
+  const rawA = String(a || '').trim().toLowerCase();
+  const rawB = String(b || '').trim().toLowerCase();
+  if (!rawA || !rawB) return false;
+
+  const hasYears = Number.isFinite(Number(yearA)) && Number.isFinite(Number(yearB));
+  if (hasYears && Number(yearA) !== Number(yearB)) {
+    return false;
+  }
+
+  if (rawA === rawB) return true;
+
+  const normA = normalizeCollectionTitle(rawA);
+  const normB = normalizeCollectionTitle(rawB);
+  if (!normA || !normB) return false;
+  if (normA === normB) return true;
+
+  if (normA.includes(normB) || normB.includes(normA)) {
+    return true;
+  }
+
+  return false;
+}
+
 function isReleasedTraktItem(item) {
   const rawDate = item?.type === 'movie'
     ? item?.movie?.released
@@ -671,21 +707,34 @@ async function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckId
   const countMoviesByTitleYear = (movies) => {
     if (!movies || !movies.length) return { cnt: 0, last_stopped: null };
     try {
-      const orClauses = movies.map(() => '(LOWER(shm.title) = ? AND shm.year = ?)').join(' OR ');
       const completionSql = getMovieCompletionSql('sh', 'shm');
-      const params = [userFilter.param, ...movies.flatMap(m => [m.title.toLowerCase(), m.year])];
-      const row = tautulliDb.prepare(`
-        SELECT COUNT(DISTINCT LOWER(shm.title) || COALESCE(shm.year,'')) as cnt,
+      const watchedRows = tautulliDb.prepare(`
+        SELECT LOWER(shm.title) as title,
+               shm.title as raw_title,
+               shm.year as year,
                MAX(sh.stopped) as last_stopped
         FROM session_history sh
         JOIN session_history_metadata shm ON sh.id = shm.id
         WHERE ${userFilter.clause}
           AND sh.stopped > sh.started
           AND sh.media_type = 'movie'
-          AND (${orClauses})
           AND ${completionSql}
-      `).get(...params);
-      return row || { cnt: 0, last_stopped: null };
+        GROUP BY LOWER(shm.title), shm.year
+      `).all(userFilter.param);
+
+      let cnt = 0;
+      let lastStopped = 0;
+      for (const movie of movies) {
+        const matched = watchedRows.find(row =>
+          collectionTitleMatches(row.raw_title || row.title, movie.plexTitle || movie.title, row.year, movie.year)
+          || collectionTitleMatches(row.raw_title || row.title, movie.title, row.year, movie.year)
+        );
+        if (matched) {
+          cnt += 1;
+          lastStopped = Math.max(lastStopped, Number(matched.last_stopped || 0));
+        }
+      }
+      return { cnt, last_stopped: lastStopped || null };
     } catch(e) {
       log.warn('countMoviesByTitleYear:', e.message);
       return { cnt: 0, last_stopped: null };
@@ -699,18 +748,31 @@ async function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckId
   const countShowsByTitle = (shows) => {
     if (!shows || !shows.length) return { cnt: 0, last_stopped: null };
     try {
-      const placeholders = shows.map(() => '?').join(', ');
-      const row = tautulliDb.prepare(`
-        SELECT COUNT(DISTINCT LOWER(shm.grandparent_title)) as cnt,
+      const watchedRows = tautulliDb.prepare(`
+        SELECT LOWER(shm.grandparent_title) as title,
+               shm.grandparent_title as raw_title,
                MAX(sh.stopped) as last_stopped
         FROM session_history sh
         JOIN session_history_metadata shm ON sh.id = shm.id
         WHERE ${userFilter.clause}
           AND sh.stopped > sh.started
           AND sh.media_type = 'episode'
-          AND LOWER(shm.grandparent_title) IN (${placeholders})
-      `).get(userFilter.param, ...shows.map(s => s.title.toLowerCase()));
-      return row || { cnt: 0, last_stopped: null };
+        GROUP BY LOWER(shm.grandparent_title)
+      `).all(userFilter.param);
+
+      let cnt = 0;
+      let lastStopped = 0;
+      for (const show of shows) {
+        const matched = watchedRows.find(row =>
+          collectionTitleMatches(row.raw_title || row.title, show.plexTitle || show.title)
+          || collectionTitleMatches(row.raw_title || row.title, show.title)
+        );
+        if (matched) {
+          cnt += 1;
+          lastStopped = Math.max(lastStopped, Number(matched.last_stopped || 0));
+        }
+      }
+      return { cnt, last_stopped: lastStopped || null };
     } catch(e) {
       log.warn('countShowsByTitle:', e.message);
       return { cnt: 0, last_stopped: null };
@@ -810,7 +872,7 @@ async function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckId
 
         // 🧑‍⚖️ Maître Jedi — 7 films Star Wars minimum
         case 'black-knight': {
-          const r = await checkCollection(id);
+          const r = await checkMixedCollection(id, 7, 0);
           if (r.date) results[id] = r.date;
           if (r.total > 0) progress[id] = { current: r.current, total: r.total };
           break;
