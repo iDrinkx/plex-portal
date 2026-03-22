@@ -32,7 +32,7 @@ const TRAKT_LISTS = {
   'evolutionist': 'https://app.trakt.tv/lists/official/1531',
   'agent-007': 'https://app.trakt.tv/users/maiki01/lists/james-bond-collection',
   'fast-family': 'https://app.trakt.tv/lists/official/the-fast-and-the-furious-collection',
-  'star-trek-universe': 'https://app.trakt.tv/users/pullsa/lists/star-trek-universe',
+  'star-trek-universe': 'https://app.trakt.tv/users/dgw/lists/star-trek-canon',
   'arrowverse': 'https://trakt.tv/users/dudeimtired/lists/arrowverse-collection',
   'monsterverse': 'https://trakt.tv/users/pullsa/lists/the-monsterverse'
 };
@@ -365,14 +365,27 @@ function getPreferredPlexServerToken() {
   return configuredToken || '';
 }
 
-function normalizeCollectionTitle(value) {
+function decodeBasicHtmlEntities(value) {
   return String(value || '')
+    .replace(/&amp;/gi, '&')
+    .replace(/&#38;/gi, '&')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/&apos;/gi, "'")
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>');
+}
+
+function normalizeCollectionTitle(value) {
+  return decodeBasicHtmlEntities(value)
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
     .replace(/&/g, ' and ')
     .replace(/[^a-z0-9]+/g, ' ')
     .replace(/\b(the|a|an|le|la|les|un|une|des|du|de)\b/g, ' ')
+    .replace(/\bfast and furious 6\b/g, 'furious 6')
+    .replace(/\bfast and furious 7\b/g, 'furious 7')
     .replace(/\s+/g, ' ')
     .trim();
 }
