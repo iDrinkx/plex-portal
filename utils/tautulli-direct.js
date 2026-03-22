@@ -1361,8 +1361,12 @@ async function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckId
         const required = requiredCount ?? traktMovies.length;
         const current = Math.min(row.cnt, required);
         log.debug(`${id} (trakt films): ${current}/${required}`);
-        if (current >= required) return { date: fmt(row.last_stopped) || today, current, total: required };
-        return { date: null, current, total: required };
+        const details = {
+          matchedMovies: row.matchedItems || [],
+          unmatchedMovies: row.unmatchedItems || []
+        };
+        if (current >= required) return { date: fmt(row.last_stopped) || today, current, total: required, details };
+        return { date: null, current, total: required, details };
       }
     }
     return { date: null, current: 0, total: 0 };
@@ -1438,6 +1442,8 @@ async function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckId
         // 🦕 Survivant du Parc — Toute la saga Jurassic
         case 'jurassic-survivor': {
           const r = await checkCollection(id);
+          log.info(`jurassic detail: films vus [${(r.details?.matchedMovies || []).join(' | ')}]`);
+          log.info(`jurassic detail: films manquants [${(r.details?.unmatchedMovies || []).join(' | ')}]`);
           if (r.date) results[id] = r.date;
           if (r.total > 0) progress[id] = { current: r.current, total: r.total };
           break;
