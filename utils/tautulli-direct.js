@@ -8,6 +8,7 @@ const Database = require('better-sqlite3');
 const path = require('path');
 const log = require('./logger').create('[Tautulli DB]');
 const { getConfigValue } = require('./config');
+const { CollectionItemMappingQueries } = require('./database');
 
 let tautulliDb = null;
 
@@ -173,6 +174,14 @@ function buildExternalIds(itemIds = {}) {
   return ids;
 }
 
+function getTraktItemKey(item = {}) {
+  const ids = buildExternalIds(item.ids || {});
+  if (ids.size > 0) {
+    return [...ids].sort()[0];
+  }
+  return `${item.type || 'unknown'}:${item.year || 'na'}:${normalizeCollectionTitle(item.title || '')}`;
+}
+
 function extractPlexGuidIds(guidEntries = []) {
   const ids = new Set();
   const entries = Array.isArray(guidEntries) ? guidEntries : [guidEntries];
@@ -214,6 +223,17 @@ function mergeIdSets(...sets) {
   return merged;
 }
 
+function extractRowGuidIds(row = {}) {
+  return mergeIdSets(
+    extractIdsFromRawGuidValue(row.guid),
+    extractIdsFromRawGuidValue(row.guids),
+    extractIdsFromRawGuidValue(row.parent_guid),
+    extractIdsFromRawGuidValue(row.parent_guids),
+    extractIdsFromRawGuidValue(row.grandparent_guid),
+    extractIdsFromRawGuidValue(row.grandparent_guids)
+  );
+}
+
 function normalizeRatingKey(value) {
   if (value === undefined || value === null) return null;
   const normalized = String(value).trim();
@@ -243,6 +263,13 @@ function normalizeCollectionTitle(value) {
     .trim();
 }
 
+function getCollectionTitleTokens(value) {
+  return normalizeCollectionTitle(value)
+    .split(' ')
+    .map(token => token.trim())
+    .filter(token => token && token.length >= 2);
+}
+
 function collectionTitleMatches(a, b, yearA = null, yearB = null) {
   const rawA = String(a || '').trim().toLowerCase();
   const rawB = String(b || '').trim().toLowerCase();
@@ -250,7 +277,7 @@ function collectionTitleMatches(a, b, yearA = null, yearB = null) {
 
   const hasYears = Number.isFinite(Number(yearA)) && Number.isFinite(Number(yearB));
   if (hasYears && Number(yearA) !== Number(yearB)) {
-    return null;
+    return false;
   }
 
   if (rawA === rawB) return true;
@@ -272,6 +299,18 @@ function collectionTitleMatches(a, b, yearA = null, yearB = null) {
       )
     ) {
       return true;
+    }
+
+    const tokensA = getCollectionTitleTokens(normA);
+    const tokensB = getCollectionTitleTokens(normB);
+    if (tokensA.length >= 3 && tokensB.length >= 3) {
+      const setA = new Set(tokensA);
+      const setB = new Set(tokensB);
+      const common = tokensA.filter(token => setB.has(token));
+      const overlap = common.length / Math.max(setA.size, setB.size);
+      if (common.length >= 3 && overlap >= 0.6) {
+        return true;
+      }
     }
   }
 
@@ -953,11 +992,65 @@ async function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckId
   const userFilter = plexUserId
     ? { clause: 'sh.user_id = ?', param: plexUserId }
     : { clause: 'LOWER(sh.user) = ?', param: norm };
+  const mappingCache = new Map();
+
+  const getAchievementMappings = (achievementId) => {
+    if (mappingCache.has(achievementId)) return mappingCache.get(achievementId);
+    try {
+      const mappings = CollectionItemMappingQueries.getForAchievement(achievementId);
+      mappingCache.set(achievementId, mappings);
+      return mappings;
+    } catch (err) {
+      log.warn(`Collection mappings ${achievementId}: ${err.message}`);
+      const empty = new Map();
+      mappingCache.set(achievementId, empty);
+      return empty;
+    }
+  };
+
+  const getItemMapping = (achievementId, item) => {
+    const mappings = getAchievementMappings(achievementId);
+    return mappings.get(`${item.type}:${getTraktItemKey(item)}`) || null;
+  };
+
+  const saveItemMapping = (achievementId, item, mediaType, row) => {
+    const traktKey = getTraktItemKey(item);
+    const matchedTitle = row.raw_title || row.original_title || row.full_title || row.sort_title || item.title || null;
+    const matchedYear = row.year ?? item.year ?? null;
+    const matchedGuid = mediaType === 'show'
+      ? String(row.grandparent_guid || row.grandparent_guids || row.guid || row.guids || '').trim()
+      : String(row.guid || row.guids || row.parent_guid || row.parent_guids || '').trim();
+
+    try {
+      CollectionItemMappingQueries.upsert({
+        achievementId,
+        mediaType,
+        traktKey,
+        traktTitle: item.title || null,
+        traktYear: item.year ?? null,
+        matchedTitle,
+        matchedYear,
+        matchedGuid: matchedGuid || null
+      });
+      getAchievementMappings(achievementId).set(`${mediaType}:${traktKey}`, {
+        achievement_id: achievementId,
+        media_type: mediaType,
+        trakt_key: traktKey,
+        trakt_title: item.title || null,
+        trakt_year: item.year ?? null,
+        matched_title: matchedTitle,
+        matched_year: matchedYear,
+        matched_guid: matchedGuid || null
+      });
+    } catch (err) {
+      log.warn(`Collection mapping save ${achievementId}: ${err.message}`);
+    }
+  };
   /**
    * Compte les films regardés par l'utilisateur via une liste de {title, year}.
    * Le matching par titre+année est robuste aux re-scans Plex qui changent les GUIDs.
    */
-  const countMoviesByTitleYear = (movies) => {
+  const countMoviesByTitleYear = (achievementId, movies) => {
     if (!movies || !movies.length) return { cnt: 0, last_stopped: null, matchedItems: [], unmatchedItems: [] };
     try {
       const completionSql = getMovieCompletionSql('sh', 'shm');
@@ -977,11 +1070,16 @@ async function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckId
         GROUP BY ${hasTableColumn('session_history_metadata', 'title') ? 'shm.title' : 'shm.id'}, shm.year
       `).all(userFilter.param);
 
-      const preparedMovies = movies.map(movie => ({
-        movie,
-        movieTitles: [movie.plexTitle, movie.title].filter(Boolean),
-        movieIds: buildExternalIds(movie.ids || {})
-      }));
+      const preparedMovies = movies.map(movie => {
+        const mapping = getItemMapping(achievementId, movie);
+        const mappedTitle = String(mapping?.matched_title || '').trim();
+        const mappedGuidIds = extractIdsFromRawGuidValue(mapping?.matched_guid);
+        return {
+          movie,
+          movieTitles: [mappedTitle, movie.plexTitle, movie.title].filter(Boolean),
+          movieIds: mergeIdSets(buildExternalIds(movie.ids || {}), mappedGuidIds)
+        };
+      });
 
       let cnt = 0;
       let lastStopped = 0;
@@ -1013,6 +1111,7 @@ async function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckId
           cnt += 1;
           lastStopped = Math.max(lastStopped, Number(matched.last_stopped || 0));
           matchedItems.push(preparedMovie.movie.title);
+          saveItemMapping(achievementId, preparedMovie.movie, 'movie', matched);
         } else {
           unmatchedItems.push(preparedMovie.movie.title);
         }
@@ -1028,7 +1127,7 @@ async function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckId
    * Compte les séries regardées par l'utilisateur via leurs titres (grandparent_title).
    * La règle est "au moins un épisode vu" par série.
    */
-  const countShowsByTitle = (shows) => {
+  const countShowsByTitle = (achievementId, shows) => {
     if (!shows || !shows.length) return { cnt: 0, last_stopped: null, matchedItems: [], unmatchedItems: [] };
     try {
       const showTitleColumns = getSessionHistoryMetadataShowTitleColumns('shm');
@@ -1045,11 +1144,16 @@ async function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckId
         GROUP BY ${hasTableColumn('session_history_metadata', 'grandparent_title') ? 'shm.grandparent_title' : 'shm.id'}
       `).all(userFilter.param);
 
-      const preparedShows = shows.map(show => ({
-        show,
-        showTitles: [show.plexTitle, show.title].filter(Boolean),
-        showIds: buildExternalIds(show.ids || {})
-      }));
+      const preparedShows = shows.map(show => {
+        const mapping = getItemMapping(achievementId, show);
+        const mappedTitle = String(mapping?.matched_title || '').trim();
+        const mappedGuidIds = extractIdsFromRawGuidValue(mapping?.matched_guid);
+        return {
+          show,
+          showTitles: [mappedTitle, show.plexTitle, show.title].filter(Boolean),
+          showIds: mergeIdSets(buildExternalIds(show.ids || {}), mappedGuidIds)
+        };
+      });
 
       let cnt = 0;
       let lastStopped = 0;
@@ -1081,6 +1185,7 @@ async function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckId
           cnt += 1;
           lastStopped = Math.max(lastStopped, Number(matched.last_stopped || 0));
           matchedItems.push(preparedShow.show.title);
+          saveItemMapping(achievementId, preparedShow.show, 'show', matched);
         } else {
           unmatchedItems.push(preparedShow.show.title);
         }
@@ -1101,7 +1206,7 @@ async function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckId
     if (traktItems && traktItems.length > 0) {
       const traktMovies = traktItems.filter(item => item.type === 'movie');
       if (traktMovies.length > 0) {
-        const row = countMoviesByTitleYear(traktMovies);
+        const row = countMoviesByTitleYear(id, traktMovies);
         const required = traktMovies.length;
         const current = Math.min(row.cnt, required);
         log.debug(`${id} (trakt films): ${current}/${required}`);
@@ -1133,10 +1238,10 @@ async function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckId
     let movieRow = { cnt: 0, last_stopped: null };
     let showRow = { cnt: 0, last_stopped: null };
 
-    if (movieItems.length > 0) movieRow = countMoviesByTitleYear(movieItems);
+    if (movieItems.length > 0) movieRow = countMoviesByTitleYear(id, movieItems);
 
     if (showItems.length > 0) {
-      showRow = countShowsByTitle(showItems);
+      showRow = countShowsByTitle(id, showItems);
     }
 
     const currentMovies = Math.min(movieRow.cnt || 0, requiredMovies);
