@@ -98,10 +98,20 @@ async function getTraktListItems(achievementId) {
       .filter(isReleasedTraktItem)
       .map(item => {
         if (item?.type === 'movie' && item.movie?.title) {
-          return { type: 'movie', title: item.movie.title, year: item.movie.year ?? null };
+          return {
+            type: 'movie',
+            title: item.movie.title,
+            year: item.movie.year ?? null,
+            ids: buildExternalIds(item.movie.ids || {})
+          };
         }
         if (item?.type === 'show' && item.show?.title) {
-          return { type: 'show', title: item.show.title, year: item.show.year ?? null };
+          return {
+            type: 'show',
+            title: item.show.title,
+            year: item.show.year ?? null,
+            ids: buildExternalIds(item.show.ids || {})
+          };
         }
         return null;
       })
@@ -138,6 +148,31 @@ function hasTableColumn(tableName, columnName) {
 
 function getPlexAvailabilityCacheKey(item) {
   return `${item.type || 'unknown'}:${String(item.title || '').toLowerCase()}::${item.year || ''}`;
+}
+
+function buildExternalIds(itemIds = {}) {
+  const ids = new Set();
+  const imdb = String(itemIds?.imdb || '').trim();
+  const tmdb = itemIds?.tmdb;
+  const tvdb = itemIds?.tvdb;
+  const trakt = itemIds?.trakt;
+  if (imdb) ids.add(`imdb:${imdb.toLowerCase()}`);
+  if (tmdb !== undefined && tmdb !== null && `${tmdb}` !== '') ids.add(`tmdb:${tmdb}`);
+  if (tvdb !== undefined && tvdb !== null && `${tvdb}` !== '') ids.add(`tvdb:${tvdb}`);
+  if (trakt !== undefined && trakt !== null && `${trakt}` !== '') ids.add(`trakt:${trakt}`);
+  return ids;
+}
+
+function extractPlexGuidIds(guidEntries = []) {
+  const ids = new Set();
+  const entries = Array.isArray(guidEntries) ? guidEntries : [guidEntries];
+  for (const entry of entries) {
+    const raw = String(entry?.id || entry || '').trim();
+    const match = raw.match(/^(imdb|tmdb|tvdb):\/\/(.+)$/i);
+    if (!match) continue;
+    ids.add(`${match[1].toLowerCase()}:${String(match[2]).toLowerCase()}`);
+  }
+  return ids;
 }
 
 function getPreferredPlexServerToken() {
@@ -218,7 +253,7 @@ async function getPlexLibraryIndex() {
 
     const sections = (await sectionsResp.json())?.MediaContainer?.Directory || [];
     const targetSections = sections.filter(section => section?.type === 'movie' || section?.type === 'show');
-    const indexedItems = new Set();
+    const indexedItems = [];
 
     for (const section of targetSections) {
       const type = section.type === 'show' ? 2 : 1;
@@ -228,6 +263,7 @@ async function getPlexLibraryIndex() {
       while (true) {
         const url = new URL(`${plexUrl}/library/sections/${section.key}/all`);
         url.searchParams.set('type', String(type));
+        url.searchParams.set('includeGuids', '1');
         url.searchParams.set('X-Plex-Container-Start', String(start));
         url.searchParams.set('X-Plex-Container-Size', String(size));
         url.searchParams.set('X-Plex-Token', plexToken);
@@ -244,7 +280,14 @@ async function getPlexLibraryIndex() {
             title,
             year: entry?.year ?? null
           });
-          indexedItems.add(cacheKey);
+          indexedItems.push({
+            cacheKey,
+            type: section.type === 'show' ? 'show' : 'movie',
+            title,
+            normalizedTitle: normalizeCollectionTitle(title),
+            year: entry?.year ?? null,
+            ids: extractPlexGuidIds(entry?.Guid || entry?.Guids || [])
+          });
         }
 
         if (metadata.length < size) break;
@@ -255,7 +298,7 @@ async function getPlexLibraryIndex() {
     plexLibraryIndexCache.items = indexedItems;
     plexLibraryIndexCache.ts = now;
     plexLibraryIndexCache.failedAt = 0;
-    log.info(`Index Plex collections: ${indexedItems.size} éléments référencés`);
+    log.info(`Index Plex collections: ${indexedItems.length} éléments référencés`);
     return indexedItems;
   } catch (err) {
     plexLibraryIndexCache.failedAt = now;
@@ -283,7 +326,22 @@ async function isItemAvailableInPlex(item) {
     const index = await getPlexLibraryIndex();
     if (!index) return false;
 
-    const available = index.has(cacheKey);
+    const itemIds = buildExternalIds(item?.ids || {});
+    let available = false;
+
+    if (itemIds.size > 0) {
+      available = index.some(entry =>
+        entry.type === item.type &&
+        [...itemIds].some(id => entry.ids?.has(id))
+      );
+    }
+
+    if (!available) {
+      available = index.some(entry =>
+        entry.type === item.type &&
+        collectionTitleMatches(entry.title, item.title, entry.year, item.year)
+      );
+    }
 
     plexAvailabilityCache[cacheKey] = { available, ts: now };
     return available;
