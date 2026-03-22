@@ -958,7 +958,7 @@ async function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckId
    * Le matching par titre+année est robuste aux re-scans Plex qui changent les GUIDs.
    */
   const countMoviesByTitleYear = (movies) => {
-    if (!movies || !movies.length) return { cnt: 0, last_stopped: null };
+    if (!movies || !movies.length) return { cnt: 0, last_stopped: null, matchedItems: [], unmatchedItems: [] };
     try {
       const completionSql = getMovieCompletionSql('sh', 'shm');
       const movieTitleColumns = getSessionHistoryMetadataMovieTitleColumns('shm');
@@ -985,6 +985,8 @@ async function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckId
 
       let cnt = 0;
       let lastStopped = 0;
+      const matchedItems = [];
+      const unmatchedItems = [];
       for (const preparedMovie of preparedMovies) {
         const matched = watchedRows.find(row =>
           (
@@ -1010,12 +1012,15 @@ async function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckId
         if (matched) {
           cnt += 1;
           lastStopped = Math.max(lastStopped, Number(matched.last_stopped || 0));
+          matchedItems.push(preparedMovie.movie.title);
+        } else {
+          unmatchedItems.push(preparedMovie.movie.title);
         }
       }
-      return { cnt, last_stopped: lastStopped || null };
+      return { cnt, last_stopped: lastStopped || null, matchedItems, unmatchedItems };
     } catch(e) {
       log.warn('countMoviesByTitleYear:', e.message);
-      return { cnt: 0, last_stopped: null };
+      return { cnt: 0, last_stopped: null, matchedItems: [], unmatchedItems: movies.map(movie => movie.title).filter(Boolean) };
     }
   };
 
@@ -1024,7 +1029,7 @@ async function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckId
    * La règle est "au moins un épisode vu" par série.
    */
   const countShowsByTitle = (shows) => {
-    if (!shows || !shows.length) return { cnt: 0, last_stopped: null };
+    if (!shows || !shows.length) return { cnt: 0, last_stopped: null, matchedItems: [], unmatchedItems: [] };
     try {
       const showTitleColumns = getSessionHistoryMetadataShowTitleColumns('shm');
       const showGuidColumns = getSessionHistoryMetadataGuidColumns('shm');
@@ -1048,6 +1053,8 @@ async function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckId
 
       let cnt = 0;
       let lastStopped = 0;
+      const matchedItems = [];
+      const unmatchedItems = [];
       for (const preparedShow of preparedShows) {
         const matched = watchedRows.find(row =>
           (
@@ -1073,12 +1080,15 @@ async function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckId
         if (matched) {
           cnt += 1;
           lastStopped = Math.max(lastStopped, Number(matched.last_stopped || 0));
+          matchedItems.push(preparedShow.show.title);
+        } else {
+          unmatchedItems.push(preparedShow.show.title);
         }
       }
-      return { cnt, last_stopped: lastStopped || null };
+      return { cnt, last_stopped: lastStopped || null, matchedItems, unmatchedItems };
     } catch(e) {
       log.warn('countShowsByTitle:', e.message);
-      return { cnt: 0, last_stopped: null };
+      return { cnt: 0, last_stopped: null, matchedItems: [], unmatchedItems: shows.map(show => show.title).filter(Boolean) };
     }
   };
 
@@ -1138,9 +1148,29 @@ async function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckId
     log.debug(`${id} (mixte): films ${currentMovies}/${requiredMovies}, séries ${currentShows}/${requiredShows}`);
 
     if (totalRequired > 0 && currentMovies >= requiredMovies && currentShows >= requiredShows) {
-      return { date: fmt(maxStopped) || today, current: totalCurrent, total: totalRequired };
+      return {
+        date: fmt(maxStopped) || today,
+        current: totalCurrent,
+        total: totalRequired,
+        details: {
+          matchedMovies: movieRow.matchedItems || [],
+          unmatchedMovies: movieRow.unmatchedItems || [],
+          matchedShows: showRow.matchedItems || [],
+          unmatchedShows: showRow.unmatchedItems || []
+        }
+      };
     }
-    return { date: null, current: totalCurrent, total: totalRequired };
+    return {
+      date: null,
+      current: totalCurrent,
+      total: totalRequired,
+      details: {
+        matchedMovies: movieRow.matchedItems || [],
+        unmatchedMovies: movieRow.unmatchedItems || [],
+        matchedShows: showRow.matchedItems || [],
+        unmatchedShows: showRow.unmatchedItems || []
+      }
+    };
   };
 
   log.debug(`Évaluation secrets pour ${norm}: [${toCheckIds.join(', ')}]`);
@@ -1200,6 +1230,10 @@ async function evaluateSecretAchievements(username, joinedAtTimestamp, toCheckId
         // 🦖 MonsterVerse — Collections films + séries
         case 'monsterverse': {
           const r = await checkMixedCollection(id);
+          log.info(`monsterverse detail: films vus [${(r.details?.matchedMovies || []).join(' | ')}]`);
+          log.info(`monsterverse detail: films manquants [${(r.details?.unmatchedMovies || []).join(' | ')}]`);
+          log.info(`monsterverse detail: series vues [${(r.details?.matchedShows || []).join(' | ')}]`);
+          log.info(`monsterverse detail: series manquantes [${(r.details?.unmatchedShows || []).join(' | ')}]`);
           if (r.date) results[id] = r.date;
           if (r.total > 0) progress[id] = { current: r.current, total: r.total };
           break;
