@@ -293,15 +293,21 @@ app.get("/", async (req, res) => {
     return res.redirect(redirectUrl);
   }
 
+  const uptimeKumaUrl = String(getConfigValue("UPTIME_KUMA_URL", "") || "").trim();
+  const uptimeKumaUsername = String(getConfigValue("UPTIME_KUMA_USERNAME", "") || "").trim();
+  const uptimeKumaPassword = String(getConfigValue("UPTIME_KUMA_PASSWORD", "") || "").trim();
+
   let uptimeKuma = null;
-  try {
-    uptimeKuma = await getPublicStatusPageSummary({
-      baseUrl: getConfigValue("UPTIME_KUMA_URL", ""),
-      username: getConfigValue("UPTIME_KUMA_USERNAME", ""),
-      password: getConfigValue("UPTIME_KUMA_PASSWORD", "")
-    });
-  } catch (_) {
-    uptimeKuma = null;
+  if (uptimeKumaUrl && uptimeKumaUsername && uptimeKumaPassword) {
+    try {
+      uptimeKuma = await getPublicStatusPageSummary({
+        baseUrl: uptimeKumaUrl,
+        username: uptimeKumaUsername,
+        password: uptimeKumaPassword
+      });
+    } catch (_) {
+      uptimeKuma = null;
+    }
   }
 
   res.render("login", {
