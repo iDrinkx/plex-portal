@@ -1170,19 +1170,10 @@ router.get("/mes-stats", requireAuth, (req, res) => {
 router.get("/succes", requireAuth, async (req, res) => {
   try {
     const collectionsEnabled = areCollectionAchievementsEnabled();
-    let achievementState = await getUserAchievementState(req.session.user, { skipRefresh: true });
-    const collectionAchievementIds = collectionsEnabled ? ACHIEVEMENTS.collections.map(a => a.id) : [];
-    const collectionsMissingState = collectionsEnabled && collectionAchievementIds.length > 0
-      && !collectionAchievementIds.some(id =>
-        achievementState.userUnlockedMap?.[id] || achievementState.progressMap?.[id]
-      );
-
-    if (collectionsMissingState && !achievementState.snapshot?.updatedAt) {
-      achievementState = await refreshUserAchievementState(req.session.user, { includeSecretEvaluation: true });
-    }
+    const achievementState = await getUserAchievementState(req.session.user, { skipRefresh: true });
 
     let backgroundRefreshStatus = getBackgroundAchievementRefreshStatus(req.session.user);
-    if ((achievementState.needsRefresh || collectionsMissingState) && !backgroundRefreshStatus.running && !backgroundRefreshStatus.queued) {
+    if ((achievementState.needsRefresh || !achievementState.snapshot?.updatedAt) && !backgroundRefreshStatus.running && !backgroundRefreshStatus.queued) {
       queueBackgroundAchievementRefresh(req.session.user, { includeSecretEvaluation: true });
       backgroundRefreshStatus = getBackgroundAchievementRefreshStatus(req.session.user);
     }
@@ -1319,7 +1310,7 @@ router.get('/api/badges-eval', requireAuth, async (req, res) => {
   try {
     const state = await getUserAchievementState(req.session.user, { skipRefresh: true });
     let refreshStatus = getBackgroundAchievementRefreshStatus(req.session.user);
-    if (!refreshStatus.running && !refreshStatus.queued) {
+    if ((state.needsRefresh || !state.snapshot?.updatedAt) && !refreshStatus.running && !refreshStatus.queued) {
       queueBackgroundAchievementRefresh(req.session.user, { includeSecretEvaluation: true });
       refreshStatus = getBackgroundAchievementRefreshStatus(req.session.user);
     }
