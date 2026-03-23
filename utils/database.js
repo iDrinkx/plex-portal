@@ -129,12 +129,6 @@ function mergeUsersCaseInsensitive() {
     const mergedEmail = canonical.email || rows.find((row) => row.email)?.email || null;
     const mergedJoinedAt = canonical.joinedAt || rows.find((row) => row.joinedAt)?.joinedAt || null;
 
-    db.prepare(`
-      UPDATE users
-      SET username = ?, plexId = ?, email = ?, joinedAt = ?, updatedAt = CURRENT_TIMESTAMP
-      WHERE id = ?
-    `).run(normalizedUsername, mergedPlexId, mergedEmail, mergedJoinedAt, canonical.id);
-
     for (const duplicate of duplicates) {
       db.prepare(`
         INSERT INTO watch_history (
@@ -249,6 +243,12 @@ function mergeUsersCaseInsensitive() {
 
       db.prepare(`DELETE FROM users WHERE id = ?`).run(duplicate.id);
     }
+
+    db.prepare(`
+      UPDATE users
+      SET username = ?, plexId = ?, email = ?, joinedAt = ?, updatedAt = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).run(normalizedUsername, mergedPlexId, mergedEmail, mergedJoinedAt, canonical.id);
 
     return duplicates.length;
   });
