@@ -1,3 +1,12 @@
+## [1.39.8](https://github.com/iDrinkx/portall/compare/v1.39.7...v1.39.8) (2026-03-23)
+
+### Corrections de bugs
+
+* erreur wizarr join att ([09bcbe0](https://github.com/iDrinkx/portall/commit/09bcbe0349332e74af07fba413150cc1485274ff))
+* succès secrets ([67aed23](https://github.com/iDrinkx/portall/commit/67aed232d50d0637eacff4da4c4038fa07979eaf))
+* trakt erreur ([acc4daf](https://github.com/iDrinkx/portall/commit/acc4daf943e9cfc52d603fa9c1ef7f5ac291497a))
+* wizarr logs error ([eab0baf](https://github.com/iDrinkx/portall/commit/eab0bafaada246f3814e5b03f6a5afc46e7cbfd3))
+
 ## [1.39.7](https://github.com/iDrinkx/portall/compare/v1.39.6...v1.39.7) (2026-03-22)
 
 ### Corrections de bugs
