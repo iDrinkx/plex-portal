@@ -1450,13 +1450,15 @@ router.get("/api/seerr", requireAuth, async (req, res) => {
     const userEmail = req.session.user?.email;
     const username = req.session.user?.username;
     const plexUserId = req.session.user?.id;
+    const connectSidMatch = String(req.headers.cookie || "").match(/(?:^|;\s*)connect\.sid=([^;]+)/);
+    const sessionCookie = connectSidMatch ? `connect.sid=${connectSidMatch[1]}` : "";
     
     if (!userEmail) {
       return res.status(400).json({ error: "No user email in session" });
     }
 
     // Clé de cache utilisant l'ID Plex pour plus de certitude
-    const cacheKey = `seerr:${plexUserId}`;
+    const cacheKey = `seerr:${plexUserId}:${sessionCookie ? "sid" : "nosid"}`;
     
     const seerr = await cache.getOrSet(
       cacheKey,
@@ -1464,7 +1466,8 @@ router.get("/api/seerr", requireAuth, async (req, res) => {
         userEmail,
         username,
         process.env.SEERR_URL,
-        process.env.SEERR_API_KEY
+        process.env.SEERR_API_KEY,
+        { sessionCookie }
       ),
       60 * 1000 // 60 secondes
     );

@@ -57,6 +57,7 @@ async function createSeerrSessionCookie(SEERR_URL) {
 
 async function fetchSeerrJson(url, SEERR_API_KEY, SEERR_URL, options = {}) {
   const requireSession = options.requireSession === true;
+  const preferredSessionCookie = String(options.sessionCookie || "").trim();
 
   async function run(headers) {
     const res = await fetch(url, { headers });
@@ -84,7 +85,7 @@ async function fetchSeerrJson(url, SEERR_API_KEY, SEERR_URL, options = {}) {
     }
   }
 
-  const sessionCookie = await createSeerrSessionCookie(SEERR_URL);
+  const sessionCookie = preferredSessionCookie || await createSeerrSessionCookie(SEERR_URL);
   if (!sessionCookie) return null;
 
   const cookieAttempt = await run({
@@ -216,7 +217,7 @@ async function getCurrentSeerrUser(SEERR_URL, SEERR_API_KEY) {
  * @param {string} SEERR_API_KEY - Cle API Seerr
  * @returns {Promise<Object|null>} Stats avec quotas restants
  */
-async function getSeerrStats(userEmail, username, SEERR_URL, SEERR_API_KEY) {
+async function getSeerrStats(userEmail, username, SEERR_URL, SEERR_API_KEY, options = {}) {
   try {
     if (!SEERR_URL || !SEERR_API_KEY || !userEmail) {
       return null;
@@ -238,7 +239,9 @@ async function getSeerrStats(userEmail, username, SEERR_URL, SEERR_API_KEY) {
       url.searchParams.set("skip", skip);
       url.searchParams.set("take", take);
 
-      const json = await fetchSeerrJson(url.toString(), SEERR_API_KEY, SEERR_URL);
+      const json = await fetchSeerrJson(url.toString(), SEERR_API_KEY, SEERR_URL, {
+        sessionCookie: options.sessionCookie
+      });
       if (!json) break;
 
       let requests = [];
@@ -264,7 +267,10 @@ async function getSeerrStats(userEmail, username, SEERR_URL, SEERR_API_KEY) {
       `${SEERR_URL}/api/v1/user/${userIdNum}/quota`,
       SEERR_API_KEY,
       SEERR_URL,
-      { requireSession: true }
+      {
+        requireSession: true,
+        sessionCookie: options.sessionCookie
+      }
     );
 
     const now = Date.now();
