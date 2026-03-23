@@ -513,6 +513,19 @@ const WatchHistoryQueries = {
       FROM watch_history 
       ORDER BY user_id, scannedAt DESC
     `).all();
+  },
+
+  /**
+   * Reparer les lignes incoherentes ou totalHours < movieHours + episodeHours.
+   * Ce correctif est conservateur: il ne modifie que les totaux manifestement faux.
+   */
+  repairInconsistentTotals() {
+    const db = getDb();
+    return db.prepare(`
+      UPDATE watch_history
+      SET totalHours = ROUND(COALESCE(movieHours, 0) + COALESCE(episodeHours, 0), 1)
+      WHERE ROUND(COALESCE(totalHours, 0), 1) < ROUND(COALESCE(movieHours, 0) + COALESCE(episodeHours, 0), 1)
+    `).run();
   }
 };
 

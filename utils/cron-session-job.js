@@ -25,7 +25,17 @@ function startSessionCronJob(TAUTULLI_URL, TAUTULLI_API_KEY, PLEX_URL, PLEX_TOKE
       console.log(`[CRON-JOB] Lancement scan intelligent (delta mode) - source prioritaire: ${hasDirectDb ? 'tautulli.db' : 'api'}`);
       const scanStartTime = Date.now();
 
+      const repairedBeforeScan = SessionStatsCache.repairInconsistentWatchHistory();
+      if (repairedBeforeScan > 0) {
+        console.log(`[CRON-JOB]   Reparation watch_history avant scan: ${repairedBeforeScan} ligne(s)`);
+      }
+
       const result = await scanTautulliHistoryForAllUsers(TAUTULLI_URL, TAUTULLI_API_KEY);
+
+      const repairedAfterScan = SessionStatsCache.repairInconsistentWatchHistory();
+      if (repairedAfterScan > 0) {
+        console.log(`[CRON-JOB]   Reparation watch_history apres scan: ${repairedAfterScan} ligne(s)`);
+      }
 
       const duration = Math.round((Date.now() - scanStartTime) / 1000);
       const cachedCount = SessionStatsCache.getKeys().length;
