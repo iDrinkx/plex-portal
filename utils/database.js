@@ -88,6 +88,185 @@ function attemptAddColumn(tableName, columnName, columnDef) {
   }
 }
 
+function normalizeUsername(username) {
+  return String(username || '').trim().toLowerCase();
+}
+
+function mergeUsersCaseInsensitive() {
+  const log = require('./logger').create('[DB]');
+  const groups = db.prepare(`
+    SELECT LOWER(TRIM(username)) AS normalized_username, COUNT(*) AS duplicate_count
+    FROM users
+    GROUP BY LOWER(TRIM(username))
+    HAVING COUNT(*) > 1
+  `).all();
+
+  if (!groups.length) {
+    const normalized = db.prepare(`
+      UPDATE users
+      SET username = LOWER(TRIM(username)), updatedAt = CURRENT_TIMESTAMP
+      WHERE username != LOWER(TRIM(username))
+    `).run();
+    if (normalized.changes > 0) {
+      log.info(`Migration usernames normalises: ${normalized.changes} utilisateur(s)`);
+    }
+    return;
+  }
+
+  const mergeOneGroup = db.transaction((normalizedUsername) => {
+    const rows = db.prepare(`
+      SELECT *
+      FROM users
+      WHERE LOWER(TRIM(username)) = ?
+      ORDER BY id ASC
+    `).all(normalizedUsername);
+
+    if (rows.length < 2) return 0;
+
+    const canonical = rows[0];
+    const duplicates = rows.slice(1);
+    const mergedPlexId = canonical.plexId || rows.find((row) => row.plexId)?.plexId || null;
+    const mergedEmail = canonical.email || rows.find((row) => row.email)?.email || null;
+    const mergedJoinedAt = canonical.joinedAt || rows.find((row) => row.joinedAt)?.joinedAt || null;
+
+    db.prepare(`
+      UPDATE users
+      SET username = ?, plexId = ?, email = ?, joinedAt = ?, updatedAt = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).run(normalizedUsername, mergedPlexId, mergedEmail, mergedJoinedAt, canonical.id);
+
+    for (const duplicate of duplicates) {
+      db.prepare(`
+        INSERT INTO watch_history (
+          user_id, scannedAt, movieCount, movieHours, episodeCount, episodeHours, totalHours, sessionCount, lastSessionTimestamp
+        )
+        SELECT ?, scannedAt, movieCount, movieHours, episodeCount, episodeHours, totalHours, sessionCount, lastSessionTimestamp
+        FROM watch_history
+        WHERE user_id = ?
+        ON CONFLICT(user_id, scannedAt) DO UPDATE SET
+          movieCount = MAX(watch_history.movieCount, excluded.movieCount),
+          movieHours = MAX(watch_history.movieHours, excluded.movieHours),
+          episodeCount = MAX(watch_history.episodeCount, excluded.episodeCount),
+          episodeHours = MAX(watch_history.episodeHours, excluded.episodeHours),
+          totalHours = MAX(
+            watch_history.totalHours,
+            excluded.totalHours,
+            ROUND(COALESCE(watch_history.movieHours, 0) + COALESCE(watch_history.episodeHours, 0), 1),
+            ROUND(COALESCE(excluded.movieHours, 0) + COALESCE(excluded.episodeHours, 0), 1)
+          ),
+          sessionCount = MAX(watch_history.sessionCount, excluded.sessionCount),
+          lastSessionTimestamp = CASE
+            WHEN excluded.lastSessionTimestamp IS NULL THEN watch_history.lastSessionTimestamp
+            WHEN watch_history.lastSessionTimestamp IS NULL THEN excluded.lastSessionTimestamp
+            WHEN excluded.lastSessionTimestamp > watch_history.lastSessionTimestamp THEN excluded.lastSessionTimestamp
+            ELSE watch_history.lastSessionTimestamp
+          END
+      `).run(canonical.id, duplicate.id);
+      db.prepare(`DELETE FROM watch_history WHERE user_id = ?`).run(duplicate.id);
+
+      db.prepare(`UPDATE session_cache SET user_id = ? WHERE user_id = ?`).run(canonical.id, duplicate.id);
+      db.prepare(`UPDATE tautulli_sessions SET user_id = ?, username = ? WHERE user_id = ?`).run(canonical.id, normalizedUsername, duplicate.id);
+
+      db.prepare(`
+        INSERT INTO user_watch_stats (
+          user_id, username, session_count, total_duration_seconds, last_session_date,
+          movie_count, movie_duration_seconds, episode_count, episode_duration_seconds, last_sync_timestamp, updated_at
+        )
+        SELECT ?, ?, session_count, total_duration_seconds, last_session_date,
+               movie_count, movie_duration_seconds, episode_count, episode_duration_seconds, last_sync_timestamp, updated_at
+        FROM user_watch_stats
+        WHERE user_id = ?
+        ON CONFLICT(user_id) DO UPDATE SET
+          username = excluded.username,
+          session_count = MAX(user_watch_stats.session_count, excluded.session_count),
+          total_duration_seconds = MAX(user_watch_stats.total_duration_seconds, excluded.total_duration_seconds),
+          last_session_date = CASE
+            WHEN excluded.last_session_date IS NULL THEN user_watch_stats.last_session_date
+            WHEN user_watch_stats.last_session_date IS NULL THEN excluded.last_session_date
+            WHEN excluded.last_session_date > user_watch_stats.last_session_date THEN excluded.last_session_date
+            ELSE user_watch_stats.last_session_date
+          END,
+          movie_count = MAX(user_watch_stats.movie_count, excluded.movie_count),
+          movie_duration_seconds = MAX(user_watch_stats.movie_duration_seconds, excluded.movie_duration_seconds),
+          episode_count = MAX(user_watch_stats.episode_count, excluded.episode_count),
+          episode_duration_seconds = MAX(user_watch_stats.episode_duration_seconds, excluded.episode_duration_seconds),
+          last_sync_timestamp = MAX(user_watch_stats.last_sync_timestamp, excluded.last_sync_timestamp),
+          updated_at = CURRENT_TIMESTAMP
+      `).run(canonical.id, normalizedUsername, duplicate.id);
+      db.prepare(`DELETE FROM user_watch_stats WHERE user_id = ?`).run(duplicate.id);
+
+      db.prepare(`
+        INSERT OR IGNORE INTO user_achievements (user_id, achievement_id, unlocked_date, granted_by, created_at)
+        SELECT ?, achievement_id, unlocked_date, granted_by, created_at
+        FROM user_achievements
+        WHERE user_id = ?
+      `).run(canonical.id, duplicate.id);
+      db.prepare(`DELETE FROM user_achievements WHERE user_id = ?`).run(duplicate.id);
+
+      db.prepare(`
+        INSERT INTO achievement_progress (user_id, achievement_id, current, total, updated_at)
+        SELECT ?, achievement_id, current, total, updated_at
+        FROM achievement_progress
+        WHERE user_id = ?
+        ON CONFLICT(user_id, achievement_id) DO UPDATE SET
+          current = MAX(achievement_progress.current, excluded.current),
+          total = MAX(achievement_progress.total, excluded.total),
+          updated_at = CURRENT_TIMESTAMP
+      `).run(canonical.id, duplicate.id);
+      db.prepare(`DELETE FROM achievement_progress WHERE user_id = ?`).run(duplicate.id);
+
+      db.prepare(`
+        INSERT INTO achievement_snapshots (
+          user_id, total_hours, movie_count, episode_count, session_count, monthly_hours, night_count, morning_count, updated_at
+        )
+        SELECT ?, total_hours, movie_count, episode_count, session_count, monthly_hours, night_count, morning_count, updated_at
+        FROM achievement_snapshots
+        WHERE user_id = ?
+        ON CONFLICT(user_id) DO UPDATE SET
+          total_hours = MAX(achievement_snapshots.total_hours, excluded.total_hours),
+          movie_count = MAX(achievement_snapshots.movie_count, excluded.movie_count),
+          episode_count = MAX(achievement_snapshots.episode_count, excluded.episode_count),
+          session_count = MAX(achievement_snapshots.session_count, excluded.session_count),
+          monthly_hours = MAX(achievement_snapshots.monthly_hours, excluded.monthly_hours),
+          night_count = MAX(achievement_snapshots.night_count, excluded.night_count),
+          morning_count = MAX(achievement_snapshots.morning_count, excluded.morning_count),
+          updated_at = CURRENT_TIMESTAMP
+      `).run(canonical.id, duplicate.id);
+      db.prepare(`DELETE FROM achievement_snapshots WHERE user_id = ?`).run(duplicate.id);
+
+      db.prepare(`
+        INSERT INTO user_service_credentials (user_id, service_key, username, secret_encrypted, meta_json, updated_at)
+        SELECT ?, service_key, username, secret_encrypted, meta_json, updated_at
+        FROM user_service_credentials
+        WHERE user_id = ?
+        ON CONFLICT(user_id, service_key) DO UPDATE SET
+          username = COALESCE(NULLIF(user_service_credentials.username, ''), excluded.username),
+          secret_encrypted = COALESCE(NULLIF(user_service_credentials.secret_encrypted, ''), excluded.secret_encrypted),
+          meta_json = COALESCE(user_service_credentials.meta_json, excluded.meta_json),
+          updated_at = CURRENT_TIMESTAMP
+      `).run(canonical.id, duplicate.id);
+      db.prepare(`DELETE FROM user_service_credentials WHERE user_id = ?`).run(duplicate.id);
+
+      db.prepare(`DELETE FROM users WHERE id = ?`).run(duplicate.id);
+    }
+
+    return duplicates.length;
+  });
+
+  let mergedUsers = 0;
+  for (const group of groups) {
+    mergedUsers += mergeOneGroup(group.normalized_username);
+  }
+
+  const normalized = db.prepare(`
+    UPDATE users
+    SET username = LOWER(TRIM(username)), updatedAt = CURRENT_TIMESTAMP
+    WHERE username != LOWER(TRIM(username))
+  `).run();
+
+  log.warn(`Migration usernames fusionnes: ${mergedUsers} doublon(s) rattache(s), ${normalized.changes} username(s) normalise(s)`);
+}
+
 /**
  * Exécuter les migrations (créer les tables si elles n'existent pas)
  */
@@ -331,6 +510,11 @@ function runMigrations() {
       CREATE UNIQUE INDEX IF NOT EXISTS idx_user_service_credentials_user_service ON user_service_credentials(user_id, service_key);
     `);  // indexes
 
+    mergeUsersCaseInsensitive();
+    db.exec(`
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username_ci ON users(LOWER(username));
+    `);
+
     // 🔄 Migration données : renommage d'IDs de badges
     try {
       const renamed = db.prepare(`UPDATE user_achievements SET achievement_id = ? WHERE achievement_id = ?`);
@@ -390,6 +574,8 @@ const UserQueries = {
    */
   upsert(username, plexId, email, joinedAt) {
     const db = getDb();
+    const normalizedUsername = normalizeUsername(username);
+    if (!normalizedUsername) return null;
     const stmt = db.prepare(`
       INSERT INTO users (username, plexId, email, joinedAt)
       VALUES (?, ?, ?, ?)
@@ -400,7 +586,7 @@ const UserQueries = {
         updatedAt = CURRENT_TIMESTAMP
       RETURNING *
     `);
-    return stmt.get(username, plexId || null, email || null, joinedAt || null);
+    return stmt.get(normalizedUsername, plexId || null, email || null, joinedAt || null);
   },
   
   /**
@@ -408,7 +594,9 @@ const UserQueries = {
    */
   getByUsername(username) {
     const db = getDb();
-    return db.prepare('SELECT * FROM users WHERE username = ?').get(username);
+    const normalizedUsername = normalizeUsername(username);
+    if (!normalizedUsername) return null;
+    return db.prepare('SELECT * FROM users WHERE username = ?').get(normalizedUsername);
   },
   
   /**
