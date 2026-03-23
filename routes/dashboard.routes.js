@@ -51,6 +51,9 @@ const {
 const { SUPPORTED_LOCALES, getSiteLanguage } = require("../utils/i18n");
 const { BACKGROUND_PRESETS, getSiteBackgroundSettings, saveSiteBackgroundSettings } = require("../utils/site-background");
 
+const PLEX_LIVE_TIMEOUT_MS = 12000;
+const NOW_PLAYING_CACHE_TTL_MS = 45 * 1000;
+
 /* ===============================
    ?? AUTH
 =============================== */
@@ -2014,6 +2017,7 @@ router.delete("/api/admin/dashboard-cards/:id", requireAuth, requireAdmin, (req,
 router.get("/api/now-playing", requireAuth, async (req, res) => {
   const plexUrl   = String(getConfigValue("PLEX_URL", "") || "").replace(/\/$/, "");
   const plexToken = getEffectivePlexToken();
+  const liveCacheKey = `now-playing-live:${req.session.user.id}`;
   const buildLastPlayedResponse = () => {
     const username = String(req.session.user.username || "");
     const last = getLastPlayedItem(username);
@@ -2036,7 +2040,7 @@ router.get("/api/now-playing", requireAuth, async (req, res) => {
   try {
     const r = await fetch(`${plexUrl}/status/sessions`, {
       headers: { "X-Plex-Token": plexToken, "Accept": "application/json" },
-      timeout: 5000
+      timeout: PLEX_LIVE_TIMEOUT_MS
     });
     if (!r.ok) return res.json(buildLastPlayedResponse());
     const bodyText = await r.text();
@@ -2070,7 +2074,7 @@ router.get("/api/now-playing", requireAuth, async (req, res) => {
       ? (req.basePath || "") + "/api/plex-thumb?path=" + encodeURIComponent(mySession.thumb)
       : null;
 
-    res.json({
+    const payload = {
       playing:      true,
       state:        mySession.Player?.state || "playing",   // playing | paused | buffering
       type:         mySession.type,                          // episode | movie | track
@@ -2080,9 +2084,14 @@ router.get("/api/now-playing", requireAuth, async (req, res) => {
       thumb,
       progressPct,
       player:       mySession.Player?.title || "",           // nom de l'appareil
-    });
+    };
+
+    cache.set(liveCacheKey, payload, NOW_PLAYING_CACHE_TTL_MS);
+    res.json(payload);
   } catch (e) {
-    log.create('[NowPlaying]').warn(e.message);
+    log.create('[NowPlaying]').warn(`${e.message} while trying to fetch ${plexUrl}/status/sessions (over ${PLEX_LIVE_TIMEOUT_MS}ms)`);
+    const cachedLive = cache.get(liveCacheKey);
+    if (cachedLive) return res.json(cachedLive);
     res.json(buildLastPlayedResponse());
   }
 });
@@ -2109,7 +2118,10 @@ router.get("/api/plex-thumb", requireAuth, async (req, res) => {
   }
 
   try {
-    const r = await fetch(`${plexUrl}${thumbPath}?X-Plex-Token=${plexToken}`, { timeout: 8000 });
+    const r = await fetch(`${plexUrl}${thumbPath}`, {
+      headers: { "X-Plex-Token": plexToken },
+      timeout: 12000
+    });
     if (!r.ok) return res.status(404).end();
     const ct = r.headers.get("content-type") || "";
     // N'accepter que des images en réponse
