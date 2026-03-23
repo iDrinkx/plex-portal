@@ -3,9 +3,14 @@ const fetch = require('node-fetch');
 const log = require('./logger');
 const { UserQueries } = require('./database');
 const { XP_SYSTEM } = require('./xp-system');
-const { getUserStatsFromTautulli, getAllUserStatsFromTautulli, isTautulliReady } = require('./tautulli-direct');
-const { calculateUserXp } = require('./xp-calculator');  // 🎯 Fonction centralisée XP
-const { refreshUserAchievementState, queueBackgroundAchievementRefresh } = require('./achievement-state');
+const {
+  getUserStatsFromTautulli,
+  getAllUserStatsFromTautulli,
+  getMonthlyHoursFromTautulli,
+  getTimeBasedSessionCounts,
+  isTautulliReady
+} = require('./tautulli-direct');
+const { refreshUserAchievementState } = require('./achievement-state');
 const { getAllWizarrUsers, getAllWizarrUsersDetailed } = require('./wizarr');       // 🔑 Source de vérité
 const { getConfigValue } = require('./config');
 
@@ -18,6 +23,7 @@ let classementCache = {
   timestamp: null,
   lastRefresh: null
 };
+let classementRefreshInFlight = null;
 
 let lastValidCache = null; // Cache de secours en cas de corruption
 let corruptionCount = 0;    // Compteur de corruptions détectées
@@ -168,14 +174,20 @@ function validateCacheData(users, stats) {
  * Pré-calcule et cache les données du classement
  */
 async function refreshClassementCache() {
-  try {
-    logCR.debug('🔄 Refresh classement en cours...');
-    const startTime = Date.now();
+  if (classementRefreshInFlight) {
+    logCR.debug('⏳ Refresh classement déjà en cours - requête fusionnée');
+    return classementRefreshInFlight;
+  }
 
-    if (!isTautulliReady()) {
-      logCR.warn('Tautulli pas prêt, skip refresh');
-      return;
-    }
+  classementRefreshInFlight = (async () => {
+    try {
+      logCR.debug('🔄 Refresh classement en cours...');
+      const startTime = Date.now();
+
+      if (!isTautulliReady()) {
+        logCR.warn('Tautulli pas prêt, skip refresh');
+        return;
+      }
 
     // ══════════════════════════════════════════════════════════════════
     // ÉTAPE 1: Plex XML en premier — construit les 3 maps de référence
@@ -398,7 +410,7 @@ async function refreshClassementCache() {
         || wizarrUsers.find(entry => String(entry?.email || '').trim().toLowerCase() && emailToUsername[String(entry.email || '').trim().toLowerCase()]?.toLowerCase() === key)
         || null;
 
-      // Priorité joinedAt: Plex XML (= même source que profil) > DB > calculateUserXp fallback
+      // Priorité joinedAt: Plex XML (= même source que profil) > DB > fallback interne
       let joinedAtTs = plexJoinedAtMap[key] || null;
       if (!joinedAtTs) {
         const dbUser = UserQueries.getByUsername(stats.username);
@@ -421,25 +433,18 @@ async function refreshClassementCache() {
 
       try {
         // 🎯 Appeler la fonction centralisée avec heures DB directes (rapide, pas d'appel HTTP)
+        const monthlyHours = Number(getMonthlyHoursFromTautulli(stats.username) || 0);
+        const { nightCount, morningCount } = getTimeBasedSessionCounts(stats.username);
         const statsHint = {
           totalHours: Number(stats.totalHours ?? 0),
           sessionCount: Number(stats.sessionCount ?? stats.session_count ?? 0),
           movieCount: Number(stats.movieCount ?? stats.movie_count ?? 0),
           episodeCount: Number(stats.episodeCount ?? stats.episode_count ?? 0),
-          monthlyHours: Number(stats.monthlyHours ?? 0),
-          nightCount: Number(stats.nightCount ?? 0),
-          morningCount: Number(stats.morningCount ?? 0)
+          monthlyHours,
+          nightCount: Number(nightCount || 0),
+          morningCount: Number(morningCount || 0)
         };
-        await refreshUserAchievementState({
-          username: stats.username,
-          id: wizarrUser?.plexUserId || stats.userId || null,
-          email: wizarrUser?.email || null,
-          joinedAtTimestamp: joinedAtTs || null
-        }, {
-          precomputedStats: statsHint,
-          includeSecretEvaluation: false
-        });
-        queueBackgroundAchievementRefresh({
+        const progressionState = await refreshUserAchievementState({
           username: stats.username,
           id: wizarrUser?.plexUserId || stats.userId || null,
           email: wizarrUser?.email || null,
@@ -448,17 +453,18 @@ async function refreshClassementCache() {
           precomputedStats: statsHint,
           includeSecretEvaluation: true
         });
-        const xpData = await calculateUserXp(stats.username, joinedAtTs, stats.totalHours ?? null, statsHint);
-        logCR.debug(`✅ ${stats.username}: XP=${xpData.totalXp}, level=${xpData.level}, hours=${xpData.totalHours}`);
+        const snapshot = progressionState?.snapshot || {};
+        const rank = snapshot.rank || XP_SYSTEM.getRankByLevel(snapshot.level || 1);
+        logCR.debug(`✅ ${stats.username}: XP=${snapshot.totalXp || 0}, level=${snapshot.level || 1}, hours=${snapshot.totalHours || 0}`);
 
         return {
           username: stats.username,
           thumb,
-          totalHours: xpData.totalHours,
-          totalXp: xpData.totalXp,
-          level: xpData.level,
-          rank: xpData.rank,
-          badgeCount: xpData.badgeCount
+          totalHours: Number(snapshot.totalHours || stats.totalHours || 0),
+          totalXp: Number(snapshot.totalXp || 0),
+          level: Number(snapshot.level || 1),
+          rank,
+          badgeCount: Number(snapshot.badgeCount || 0)
         };
       } catch (err) {
         logCR.error(`⚠️  Erreur XP pour ${stats.username}: ${err.message}`);
@@ -544,11 +550,16 @@ async function refreshClassementCache() {
     classementCache = newCache;
     lastValidCache = { data: { byHours: [...byHours], byLevel: [...byLevel] } }; // Sauvegarder comme backup
 
-    const duration = Date.now() - startTime;
-    logCR.debug(`✅ Classement refreshé en ${duration}ms (${users.length} users)`);
-  } catch (err) {
-    logCR.error(`Error refreshing classement: ${err.message}`);
-  }
+      const duration = Date.now() - startTime;
+      logCR.debug(`✅ Classement refreshé en ${duration}ms (${users.length} users)`);
+    } catch (err) {
+      logCR.error(`Error refreshing classement: ${err.message}`);
+    } finally {
+      classementRefreshInFlight = null;
+    }
+  })();
+
+  return classementRefreshInFlight;
 }
 
 /**

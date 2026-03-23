@@ -9,25 +9,24 @@ const logRomm = log.create("[RomM]");
 const { computeSubscription, getAllWizarrUsersDetailed } = require("../utils/wizarr");
 const { getTautulliStats } = require("../utils/tautulli");
 const { getSeerrStats } = require("../utils/seerr");
-const { getPlexJoinDate, getServerOwnerId } = require("../utils/plex");
+const { getEffectivePlexToken, getPlexJoinDate, getServerOwnerId } = require("../utils/plex");
 const { getRadarrCalendar, getSonarrCalendar } = require("../utils/radarr-sonarr");
 const { XP_SYSTEM } = require("../utils/xp-system");
 const { ACHIEVEMENTS, hydrateAchievementTexts, areCollectionAchievementsEnabled, getAchievementXp } = require("../utils/achievements");
 const {
   UserAchievementQueries,
   UserQueries,
-  AchievementProgressQueries,
   DatabaseMaintenance,
   AppSettingQueries,
   DashboardCardQueries,
   UserServiceCredentialQueries
 } = require("../utils/database");
-const { getLastPlayedItem, getUserStatsFromTautulli } = require("../utils/tautulli-direct");
+const { getLastPlayedItem, getUserStatsFromTautulli, getServerLibraryStats } = require("../utils/tautulli-direct");
 const CacheManager = require("../utils/cache");
 const TautulliEvents = require("../utils/tautulli-events");  // ?? Import EventEmitter
-const { calculateUserXp } = require("../utils/xp-calculator");  // ?? Fonction centralisée XP
 const {
   getUserAchievementState,
+  refreshUserAchievementState,
   SUCCESS_REFRESH_TTL_MS,
   queueBackgroundAchievementRefresh,
   getBackgroundAchievementRefreshStatus
@@ -49,6 +48,9 @@ const {
 } = require("../utils/dashboard-custom-html");
 const { SUPPORTED_LOCALES, getSiteLanguage } = require("../utils/i18n");
 const { BACKGROUND_PRESETS, getSiteBackgroundSettings, saveSiteBackgroundSettings } = require("../utils/site-background");
+
+const PLEX_LIVE_TIMEOUT_MS = 12000;
+const NOW_PLAYING_CACHE_TTL_MS = 45 * 1000;
 
 /* ===============================
    ?? AUTH
@@ -72,6 +74,67 @@ async function ensureAdminFlag(req) {
     isAdmin = false;
   }
   req.session.user.isAdmin = isAdmin;
+}
+
+function decodeXmlEntities(value) {
+  return String(value || "")
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&");
+}
+
+function parseXmlAttributes(fragment = "") {
+  const attrs = {};
+  const attrRegex = /([A-Za-z0-9:_-]+)="([^"]*)"/g;
+  let match = null;
+  while ((match = attrRegex.exec(fragment)) !== null) {
+    attrs[match[1]] = decodeXmlEntities(match[2]);
+  }
+  return attrs;
+}
+
+function parsePlexSessionsResponse(rawBody = "") {
+  const sessions = [];
+  const itemRegex = /<(Video|Track|Photo)\b([^>]*)>([\s\S]*?)<\/\1>/g;
+  let match = null;
+
+  while ((match = itemRegex.exec(rawBody)) !== null) {
+    const [, mediaType, attrSource, innerXml] = match;
+    const mediaAttrs = parseXmlAttributes(attrSource);
+    const userMatch = innerXml.match(/<User\b([^>]*)\/?>/i);
+    const playerMatch = innerXml.match(/<Player\b([^>]*)\/?>/i);
+    const userAttrs = parseXmlAttributes(userMatch?.[1] || "");
+    const playerAttrs = parseXmlAttributes(playerMatch?.[1] || "");
+
+    sessions.push({
+      type: String(mediaAttrs.type || mediaType || "").toLowerCase(),
+      title: mediaAttrs.title || "",
+      grandparentTitle: mediaAttrs.grandparentTitle || "",
+      year: mediaAttrs.year ? Number(mediaAttrs.year) : null,
+      thumb: mediaAttrs.thumb || null,
+      duration: mediaAttrs.duration ? Number(mediaAttrs.duration) : 0,
+      viewOffset: mediaAttrs.viewOffset ? Number(mediaAttrs.viewOffset) : 0,
+      User: {
+        title: userAttrs.title || "",
+        id: userAttrs.id || userAttrs.userID || userAttrs.userId || ""
+      },
+      Player: {
+        title: playerAttrs.title || "",
+        state: playerAttrs.state || "playing"
+      }
+    });
+  }
+
+  return sessions;
+}
+
+function normalizePlexIdentity(value = "") {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "");
 }
 
 async function requireAuth(req, res, next) {
@@ -1054,29 +1117,23 @@ router.get("/dashboard", requireAuth, (req, res) => {
 
 router.get("/profil", requireAuth, async (req, res) => {
   try {
-    // ? Rendu ultra-rapide: on ne bloque plus la page profil sur les appels stats.
-    // Les données dynamiques sont hydratées côté client via /api/stats, /api/xp-snapshot, etc.
-    // Pour l'entête profil, on utilise uniquement l'état DB des succès déjà débloqués.
-    const dbUser = UserQueries.upsert(
-      req.session.user.username,
-      req.session.user.id || null,
-      req.session.user.email || null,
-      req.session.user.joinedAt || req.session.user.joinedAtTimestamp || null
-    );
-    const userUnlockedMap = dbUser ? UserAchievementQueries.getForUser(dbUser.id) : {};
-    const progressMap = dbUser ? AchievementProgressQueries.getForUser(dbUser.id) : {};
+    // Rendu rapide : l'entête lit le snapshot progression persistant partagé avec le classement.
+    const achievementState = await getUserAchievementState(req.session.user, { skipRefresh: true });
+    const userUnlockedMap = achievementState.userUnlockedMap || {};
     const allAchievements = ACHIEVEMENTS.getAll();
     const unlockedAchievementIds = new Set(Object.keys(userUnlockedMap || {}));
     const unlockedAchievements = allAchievements.filter(a => unlockedAchievementIds.has(a.id));
-    const totalAchievementsXp = unlockedAchievements.reduce((sum, ach) => sum + getAchievementXp(ach, progressMap[ach.id]), 0);
+    const totalAchievementsXp = Number(achievementState.snapshot?.totalXp || 0)
+      - Math.round(Number(achievementState.snapshot?.totalHours || 0) * 10)
+      - Math.round(Number(achievementState.snapshot?.daysJoined || 0) * 1.5);
 
     res.render("profil/index", {
       user: req.session.user,
       basePath: req.basePath,
       XP_SYSTEM,
-      unlockedBadgesCount: unlockedAchievements.length,
+      unlockedBadgesCount: Number(achievementState.snapshot?.badgeCount || unlockedAchievements.length),
       totalBadgesCount: allAchievements.length,
-      totalAchievementsXp
+      totalAchievementsXp: Math.max(0, totalAchievementsXp)
     });
   } catch (err) {
     log.create('[Profil]').error(err.message);
@@ -1114,8 +1171,9 @@ router.get("/succes", requireAuth, async (req, res) => {
   try {
     const collectionsEnabled = areCollectionAchievementsEnabled();
     const achievementState = await getUserAchievementState(req.session.user, { skipRefresh: true });
+
     let backgroundRefreshStatus = getBackgroundAchievementRefreshStatus(req.session.user);
-    if (achievementState.needsRefresh && !backgroundRefreshStatus.running && !backgroundRefreshStatus.queued) {
+    if ((achievementState.needsRefresh || !achievementState.snapshot?.updatedAt) && !backgroundRefreshStatus.running && !backgroundRefreshStatus.queued) {
       queueBackgroundAchievementRefresh(req.session.user, { includeSecretEvaluation: true });
       backgroundRefreshStatus = getBackgroundAchievementRefreshStatus(req.session.user);
     }
@@ -1252,13 +1310,13 @@ router.get('/api/badges-eval', requireAuth, async (req, res) => {
   try {
     const state = await getUserAchievementState(req.session.user, { skipRefresh: true });
     let refreshStatus = getBackgroundAchievementRefreshStatus(req.session.user);
-    if (!refreshStatus.running && !refreshStatus.queued) {
+    if ((state.needsRefresh || !state.snapshot?.updatedAt) && !refreshStatus.running && !refreshStatus.queued) {
       queueBackgroundAchievementRefresh(req.session.user, { includeSecretEvaluation: true });
       refreshStatus = getBackgroundAchievementRefreshStatus(req.session.user);
     }
     res.json({
       success: true,
-      refreshed: state.refreshed,
+      refreshed: !!state.refreshed,
       queued: !!refreshStatus.queued,
       running: !!refreshStatus.running || !!refreshStatus.queued,
       needsRefresh: !!state.needsRefresh,
@@ -1408,32 +1466,25 @@ router.get("/api/stats-wait", requireAuth, async (req, res) => {
 
 router.get("/api/xp-snapshot", requireAuth, async (req, res) => {
   try {
-    const user         = req.session.user;
-    const joinedAtTs   = user.joinedAtTimestamp || 0;
-
-    // ? Heures depuis DB directe (synchrone, pas d'appel HTTP lent)
-    const directStats  = getUserStatsFromTautulli(user.username);
-    const hoursHint    = directStats?.totalHours ?? null;
-    const statsHint    = directStats ? {
-      totalHours: directStats.totalHours || 0,
-      sessionCount: directStats.sessionCount || 0,
-      movieCount: directStats.movieCount || 0,
-      episodeCount: directStats.episodeCount || 0,
-      monthlyHours: 0,
-      nightCount: 0,
-      morningCount: 0
-    } : null;
-
-    // ?? Utiliser la fonction centralisée pour GARANTIR la cohérence avec le classement
-    const xpData = await calculateUserXp(user.username, joinedAtTs, hoursHint, statsHint);
+    const state = await getUserAchievementState(req.session.user, {
+      maxAgeMs: SUCCESS_REFRESH_TTL_MS
+    });
+    const snapshot = state.snapshot || {};
+    const rank = snapshot.rank || XP_SYSTEM.getRankByLevel(snapshot.level || 1);
 
     res.json({
-      rank: { color: xpData.rank.color, name: xpData.rank.name, icon: xpData.rank.icon, bgColor: xpData.rank.bgColor, borderColor: xpData.rank.borderColor },
-      level: xpData.level,
-      totalXp: xpData.totalXp,
-      badgeCount: xpData.badgeCount,
-      progressPercent: xpData.progressPercent,
-      xpNeeded: xpData.xpNeeded
+      rank: {
+        color: rank.color,
+        name: rank.name,
+        icon: rank.icon,
+        bgColor: rank.bgColor,
+        borderColor: rank.borderColor
+      },
+      level: Number(snapshot.level || 1),
+      totalXp: Number(snapshot.totalXp || 0),
+      badgeCount: Number(snapshot.badgeCount || 0),
+      progressPercent: Number(snapshot.progressPercent || 0),
+      xpNeeded: Number(snapshot.xpNeeded || 0)
     });
   } catch (err) {
     log.create('[XP-SNAPSHOT]').error(`Erreur: ${err.message}`);
@@ -1450,13 +1501,15 @@ router.get("/api/seerr", requireAuth, async (req, res) => {
     const userEmail = req.session.user?.email;
     const username = req.session.user?.username;
     const plexUserId = req.session.user?.id;
+    const connectSidMatch = String(req.headers.cookie || "").match(/(?:^|;\s*)connect\.sid=([^;]+)/);
+    const sessionCookie = connectSidMatch ? `connect.sid=${connectSidMatch[1]}` : "";
     
     if (!userEmail) {
       return res.status(400).json({ error: "No user email in session" });
     }
 
     // Clé de cache utilisant l'ID Plex pour plus de certitude
-    const cacheKey = `seerr:${plexUserId}`;
+    const cacheKey = `seerr:${plexUserId}:${sessionCookie ? "sid" : "nosid"}`;
     
     const seerr = await cache.getOrSet(
       cacheKey,
@@ -1464,7 +1517,8 @@ router.get("/api/seerr", requireAuth, async (req, res) => {
         userEmail,
         username,
         process.env.SEERR_URL,
-        process.env.SEERR_API_KEY
+        process.env.SEERR_API_KEY,
+        { sessionCookie }
       ),
       60 * 1000 // 60 secondes
     );
@@ -1535,8 +1589,14 @@ router.get("/api/all-users", async (req, res) => {
       const pageInfo = json.pageInfo || {};
       totalPages = Math.ceil((pageInfo.results || 0) / pageSize);
 
-      if (json.data) {
-        users.push(...json.data.map(u => ({
+      const pageUsers = Array.isArray(json.results)
+        ? json.results
+        : Array.isArray(json.data)
+          ? json.data
+          : [];
+
+      if (pageUsers.length > 0) {
+        users.push(...pageUsers.map(u => ({
           id: u.id,
           username: u.username || u.plexUsername,
           plexUserId: u.plexId,
@@ -1953,48 +2013,63 @@ router.delete("/api/admin/dashboard-cards/:id", requireAuth, requireAdmin, (req,
 =============================== */
 router.get("/api/now-playing", requireAuth, async (req, res) => {
   const plexUrl   = String(getConfigValue("PLEX_URL", "") || "").replace(/\/$/, "");
-  const plexToken = String(getConfigValue("PLEX_TOKEN", "") || "");
-  if (!plexUrl || !plexToken) return res.json({ playing: false });
+  const plexToken = getEffectivePlexToken();
+  const liveCacheKey = `now-playing-live:${req.session.user.id}`;
+  const buildLastPlayedResponse = () => {
+    const username = String(req.session.user.username || "");
+    const last = getLastPlayedItem(username);
+    if (!last) return { playing: false };
+    const thumb = last.thumb
+      ? (req.basePath || "") + "/api/plex-thumb?path=" + encodeURIComponent(last.thumb)
+      : null;
+
+    return {
+      playing: false,
+      lastPlayed: true,
+      type: last.mediaType,
+      title: last.title,
+      grandTitle: last.grandTitle,
+      year: last.year,
+      thumb,
+      stoppedAt: last.stoppedAt
+    };
+  };
+
+  if (!plexUrl || !plexToken) return res.json(buildLastPlayedResponse());
 
   try {
     const r = await fetch(`${plexUrl}/status/sessions`, {
       headers: { "X-Plex-Token": plexToken, "Accept": "application/json" },
-      timeout: 5000
+      timeout: PLEX_LIVE_TIMEOUT_MS
     });
-    if (!r.ok) return res.json({ playing: false });
-    const json = await r.json();
-    const sessions = json?.MediaContainer?.Metadata || [];
+    if (!r.ok) return res.json(buildLastPlayedResponse());
+    const bodyText = await r.text();
+    let sessions = [];
+    try {
+      const json = JSON.parse(bodyText);
+      sessions = json?.MediaContainer?.Metadata || [];
+    } catch (_) {
+      sessions = parsePlexSessionsResponse(bodyText);
+    }
 
-    // Trouver la session de l'utilisateur connecté (par username ou titre)
-    const username = (req.session.user.username || "").toLowerCase();
-    const userId   = req.session.user.id;
+    // Trouver la session de l'utilisateur connecté.
+    // Plex peut remonter un userId cloud, un userId local PMS (= 1 pour le proprio),
+    // ou un username avec casse/espaces différents.
+    const username = normalizePlexIdentity(req.session.user.username || "");
+    const userId   = String(req.session.user.id || "").trim();
+    const isAdminSession = !!req.session.user.isAdmin;
 
     const mySession = sessions.find(s => {
-      const su = (s.User?.title || "").toLowerCase();
+      const su = normalizePlexIdentity(s.User?.title || "");
       const sid = String(s.User?.id || "");
-      return su === username || sid === String(userId);
+      if (su && su === username) return true;
+      if (sid && sid === userId) return true;
+      if (isAdminSession && sid === "1" && su === username) return true;
+      return false;
     });
 
     if (!mySession) {
-      // Fallback : dernier contenu regardé
-      const username = (req.session.user.username || "");
-      const last = getLastPlayedItem(username);
-      if (!last) return res.json({ playing: false });
-
-      const thumbUrl = last.thumb
-        ? (req.basePath || "") + "/api/plex-thumb?path=" + encodeURIComponent(last.thumb)
-        : null;
-
-      return res.json({
-        playing:      false,
-        lastPlayed:   true,
-        type:         last.mediaType,
-        title:        last.title,
-        grandTitle:   last.grandTitle,
-        year:         last.year,
-        thumb:        thumbUrl,
-        stoppedAt:    last.stoppedAt,
-      });
+      return res.json(buildLastPlayedResponse());
     }
 
     const duration    = mySession.duration || 0;
@@ -2005,7 +2080,7 @@ router.get("/api/now-playing", requireAuth, async (req, res) => {
       ? (req.basePath || "") + "/api/plex-thumb?path=" + encodeURIComponent(mySession.thumb)
       : null;
 
-    res.json({
+    const payload = {
       playing:      true,
       state:        mySession.Player?.state || "playing",   // playing | paused | buffering
       type:         mySession.type,                          // episode | movie | track
@@ -2015,10 +2090,15 @@ router.get("/api/now-playing", requireAuth, async (req, res) => {
       thumb,
       progressPct,
       player:       mySession.Player?.title || "",           // nom de l'appareil
-    });
+    };
+
+    cache.set(liveCacheKey, payload, NOW_PLAYING_CACHE_TTL_MS);
+    res.json(payload);
   } catch (e) {
-    log.create('[NowPlaying]').warn(e.message);
-    res.json({ playing: false });
+    log.create('[NowPlaying]').warn(`${e.message} while trying to fetch ${plexUrl}/status/sessions (over ${PLEX_LIVE_TIMEOUT_MS}ms)`);
+    const cachedLive = cache.get(liveCacheKey);
+    if (cachedLive) return res.json(cachedLive);
+    res.json(buildLastPlayedResponse());
   }
 });
 
@@ -2029,7 +2109,7 @@ router.get("/api/now-playing", requireAuth, async (req, res) => {
 =============================== */
 router.get("/api/plex-thumb", requireAuth, async (req, res) => {
   const plexUrl   = String(getConfigValue("PLEX_URL", "") || "").replace(/\/$/, "");
-  const plexToken = String(getConfigValue("PLEX_TOKEN", "") || "");
+  const plexToken = getEffectivePlexToken();
   const thumbPath = req.query.path;
   if (!plexUrl || !plexToken || !thumbPath) return res.status(400).end();
 
@@ -2044,7 +2124,10 @@ router.get("/api/plex-thumb", requireAuth, async (req, res) => {
   }
 
   try {
-    const r = await fetch(`${plexUrl}${thumbPath}?X-Plex-Token=${plexToken}`, { timeout: 8000 });
+    const r = await fetch(`${plexUrl}${thumbPath}`, {
+      headers: { "X-Plex-Token": plexToken },
+      timeout: 12000
+    });
     if (!r.ok) return res.status(404).end();
     const ct = r.headers.get("content-type") || "";
     // N'accepter que des images en réponse
@@ -2064,55 +2147,31 @@ const logSrv = log.create('[ServerStats]');
 
 router.get('/api/server-stats', requireAuth, async (req, res) => {
   const cacheKey = 'server-library-stats';
+  const staleCacheKey = 'server-library-stats:last-success';
   const cached = cache.get(cacheKey);
   if (cached) return res.json(cached);
 
-  const tautulliUrl = (process.env.TAUTULLI_URL || '').replace(/\/$/, '');
-  const apiKey      = process.env.TAUTULLI_API_KEY || '';
-
-  if (!tautulliUrl || !apiKey) {
-    return res.json({ available: false, reason: 'Tautulli non configuré' });
-  }
-
   try {
-    const r = await fetch(`${tautulliUrl}/api/v2?apikey=${apiKey}&cmd=get_libraries`, { timeout: 8000 });
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    const json = await r.json();
-    const libs = json?.response?.data || [];
-
-    if (!Array.isArray(libs) || libs.length === 0) {
-      return res.json({ available: false, reason: 'Aucune librairie Tautulli' });
-    }
-
-    const AUDIOBOOK_KEYWORDS = ['audio', 'livre', 'audiobook', 'podcast'];
-    const isAudiobook = name => AUDIOBOOK_KEYWORDS.some(k => name.toLowerCase().includes(k));
-
-    let movies = 0, shows = 0, episodes = 0, musicTracks = 0, audiobookCount = 0;
-
-    for (const lib of libs) {
-      const type  = lib.section_type;
-      const count = parseInt(lib.count, 10)  || 0;
-      const child = parseInt(lib.child_count, 10) || 0;
-
-      if (type === 'movie') {
-        movies += count;
-      } else if (type === 'show') {
-        shows    += count;
-        episodes += child;
-      } else if (type === 'artist') {
-        if (isAudiobook(lib.section_name || '')) {
-          audiobookCount += child || count;  // child = tracks (chapters)
-        } else {
-          musicTracks += child || count;     // child = tracks
-        }
+    const result = getServerLibraryStats();
+    if (!result?.available) {
+      const stale = cache.get(staleCacheKey);
+      if (stale) {
+        logSrv.warn(`Lecture DB librairies indisponible (${result?.reason || 'unknown'}) — utilisation du dernier cache valide`);
+        return res.json({ ...stale, stale: true });
       }
+      return res.json(result || { available: false, reason: 'tautulli_db_unavailable' });
     }
-
-    const result = { available: true, movies, shows, episodes, musicTracks, audiobookCount };
     cache.set(cacheKey, result, 10 * 60 * 1000); // 10 min
-    logSrv.debug(`Films:${movies} Séries:${shows} Épisodes:${episodes} Musiques:${musicTracks} Audiobooks:${audiobookCount}`);
+    cache.set(staleCacheKey, result, 60 * 60 * 1000); // 1 h fallback
+    logSrv.debug(`Films:${result.movies} Séries:${result.shows} Épisodes:${result.episodes} Musiques:${result.musicTracks} Audiobooks:${result.audiobookCount}`);
     res.json(result);
   } catch (err) {
+    const stale = cache.get(staleCacheKey);
+    if (stale) {
+      logSrv.warn(`Erreur librairies: ${err.message} — utilisation du dernier cache valide`);
+      return res.json({ ...stale, stale: true });
+    }
+
     logSrv.warn('Erreur librairies:', err.message);
     res.json({ available: false, reason: err.message });
   }

@@ -41,7 +41,7 @@ const ACHIEVEMENTS = {
       }),
       unlockedDate: null,
       category: "temporels",
-      xp: 250
+      xp: 1000
     },
     {
       id: "veteran",
@@ -57,7 +57,39 @@ const ACHIEVEMENTS = {
       }),
       unlockedDate: null,
       category: "temporels",
-      xp: 750
+      xp: 2000
+    },
+    {
+      id: "trusted-regular",
+      name: "Habitué Confirmé",
+      icon: "🕰️",
+      description: "Plus de 3 ans d'ancienneté sur {{SERVER_NAME}}",
+      condition: (data) => data.daysSince >= 1095,
+      conditionText: "Plus de 3 ans d'ancienneté sur {{SERVER_NAME}}",
+      getProgress: (data) => ({
+        current: Math.min(data.daysSince, 1095),
+        total: 1095,
+        percent: Math.min(Math.round((data.daysSince / 1095) * 100), 100)
+      }),
+      unlockedDate: null,
+      category: "temporels",
+      xp: 3000
+    },
+    {
+      id: "server-pillar",
+      name: "Pilier du Serveur",
+      icon: "🏛️",
+      description: "Plus de 4 ans d'ancienneté sur {{SERVER_NAME}}",
+      condition: (data) => data.daysSince >= 1460,
+      conditionText: "Plus de 4 ans d'ancienneté sur {{SERVER_NAME}}",
+      getProgress: (data) => ({
+        current: Math.min(data.daysSince, 1460),
+        total: 1460,
+        percent: Math.min(Math.round((data.daysSince / 1460) * 100), 100)
+      }),
+      unlockedDate: null,
+      category: "temporels",
+      xp: 4000
     },
     {
       id: "old-timer",
@@ -73,7 +105,23 @@ const ACHIEVEMENTS = {
       }),
       unlockedDate: null,
       category: "temporels",
-      xp: 1500
+      xp: 5000
+    },
+    {
+      id: "decade-legend",
+      name: "Légende Décennale",
+      icon: "🏆",
+      description: "Plus de 10 ans d'ancienneté sur {{SERVER_NAME}}",
+      condition: (data) => data.daysSince >= 3650,
+      conditionText: "Plus de 10 ans d'ancienneté sur {{SERVER_NAME}}",
+      getProgress: (data) => ({
+        current: Math.min(data.daysSince, 3650),
+        total: 3650,
+        percent: Math.min(Math.round((data.daysSince / 3650) * 100), 100)
+      }),
+      unlockedDate: null,
+      category: "temporels",
+      xp: 10000
     }
   ],
 

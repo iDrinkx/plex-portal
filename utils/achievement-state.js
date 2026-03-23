@@ -1,6 +1,7 @@
 const path = require("path");
 const { spawn } = require("child_process");
-const { ACHIEVEMENTS, areCollectionAchievementsEnabled } = require("./achievements");
+const { ACHIEVEMENTS, areCollectionAchievementsEnabled, getAchievementXp } = require("./achievements");
+const { XP_SYSTEM } = require("./xp-system");
 const {
   UserQueries,
   UserAchievementQueries,
@@ -12,7 +13,7 @@ const { getTautulliStats } = require("./tautulli");
 const { getAchievementUnlockDates, evaluateSecretAchievements, isTautulliReady } = require("./tautulli-direct");
 const log = require("./logger").create("[Achievement-State]");
 
-const SUCCESS_REFRESH_TTL_MS = 10 * 60 * 1000;
+const SUCCESS_REFRESH_TTL_MS = 30 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const BACKGROUND_REFRESH_CLEANUP_MS = 10 * 60 * 1000;
 
@@ -20,6 +21,7 @@ const backgroundRefreshQueue = [];
 const backgroundRefreshJobs = new Map();
 let backgroundRefreshActiveCount = 0;
 const backgroundRefreshWorkerPath = path.join(__dirname, "achievement-refresh-worker.js");
+const activeAchievementRefreshes = new Map();
 
 function parseSqliteDateToMs(value) {
   if (!value) return 0;
@@ -76,6 +78,56 @@ function buildRenderProgressMap(data, persistedProgressMap = {}) {
   return renderProgress;
 }
 
+function buildXpSnapshot(data = {}, userUnlockedMap = {}, progressMap = {}) {
+  const unlockedAchievements = ACHIEVEMENTS.getUnlocked(data, userUnlockedMap);
+  const badgeCount = unlockedAchievements.length;
+  const achievementsXp = unlockedAchievements.reduce(
+    (sum, achievement) => sum + getAchievementXp(achievement, progressMap[achievement.id]),
+    0
+  );
+  const totalXp = Math.round(Number(data.totalHours || 0) * 10)
+    + achievementsXp
+    + Math.round(Number(data.daysSince || 0) * 1.5);
+  const level = XP_SYSTEM.getLevel(totalXp);
+  const rank = XP_SYSTEM.getRankByLevel(level);
+  const progress = XP_SYSTEM.getProgressToNextLevel(totalXp);
+
+  return {
+    badgeCount,
+    totalXp,
+    level,
+    rank: {
+      name: rank.name,
+      icon: rank.icon,
+      color: rank.color,
+      bgColor: rank.bgColor,
+      borderColor: rank.borderColor
+    },
+    progressPercent: Number(progress.progressPercent || 0),
+    xpNeeded: Number(progress.xpNeeded || 0)
+  };
+}
+
+function normalizeSnapshot(snapshot = null) {
+  if (!snapshot) return null;
+  return {
+    ...snapshot,
+    rank: {
+      name: snapshot.rankName || "",
+      icon: snapshot.rankIcon || "",
+      color: snapshot.rankColor || "",
+      bgColor: snapshot.rankBgColor || "",
+      borderColor: snapshot.rankBorderColor || ""
+    }
+  };
+}
+
+function isSnapshotFullyEvaluated(snapshot = null, maxAgeMs = SUCCESS_REFRESH_TTL_MS) {
+  if (!snapshot?.fullEvaluatedAt) return false;
+  const ageMs = Math.max(0, Date.now() - parseSqliteDateToMs(snapshot.fullEvaluatedAt));
+  return ageMs <= maxAgeMs;
+}
+
 function getDbUserFromSessionUser(sessionUser) {
   const username = String(sessionUser?.username || "").trim();
   if (!username) return null;
@@ -122,6 +174,10 @@ function getBackgroundAchievementRefreshStatus(sessionUser) {
     finishedAt: job?.finishedAt || null,
     lastError: job?.lastError || null
   };
+}
+
+function getActiveAchievementRefreshKey(sessionUser, dbUser = null) {
+  return getBackgroundRefreshKey(sessionUser, dbUser);
 }
 
 function pumpBackgroundAchievementRefreshQueue() {
@@ -234,13 +290,13 @@ async function persistAchievementState(sessionUser, dbUserId, data, options = {}
   const joinedAtSeconds = normalizeJoinedAtSeconds(sessionUser?.joinedAtTimestamp || sessionUser?.joinedAt);
   const today = new Date().toLocaleDateString("fr-FR");
   const includeSecretEvaluation = options.includeSecretEvaluation !== false;
-  AchievementSnapshotQueries.save(dbUserId, data);
+  const previousSnapshot = normalizeSnapshot(AchievementSnapshotQueries.getForUser(dbUserId));
 
-  const userUnlockedMap = dbUserId ? UserAchievementQueries.getForUser(dbUserId) : {};
+  const initialUnlockedMap = dbUserId ? UserAchievementQueries.getForUser(dbUserId) : {};
   const computedDates = getAchievementUnlockDates(username, joinedAtSeconds || null);
 
   for (const achievement of ACHIEVEMENTS.getAll()) {
-    if (userUnlockedMap[achievement.id]) continue;
+    if (initialUnlockedMap[achievement.id]) continue;
     if (achievement.isSecret) continue;
     if (achievement.category === "secrets") continue;
     if (achievement.category === "collections") continue;
@@ -255,11 +311,11 @@ async function persistAchievementState(sessionUser, dbUserId, data, options = {}
   const collectionsEnabled = areCollectionAchievementsEnabled();
   const collectionsToCheck = collectionsEnabled ? ACHIEVEMENTS.collections : [];
   const secretsToCheck = [...collectionsToCheck, ...ACHIEVEMENTS.secrets]
-    .filter(achievement => !achievement.isSecret && (!userUnlockedMap[achievement.id] || achievement.revocable))
+    .filter(achievement => !achievement.isSecret && (!initialUnlockedMap[achievement.id] || achievement.revocable))
     .map(achievement => achievement.id);
   const revocableUnlocked = new Set(
     [...collectionsToCheck, ...ACHIEVEMENTS.secrets]
-      .filter(achievement => achievement.revocable && userUnlockedMap[achievement.id])
+      .filter(achievement => achievement.revocable && initialUnlockedMap[achievement.id])
       .map(achievement => achievement.id)
   );
 
@@ -304,7 +360,34 @@ async function persistAchievementState(sessionUser, dbUserId, data, options = {}
     }
   }
 
-  return { refreshed: true, data };
+  const userUnlockedMap = dbUserId ? UserAchievementQueries.getForUser(dbUserId) : {};
+  const progressMap = dbUserId ? AchievementProgressQueries.getForUser(dbUserId) : {};
+  const xpSnapshot = buildXpSnapshot(data, userUnlockedMap, progressMap);
+  const persistedXpSnapshot = !includeSecretEvaluation && previousSnapshot
+    ? {
+        badgeCount: Number(previousSnapshot.badgeCount || 0),
+        totalXp: Number(previousSnapshot.totalXp || 0),
+        level: Math.max(1, Number(previousSnapshot.level || 1)),
+        rank: previousSnapshot.rank || xpSnapshot.rank,
+        progressPercent: Number(previousSnapshot.progressPercent || 0),
+        xpNeeded: Number(previousSnapshot.xpNeeded || 0)
+      }
+    : xpSnapshot;
+
+  AchievementSnapshotQueries.save(dbUserId, {
+    ...data,
+    daysJoined: data.daysSince,
+    ...persistedXpSnapshot,
+    fullEvaluatedAt: includeSecretEvaluation ? new Date().toISOString() : (previousSnapshot?.fullEvaluatedAt || null)
+  });
+
+  return {
+    refreshed: true,
+    data,
+    userUnlockedMap,
+    progressMap,
+    xpSnapshot: persistedXpSnapshot
+  };
 }
 
 async function recomputeUserAchievementState(sessionUser, dbUserId, options = {}) {
@@ -346,30 +429,55 @@ async function refreshUserAchievementState(sessionUser, options = {}) {
 
   const joinedAtSeconds = normalizeJoinedAtSeconds(sessionUser?.joinedAtTimestamp || sessionUser?.joinedAt);
   const precomputedStats = options.precomputedStats || null;
-  const refreshResult = precomputedStats
-    ? await persistAchievementState(
-        sessionUser,
-        dbUserId,
-        buildAchievementData(precomputedStats, joinedAtSeconds),
-        options
-      )
-    : await recomputeUserAchievementState(sessionUser, dbUserId, options);
+  const includeSecretEvaluation = options.includeSecretEvaluation !== false;
+  const activeRefreshKey = includeSecretEvaluation ? getActiveAchievementRefreshKey(sessionUser, dbUser) : null;
+  const existingRefresh = activeRefreshKey ? activeAchievementRefreshes.get(activeRefreshKey) : null;
 
-  const snapshot = AchievementSnapshotQueries.getForUser(dbUserId);
-  const userUnlockedMap = UserAchievementQueries.getForUser(dbUserId);
-  const progressMap = AchievementProgressQueries.getForUser(dbUserId);
-  const data = buildAchievementData(snapshot || {}, sessionUser?.joinedAtTimestamp || sessionUser?.joinedAt || 0);
-  const renderProgressMap = buildRenderProgressMap(data, progressMap);
+  if (existingRefresh) {
+    return existingRefresh;
+  }
 
-  return {
-    dbUserId,
-    data,
-    userUnlockedMap,
-    progressMap,
-    snapshot,
-    renderProgressMap,
-    refreshed: !!refreshResult?.refreshed
+  const runRefresh = async () => {
+    const refreshResult = precomputedStats
+      ? await persistAchievementState(
+          sessionUser,
+          dbUserId,
+          buildAchievementData(precomputedStats, joinedAtSeconds),
+          options
+        )
+      : await recomputeUserAchievementState(sessionUser, dbUserId, options);
+
+    const snapshot = normalizeSnapshot(AchievementSnapshotQueries.getForUser(dbUserId));
+    const userUnlockedMap = UserAchievementQueries.getForUser(dbUserId);
+    const progressMap = AchievementProgressQueries.getForUser(dbUserId);
+    const data = buildAchievementData(snapshot || {}, sessionUser?.joinedAtTimestamp || sessionUser?.joinedAt || 0);
+    const renderProgressMap = buildRenderProgressMap(data, progressMap);
+
+    return {
+      dbUserId,
+      data,
+      userUnlockedMap,
+      progressMap,
+      snapshot,
+      renderProgressMap,
+      refreshed: !!refreshResult?.refreshed
+    };
   };
+
+  const refreshPromise = runRefresh().finally(() => {
+    if (activeRefreshKey) {
+      const current = activeAchievementRefreshes.get(activeRefreshKey);
+      if (current === refreshPromise) {
+        activeAchievementRefreshes.delete(activeRefreshKey);
+      }
+    }
+  });
+
+  if (activeRefreshKey) {
+    activeAchievementRefreshes.set(activeRefreshKey, refreshPromise);
+  }
+
+  return refreshPromise;
 }
 
 async function getUserAchievementState(sessionUser, options = {}) {
@@ -392,15 +500,17 @@ async function getUserAchievementState(sessionUser, options = {}) {
     };
   }
 
-  let snapshot = AchievementSnapshotQueries.getForUser(dbUserId);
+  let snapshot = normalizeSnapshot(AchievementSnapshotQueries.getForUser(dbUserId));
   let refreshed = false;
   const snapshotAgeMs = snapshot?.updatedAt ? Math.max(0, Date.now() - parseSqliteDateToMs(snapshot.updatedAt)) : Infinity;
   const stale = !snapshot || snapshotAgeMs > maxAgeMs;
+  const fullyEvaluated = isSnapshotFullyEvaluated(snapshot, maxAgeMs);
+  const needsRefresh = !fullyEvaluated || stale;
 
-  if (!skipRefresh && (forceRefresh || stale)) {
+  if (!skipRefresh && (forceRefresh || needsRefresh)) {
     const refreshResult = await recomputeUserAchievementState(sessionUser, dbUserId, options);
     refreshed = !!refreshResult.refreshed;
-    snapshot = AchievementSnapshotQueries.getForUser(dbUserId) || snapshot;
+    snapshot = normalizeSnapshot(AchievementSnapshotQueries.getForUser(dbUserId)) || snapshot;
   }
 
   const userUnlockedMap = UserAchievementQueries.getForUser(dbUserId);
@@ -417,7 +527,7 @@ async function getUserAchievementState(sessionUser, options = {}) {
     snapshot,
     refreshed,
     stale,
-    needsRefresh: stale && !forceRefresh
+    needsRefresh: needsRefresh && !forceRefresh
   };
 }
 

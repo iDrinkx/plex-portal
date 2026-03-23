@@ -1,12 +1,108 @@
-﻿const fetch = require("node-fetch");
+const fetch = require("node-fetch");
+const { AppSettingQueries } = require("./database");
+const { getConfigValue } = require("./config");
+const seerrLog = require("./logger").create("[Seerr]");
+
+let cachedSeerrSessionCookie = null;
+let cachedSeerrSessionCookieExpiresAt = 0;
+
+function getAdminPlexToken() {
+  return String(
+    AppSettingQueries.get("runtime_plex_cloud_token", "") ||
+    getConfigValue("PLEX_TOKEN", "") ||
+    process.env.PLEX_TOKEN ||
+    ""
+  ).trim();
+}
+
+async function createSeerrSessionCookie(SEERR_URL) {
+  const now = Date.now();
+  if (cachedSeerrSessionCookie && cachedSeerrSessionCookieExpiresAt > now) {
+    return cachedSeerrSessionCookie;
+  }
+
+  const adminPlexToken = getAdminPlexToken();
+  if (!SEERR_URL || !adminPlexToken) return null;
+
+  try {
+    const res = await fetch(`${SEERR_URL.replace(/\/$/, "")}/api/v1/auth/plex`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+      },
+      body: JSON.stringify({ authToken: adminPlexToken })
+    });
+
+    if (!res.ok) {
+      seerrLog.warn(`Impossible d'ouvrir une session Seerr admin: HTTP ${res.status}`);
+      return null;
+    }
+
+    const setCookies = res.headers.raw()["set-cookie"] || [];
+    const sidCookie = setCookies.find(cookie => cookie.startsWith("connect.sid="));
+    if (!sidCookie) {
+      seerrLog.warn("Session Seerr admin ouverte sans connect.sid");
+      return null;
+    }
+
+    cachedSeerrSessionCookie = sidCookie.split(";")[0];
+    cachedSeerrSessionCookieExpiresAt = now + (10 * 60 * 1000);
+    return cachedSeerrSessionCookie;
+  } catch (err) {
+    seerrLog.warn(`Erreur session Seerr admin: ${err.message}`);
+    return null;
+  }
+}
+
+async function fetchSeerrJson(url, SEERR_API_KEY, SEERR_URL, options = {}) {
+  const requireSession = options.requireSession === true;
+  const preferredSessionCookie = String(options.sessionCookie || "").trim();
+
+  async function run(headers) {
+    const res = await fetch(url, { headers });
+    if (!res.ok) {
+      const text = await res.text();
+      return { ok: false, status: res.status, text };
+    }
+    return { ok: true, json: await res.json() };
+  }
+
+  if (!requireSession) {
+    const apiAttempt = await run({
+      "X-API-Key": SEERR_API_KEY,
+      "Accept": "application/json"
+    });
+
+    if (apiAttempt.ok) {
+      return apiAttempt.json;
+    }
+
+    const bodyText = String(apiAttempt.text || "");
+    const needsCookie = /connect\.sid/i.test(bodyText) || /cookie.+required/i.test(bodyText);
+    if (!needsCookie) {
+      return null;
+    }
+  }
+
+  const sessionCookie = preferredSessionCookie || await createSeerrSessionCookie(SEERR_URL);
+  if (!sessionCookie) return null;
+
+  const cookieAttempt = await run({
+    "Cookie": sessionCookie,
+    "Accept": "application/json"
+  });
+
+  return cookieAttempt.ok ? cookieAttempt.json : null;
+}
 
 /**
  * Cherche un utilisateur Seerr par email OU username Plex
- * @param {string} email - Email à chercher
+ * @param {string} email - Email a chercher
  * @param {string} SEERR_URL - URL de base d'Seerr
- * @param {string} SEERR_API_KEY - Clé API Seerr
- * @param {string} username - Username Plex à chercher aussi en fallback
- * @returns {Promise<Object|null>} Utilisateur trouvé ou null
+ * @param {string} SEERR_API_KEY - Cle API Seerr
+ * @param {string} username - Username Plex a chercher aussi en fallback
+ * @returns {Promise<Object|null>} Utilisateur trouve ou null
  */
 async function findSeerrUserByEmail(email, SEERR_URL, SEERR_API_KEY, username = null) {
   try {
@@ -14,19 +110,15 @@ async function findSeerrUserByEmail(email, SEERR_URL, SEERR_API_KEY, username = 
       return null;
     }
 
-    // Récupérer TOUS les utilisateurs Seerr avec pagination
     let allUsers = [];
-    let page = 0;  // Seerr commence à 0
+    let page = 0;
     let hasMore = true;
     let pageInfo = null;
 
     while (hasMore) {
-      // Essayer différents formats de paramètres de pagination
       const url = new URL(`${SEERR_URL}/api/v1/user`);
-      url.searchParams.set('skip', page * 50);
-      url.searchParams.set('take', 50);
-
-
+      url.searchParams.set("skip", page * 50);
+      url.searchParams.set("take", 50);
 
       const res = await fetch(url.toString(), {
         headers: {
@@ -35,12 +127,11 @@ async function findSeerrUserByEmail(email, SEERR_URL, SEERR_API_KEY, username = 
         }
       });
 
-      if (!res.ok) { break; }
+      if (!res.ok) break;
 
       const json = await res.json();
       pageInfo = json.pageInfo;
 
-      // Extraire les utilisateurs selon le format de réponse
       let users = [];
       if (Array.isArray(json)) {
         users = json;
@@ -52,49 +143,49 @@ async function findSeerrUserByEmail(email, SEERR_URL, SEERR_API_KEY, username = 
         users = json.users;
       }
 
-      if (users.length === 0) { break; }
+      if (users.length === 0) break;
 
       allUsers = allUsers.concat(users);
 
-      // Vérifier s'il y a d'autres pages
-      if (pageInfo) {
-        if (pageInfo.pages && page + 1 >= pageInfo.pages) {
-          hasMore = false;
-        }
+      if (pageInfo?.pages && page + 1 >= pageInfo.pages) {
+        hasMore = false;
       }
 
       page++;
     }
 
-    // Chercher l'utilisateur avec cet email
     let found = allUsers.find(u => u.email && u.email.toLowerCase() === email.toLowerCase());
     if (found) return found;
 
-    // Si pas trouvé par email, essayer par username Plex
     if (username) {
+      const target = username.toLowerCase();
       found = allUsers.find(u => {
-        const displayName = (u.displayName || "").toLowerCase();
-        const usernameField = (u.username || "").toLowerCase();
-        const plexUsername = (u.plexUsername || "").toLowerCase();
-        const target = username.toLowerCase();
-        return displayName === target || usernameField === target || plexUsername === target ||
-               displayName.includes(target) || usernameField.includes(target);
+        const displayName = String(u.displayName || "").toLowerCase();
+        const usernameField = String(u.username || "").toLowerCase();
+        const plexUsername = String(u.plexUsername || "").toLowerCase();
+        return (
+          displayName === target ||
+          usernameField === target ||
+          plexUsername === target ||
+          displayName.includes(target) ||
+          usernameField.includes(target) ||
+          plexUsername.includes(target)
+        );
       });
       if (found) return found;
     }
 
     return null;
-
   } catch (err) {
-    require('./logger').create('[Seerr]').error('findSeerrUserByEmail:', err.message);
+    seerrLog.error("findSeerrUserByEmail:", err.message);
     return null;
   }
 }
 
 /**
- * Récupère l'utilisateur courant Seerr via la clé API
+ * Recupere l'utilisateur courant Seerr via la cle API
  * @param {string} SEERR_URL - URL de base d'Seerr
- * @param {string} SEERR_API_KEY - Clé API Seerr
+ * @param {string} SEERR_API_KEY - Cle API Seerr
  * @returns {Promise<Object|null>} Utilisateur courant avec son ID
  */
 async function getCurrentSeerrUser(SEERR_URL, SEERR_API_KEY) {
@@ -104,7 +195,6 @@ async function getCurrentSeerrUser(SEERR_URL, SEERR_API_KEY) {
     }
 
     const url = `${SEERR_URL}/api/v1/auth/me`;
-
     const res = await fetch(url, {
       headers: {
         "X-API-Key": SEERR_API_KEY,
@@ -112,38 +202,33 @@ async function getCurrentSeerrUser(SEERR_URL, SEERR_API_KEY) {
       }
     });
 
-    if (!res.ok) { return null; }
-
-    const user = await res.json();
-    return user;
-
+    if (!res.ok) return null;
+    return await res.json();
   } catch (err) {
     return null;
   }
 }
 
 /**
- * Récupère les statistiques Seerr pour un utilisateur spécifique
- * @param {string} userEmail - Email de l'utilisateur Plex (utilisé pour trouver l'utilisateur Seerr)
- * @param {string} username - Username Plex (fallback si l'email ne match pas)
+ * Recupere les statistiques Seerr pour un utilisateur specifique
+ * @param {string} userEmail - Email de l'utilisateur Plex
+ * @param {string} username - Username Plex
  * @param {string} SEERR_URL - URL de base d'Seerr
- * @param {string} SEERR_API_KEY - Clé API Seerr
- * @returns {Promise<Object|null>} Stats avec pending, approved, available, unavailable
+ * @param {string} SEERR_API_KEY - Cle API Seerr
+ * @returns {Promise<Object|null>} Stats avec quotas restants
  */
-async function getSeerrStats(userEmail, username, SEERR_URL, SEERR_API_KEY) {
+async function getSeerrStats(userEmail, username, SEERR_URL, SEERR_API_KEY, options = {}) {
   try {
-    if (!SEERR_URL || !SEERR_API_KEY) { return null; }
+    if (!SEERR_URL || !SEERR_API_KEY || !userEmail) {
+      return null;
+    }
 
-    if (!userEmail) { return null; }
-
-    // Chercher l'utilisateur Seerr par son email OU username Plex
     const seerrUser = await findSeerrUserByEmail(userEmail, SEERR_URL, SEERR_API_KEY, username);
-    
-    if (!seerrUser || !seerrUser.id) { return null; }
+    if (!seerrUser?.id) {
+      return null;
+    }
 
-    const userIdNum = seerrUser.id;
-
-    // Récupérer TOUTES les demandes en paginant avec skip/take
+    const userIdNum = Number(seerrUser.id);
     let allRequests = [];
     let skip = 0;
     const take = 50;
@@ -151,21 +236,14 @@ async function getSeerrStats(userEmail, username, SEERR_URL, SEERR_API_KEY) {
 
     while (hasMore) {
       const url = new URL(`${SEERR_URL}/api/v1/user/${userIdNum}/requests`);
-      url.searchParams.set('skip', skip);
-      url.searchParams.set('take', take);
+      url.searchParams.set("skip", skip);
+      url.searchParams.set("take", take);
 
-const res = await fetch(url.toString(), {
-        headers: {
-          "X-API-Key": SEERR_API_KEY,
-          "Accept": "application/json"
-        }
+      const json = await fetchSeerrJson(url.toString(), SEERR_API_KEY, SEERR_URL, {
+        sessionCookie: options.sessionCookie
       });
+      if (!json) break;
 
-      if (!res.ok) { break; }
-
-      const json = await res.json();
-
-      // Essayer différents formats de réponse
       let requests = [];
       if (Array.isArray(json)) {
         requests = json;
@@ -175,11 +253,9 @@ const res = await fetch(url.toString(), {
         requests = json.data;
       }
 
-      if (requests.length === 0) { break; }
+      if (requests.length === 0) break;
 
       allRequests = allRequests.concat(requests);
-
-      // Vérifier s'il y a d'autres résultats
       if (requests.length < take) {
         hasMore = false;
       } else {
@@ -187,14 +263,87 @@ const res = await fetch(url.toString(), {
       }
     }
 
-    // Compter par statut
+    const quotaJson = await fetchSeerrJson(
+      `${SEERR_URL}/api/v1/user/${userIdNum}/quota`,
+      SEERR_API_KEY,
+      SEERR_URL,
+      {
+        requireSession: true,
+        sessionCookie: options.sessionCookie
+      }
+    );
+
+    const now = Date.now();
+
+    const buildQuotaSummary = (type, limit, days, explicitUsed = null, explicitRemaining = null, restricted = false) => {
+      const numericExplicitUsed = Number(explicitUsed);
+      const numericExplicitRemaining = Number(explicitRemaining);
+      const inferredLimit = Number.isFinite(numericExplicitUsed) && Number.isFinite(numericExplicitRemaining)
+        ? numericExplicitUsed + numericExplicitRemaining
+        : NaN;
+      const normalizedLimit = Number(limit);
+      const normalizedDays = Number(days);
+      const effectiveLimit = Number.isFinite(normalizedLimit) && normalizedLimit > 0
+        ? normalizedLimit
+        : (Number.isFinite(inferredLimit) && inferredLimit > 0 ? inferredLimit : NaN);
+      const hasLimit = Number.isFinite(effectiveLimit) && effectiveLimit > 0;
+      const hasDays = Number.isFinite(normalizedDays) && normalizedDays > 0;
+
+      if (hasLimit && hasDays && Number.isFinite(numericExplicitUsed) && Number.isFinite(numericExplicitRemaining)) {
+        const remaining = Math.max(0, numericExplicitRemaining);
+        return {
+          limit: effectiveLimit,
+          days: normalizedDays,
+          used: numericExplicitUsed,
+          remaining,
+          restricted: Boolean(restricted),
+          text: `${remaining} sur ${effectiveLimit} restantes`
+        };
+      }
+
+      if (!hasLimit || !hasDays) {
+        return {
+          limit: hasLimit ? effectiveLimit : null,
+          days: hasDays ? normalizedDays : null,
+          used: 0,
+          remaining: null,
+          restricted: Boolean(restricted),
+          text: "Illimité"
+        };
+      }
+
+      const cutoff = now - (normalizedDays * 24 * 60 * 60 * 1000);
+      const used = allRequests.filter(req => {
+        const requestType = String(req.type || req.media?.mediaType || "").toLowerCase();
+        if (requestType !== type) return false;
+        const createdAtMs = req.createdAt ? Date.parse(req.createdAt) : 0;
+        return Number.isFinite(createdAtMs) && createdAtMs >= cutoff;
+      }).length;
+
+      const remaining = Math.max(0, effectiveLimit - used);
+      return {
+        limit: effectiveLimit,
+        days: normalizedDays,
+        used,
+        remaining,
+        restricted: Boolean(restricted),
+        text: `${remaining} sur ${effectiveLimit} restantes`
+      };
+    };
+
     let pending = 0;
     let approved = 0;
     let approvedAvailable = 0;
     let available = 0;
     let unavailable = 0;
+    let movieRequests = 0;
+    let tvRequests = 0;
 
     allRequests.forEach(req => {
+      const requestType = String(req.type || req.media?.mediaType || "").toLowerCase();
+      if (requestType === "movie") movieRequests++;
+      else if (requestType === "tv") tvRequests++;
+
       if (req.status === 1) {
         pending++;
       } else if (req.status === 2) {
@@ -203,29 +352,51 @@ const res = await fetch(url.toString(), {
       } else if (req.status === 3) {
         unavailable++;
       }
-      if (req.media?.status === 5) available++;
+
+      if (req.media?.status === 5) {
+        available++;
+      }
     });
 
-    const result = {
+    const movieQuota = buildQuotaSummary(
+      "movie",
+      quotaJson?.movie?.limit ?? seerrUser.movieQuotaLimit,
+      quotaJson?.movie?.days ?? seerrUser.movieQuotaDays,
+      quotaJson?.movie?.used,
+      quotaJson?.movie?.remaining,
+      quotaJson?.movie?.restricted
+    );
+
+    const tvQuota = buildQuotaSummary(
+      "tv",
+      quotaJson?.tv?.limit ?? seerrUser.tvQuotaLimit,
+      quotaJson?.tv?.days ?? seerrUser.tvQuotaDays,
+      quotaJson?.tv?.used,
+      quotaJson?.tv?.remaining,
+      quotaJson?.tv?.restricted
+    );
+
+    return {
       pending,
+      movieRequests,
+      tvRequests,
+      movieQuota,
+      tvQuota,
       approved: approved - approvedAvailable,
       available: approvedAvailable,
       unavailable,
-      total: allRequests.length
+      total: allRequests.length || Number(seerrUser.requestCount || 0)
     };
-
-    return result;
-
   } catch (err) {
-    require('./logger').create('[Seerr]').error('getSeerrStats:', err.message);
+    seerrLog.error("getSeerrStats:", err.message);
     return null;
   }
 }
 
 /**
- * Récupère les statistiques globales d'Seerr
+ * Recupere les statistiques globales d'Seerr
  * @param {string} SEERR_URL - URL de base d'Seerr
- * @param {string} SEERR_API_KEY - Clé API Seerr
+ * @param {string} SEERR_API_KEY - Cle API Seerr
  * @returns {Promise<Object|null>} Stats globales
  */
 async function getSeerrGlobalStats(SEERR_URL, SEERR_API_KEY) {
@@ -247,7 +418,7 @@ async function getSeerrGlobalStats(SEERR_URL, SEERR_API_KEY) {
     if (!res.ok) return null;
 
     const json = await res.json();
-    const totalRequests = json.pageInfo?.totalResults || 0;
+    const totalRequests = Number(json.pageInfo?.results || json.pageInfo?.totalResults || 0);
 
     return {
       totalRequests,
@@ -255,11 +426,15 @@ async function getSeerrGlobalStats(SEERR_URL, SEERR_API_KEY) {
       approved: 0,
       available: 0
     };
-
   } catch (err) {
-    require('./logger').create('[Seerr]').error('getSeerrGlobalStats:', err.message);
+    seerrLog.error("getSeerrGlobalStats:", err.message);
     return null;
   }
 }
 
-module.exports = { getSeerrStats, getSeerrGlobalStats, getCurrentSeerrUser, findSeerrUserByEmail };
+module.exports = {
+  getSeerrStats,
+  getSeerrGlobalStats,
+  getCurrentSeerrUser,
+  findSeerrUserByEmail
+};
