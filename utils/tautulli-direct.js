@@ -1261,10 +1261,16 @@ function getAchievementUnlockDates(username, joinedAtTimestamp) {
     const now = Date.now();
     const d365 = joinMs + 365 * 86400000;
     const d730 = joinMs + 730 * 86400000;
+    const d1095 = joinMs + 1095 * 86400000;
+    const d1460 = joinMs + 1460 * 86400000;
     const d1825 = joinMs + 1825 * 86400000;
+    const d3650 = joinMs + 3650 * 86400000;
     if (now >= d365)  dates['first-anniversary'] = fmtMs(d365);
     if (now >= d730)  dates['veteran']           = fmtMs(d730);
+    if (now >= d1095) dates['trusted-regular']   = fmtMs(d1095);
+    if (now >= d1460) dates['server-pillar']     = fmtMs(d1460);
     if (now >= d1825) dates['old-timer']          = fmtMs(d1825);
+    if (now >= d3650) dates['decade-legend']      = fmtMs(d3650);
   }
 
   if (!tautulliDb) return dates;
