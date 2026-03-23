@@ -1,3 +1,21 @@
+## [1.40.0](https://github.com/iDrinkx/portall/compare/v1.39.9...v1.40.0) (2026-03-23)
+
+### Nouvelles fonctionnalites
+
+* succès cache + classement ([19e15ef](https://github.com/iDrinkx/portall/commit/19e15efdb5437b77ecfcafc4b5607591916cf7bf))
+
+### Corrections de bugs
+
+* boucle succès ([d1f6dc4](https://github.com/iDrinkx/portall/commit/d1f6dc4a0a084bea9033ae8021c06f437d279824))
+* cache succès utc ([2440f21](https://github.com/iDrinkx/portall/commit/2440f21dbe5289655d3d3203e679f8873ac8e675))
+* charge succès secret ([9615f32](https://github.com/iDrinkx/portall/commit/9615f3206324ed5dc671383bfd00c30a1ac02c57))
+* erreur plex au demarrage ([b641ec5](https://github.com/iDrinkx/portall/commit/b641ec5c21139513a3497a78337ace014b413cfd))
+* login slow ([5571a36](https://github.com/iDrinkx/portall/commit/5571a365769d54ea370e2d3f93a9c8336ad0fb7e))
+* ralentissement ([6e8ce1c](https://github.com/iDrinkx/portall/commit/6e8ce1c91693aae26319eeef964de79aae086be7))
+* ralentissment a cause des sucèes ([dafbd31](https://github.com/iDrinkx/portall/commit/dafbd31a7fd93edf383707993ad56a5165c14a76))
+* refresh succès ([872c016](https://github.com/iDrinkx/portall/commit/872c01635e98d9f7b79f9618861d718a9cdada85))
+* succès refresh ([9b5bf56](https://github.com/iDrinkx/portall/commit/9b5bf56fe55396caf5d13ecabc58abaad2faf2ef))
+
 ## [1.39.9](https://github.com/iDrinkx/portall/compare/v1.39.8...v1.39.9) (2026-03-23)
 
 ### Corrections de bugs
