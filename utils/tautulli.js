@@ -120,6 +120,18 @@ async function getTautulliStats(username, TAUTULLI_URL, TAUTULLI_API_KEY, plexUs
  */
 async function getTautulliUserInfo(username, TAUTULLI_URL, TAUTULLI_API_KEY) {
   try {
+    try {
+      const { getTautulliUserInfoFromDb, isTautulliReady } = require("./tautulli-direct");
+      if (isTautulliReady()) {
+        const dbUser = getTautulliUserInfoFromDb(username);
+        if (dbUser) {
+          return dbUser;
+        }
+      }
+    } catch (err) {
+      logT.warn(`getTautulliUserInfo DB: ${err.message}`);
+    }
+
     const res = await fetch(
       `${TAUTULLI_URL}/api/v2?apikey=${TAUTULLI_API_KEY}&cmd=get_user&user=${encodeURIComponent(username)}`,
       { headers: { Accept: "application/json" } }
@@ -135,17 +147,66 @@ async function getTautulliUserInfo(username, TAUTULLI_URL, TAUTULLI_API_KEY) {
   }
 }
 
+function buildSessionCacheFromDirectDb(logScan) {
+  try {
+    const { getAllUserStatsFromTautulli, isTautulliReady } = require("./tautulli-direct");
+    if (!isTautulliReady()) return null;
+
+    const allStats = getAllUserStatsFromTautulli();
+    if (!Array.isArray(allStats)) return null;
+
+    const finalStats = {};
+    for (const stats of allStats) {
+      const username = String(stats?.username || '').toLowerCase().trim();
+      if (!username || !(stats?.sessionCount > 0)) continue;
+
+      finalStats[username] = {
+        sessionCount: stats.sessionCount,
+        lastSessionTimestamp: stats.lastSessionDate,
+        watchStats: {
+          totalHours: stats.totalHours || 0,
+          movieHours: stats.movieHours || 0,
+          movieCount: stats.movieCount || 0,
+          episodeHours: stats.episodeHours || 0,
+          episodeCount: stats.episodeCount || 0
+        }
+      };
+
+      SessionStatsCache.set(username, finalStats[username]);
+    }
+
+    logScan.info(`Cache sessions reconstruit depuis tautulli.db — ${Object.keys(finalStats).length} utilisateurs`);
+    return finalStats;
+  } catch (err) {
+    logScan.warn(`Fast-path tautulli.db indisponible: ${err.message}`);
+    return null;
+  }
+}
+
 /**
  * 🚀 SCAN INTELLIGENT: Récupère l'historique de toutes les sessions Tautulli
  * S'arrête automatiquement quand il détecte les données en cache (smart delta scan)
  */
 async function scanTautulliHistoryForAllUsers(TAUTULLI_URL, TAUTULLI_API_KEY) {
+  const logScan = require('./logger').create('[Tautulli Scan]');
   try {
     GLOBAL_SCAN_IN_PROGRESS = true;
-    const logScan = require('./logger').create('[Tautulli Scan]');
     logScan.info('Début du scan historique...');
     const scanStartTime = Date.now();
-    
+
+    const directStats = buildSessionCacheFromDirectDb(logScan);
+    if (directStats) {
+      const duration = Math.round((Date.now() - scanStartTime) / 1000);
+      logScan.info(`Scan terminé via tautulli.db — ${Object.keys(directStats).length} utilisateurs, ${duration}s`);
+      GLOBAL_SCAN_IN_PROGRESS = false;
+      try {
+        TautulliEvents.emitScanComplete();
+      } catch (eventErr) {
+        logScan.warn('Erreur émission événement scan-complete:', eventErr.message);
+      }
+      return directStats;
+    }
+
     // 1️⃣ Récupérer TOUS les utilisateurs Tautulli via get_users
     const tautulliUsers = [];
     
@@ -474,18 +535,34 @@ async function syncTautulliHistoryToDatabase(maxSessions = 5000, forceFullSync =
     logSync.info(`${syncMode} — depuis ${lastSyncTimestamp ? new Date(lastSyncTimestamp * 1000).toISOString().slice(0, 10) : 'début'}`);
     
     // 2️⃣ Récupérer les utilisateurs
-    const usersRes = await fetch(
-      `${TAUTULLI_URL}/api/v2?apikey=${TAUTULLI_API_KEY}&cmd=get_users`,
-      { headers: { Accept: "application/json" } }
-    );
-    
     let tautulliUsers = [];
-    if (usersRes.ok) {
-      const usersJson = await usersRes.json();
-      if (Array.isArray(usersJson)) {
-        tautulliUsers = usersJson;
-      } else if (usersJson.response?.data) {
-        tautulliUsers = usersJson.response.data;
+    try {
+      const { getAllUserStatsFromTautulli, isTautulliReady } = require('./tautulli-direct');
+      if (isTautulliReady()) {
+        tautulliUsers = getAllUserStatsFromTautulli()
+          .map(user => ({
+            id: user.userId,
+            username: user.username
+          }))
+          .filter(user => user.id && user.username);
+      }
+    } catch (err) {
+      logSync.warn(`Lecture utilisateurs via tautulli.db impossible: ${err.message}`);
+    }
+
+    if (!tautulliUsers.length) {
+      const usersRes = await fetch(
+        `${TAUTULLI_URL}/api/v2?apikey=${TAUTULLI_API_KEY}&cmd=get_users`,
+        { headers: { Accept: "application/json" } }
+      );
+
+      if (usersRes.ok) {
+        const usersJson = await usersRes.json();
+        if (Array.isArray(usersJson)) {
+          tautulliUsers = usersJson;
+        } else if (usersJson.response?.data) {
+          tautulliUsers = usersJson.response.data;
+        }
       }
     }
     logSync.info(`${tautulliUsers.length} utilisateurs`);
@@ -498,6 +575,8 @@ async function syncTautulliHistoryToDatabase(maxSessions = 5000, forceFullSync =
     `);
     
     const insertMany = db.transaction((sessions) => {
+      let inserted = 0;
+      let skipped = 0;
       for (const session of sessions) {
         const hash = generateSessionHash(session);
         
@@ -514,14 +593,17 @@ async function syncTautulliHistoryToDatabase(maxSessions = 5000, forceFullSync =
             session.rating_key || 0,
             hash
           );
+          inserted++;
         } catch (err) {
           if (err.message.includes('UNIQUE constraint')) {
             // Doublon détecté via hash - skip silencieusement
-            return;
+            skipped++;
+            continue;
           }
           throw err;
         }
       }
+      return { inserted, skipped };
     });
     
     // 4️⃣ Fetcher l'historique avec delta-sync
@@ -530,49 +612,83 @@ async function syncTautulliHistoryToDatabase(maxSessions = 5000, forceFullSync =
     let totalSkipped = 0;
     let pagesScanned = 0;
     let recordsTotal = 0;
+    let useDirectHistory = false;
+    let getHistorySyncRows = null;
+
+    try {
+      const tautulliDirect = require('./tautulli-direct');
+      if (tautulliDirect.isTautulliReady()) {
+        useDirectHistory = true;
+        getHistorySyncRows = tautulliDirect.getHistorySyncRows;
+      }
+    } catch (err) {
+      logSync.warn(`Lecture historique via tautulli.db impossible: ${err.message}`);
+    }
     
     while (true) {
       try {
-        const histRes = await fetch(
-          `${TAUTULLI_URL}/api/v2?apikey=${TAUTULLI_API_KEY}&cmd=get_history&start=${pageIndex}&length=${pageSize}`,
-          { headers: { Accept: "application/json" } }
-        );
-        
-        if (!histRes.ok) break;
-        
-        const histJson = await histRes.json();
-        const sessions = histJson.response?.data?.data || histJson.data?.data || [];
-        recordsTotal = histJson.response?.data?.recordsTotal || 0;
+        let sessions = [];
+        const currentBatchSize = maxSessions > 0
+          ? Math.min(pageSize, Math.max(maxSessions - totalInserted, 1))
+          : pageSize;
+
+        if (useDirectHistory && typeof getHistorySyncRows === 'function') {
+          sessions = getHistorySyncRows({
+            sinceTimestamp: lastSyncTimestamp,
+            limit: currentBatchSize,
+            offset: pageIndex
+          });
+        } else {
+          const histRes = await fetch(
+            `${TAUTULLI_URL}/api/v2?apikey=${TAUTULLI_API_KEY}&cmd=get_history&start=${pageIndex}&length=${currentBatchSize}`,
+            { headers: { Accept: "application/json" } }
+          );
+          
+          if (!histRes.ok) break;
+          
+          const histJson = await histRes.json();
+          sessions = histJson.response?.data?.data || histJson.data?.data || [];
+          recordsTotal = histJson.response?.data?.recordsTotal || 0;
+        }
         
         if (!Array.isArray(sessions) || sessions.length === 0) break;
         
         pagesScanned++;
-        
-        // IMPORTANT: Filtrer uniquement les nouvelles sessions (delta-sync)
-        const newSessions = sessions.filter(s => {
-          if (lastSyncTimestamp === 0) return true;  // Premier sync = tout
-          return (s.date || 0) > lastSyncTimestamp;   // Sinon = sessions > dernier timestamp
-        });
-        
+
+        const newSessions = useDirectHistory
+          ? sessions
+          : sessions.filter(s => {
+              if (lastSyncTimestamp === 0) return true;
+              return (s.date || 0) > lastSyncTimestamp;
+            });
+
         if (newSessions.length > 0) {
-          insertMany(newSessions);
-          totalInserted += newSessions.length;
+          const writeResult = insertMany(newSessions) || { inserted: 0, skipped: 0 };
+          totalInserted += writeResult.inserted || 0;
+          totalSkipped += writeResult.skipped || 0;
         }
-        
-        totalSkipped += (sessions.length - newSessions.length);
+
+        if (!useDirectHistory) {
+          totalSkipped += (sessions.length - newSessions.length);
+        }
         
         if (maxSessions > 0 && totalInserted >= maxSessions) {
           logSync.warn('Limite', maxSessions, 'sessions atteinte');
           break;
         }
         
-        // Arrêter si fin
-        if (totalInserted >= recordsTotal && recordsTotal > 0) {
+        if (useDirectHistory && sessions.length < currentBatchSize) {
+          break;
+        }
+
+        if (!useDirectHistory && totalInserted >= recordsTotal && recordsTotal > 0) {
           break;
         }
         
-        pageIndex += pageSize;
-        await new Promise(r => setTimeout(r, 50));  // Petit délai
+        pageIndex += currentBatchSize;
+        if (!useDirectHistory) {
+          await new Promise(r => setTimeout(r, 50));  // Petit délai
+        }
         
       } catch (err) {
         logSync.error('fetch page:', err.message);

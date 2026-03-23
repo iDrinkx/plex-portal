@@ -22,7 +22,7 @@ const {
   DashboardCardQueries,
   UserServiceCredentialQueries
 } = require("../utils/database");
-const { getLastPlayedItem, getUserStatsFromTautulli } = require("../utils/tautulli-direct");
+const { getLastPlayedItem, getUserStatsFromTautulli, getServerLibraryStats } = require("../utils/tautulli-direct");
 const CacheManager = require("../utils/cache");
 const TautulliEvents = require("../utils/tautulli-events");  // ?? Import EventEmitter
 const { calculateUserXp } = require("../utils/xp-calculator");  // ?? Fonction centralisée XP
@@ -2073,55 +2073,31 @@ const logSrv = log.create('[ServerStats]');
 
 router.get('/api/server-stats', requireAuth, async (req, res) => {
   const cacheKey = 'server-library-stats';
+  const staleCacheKey = 'server-library-stats:last-success';
   const cached = cache.get(cacheKey);
   if (cached) return res.json(cached);
 
-  const tautulliUrl = (process.env.TAUTULLI_URL || '').replace(/\/$/, '');
-  const apiKey      = process.env.TAUTULLI_API_KEY || '';
-
-  if (!tautulliUrl || !apiKey) {
-    return res.json({ available: false, reason: 'Tautulli non configuré' });
-  }
-
   try {
-    const r = await fetch(`${tautulliUrl}/api/v2?apikey=${apiKey}&cmd=get_libraries`, { timeout: 8000 });
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    const json = await r.json();
-    const libs = json?.response?.data || [];
-
-    if (!Array.isArray(libs) || libs.length === 0) {
-      return res.json({ available: false, reason: 'Aucune librairie Tautulli' });
-    }
-
-    const AUDIOBOOK_KEYWORDS = ['audio', 'livre', 'audiobook', 'podcast'];
-    const isAudiobook = name => AUDIOBOOK_KEYWORDS.some(k => name.toLowerCase().includes(k));
-
-    let movies = 0, shows = 0, episodes = 0, musicTracks = 0, audiobookCount = 0;
-
-    for (const lib of libs) {
-      const type  = lib.section_type;
-      const count = parseInt(lib.count, 10)  || 0;
-      const child = parseInt(lib.child_count, 10) || 0;
-
-      if (type === 'movie') {
-        movies += count;
-      } else if (type === 'show') {
-        shows    += count;
-        episodes += child;
-      } else if (type === 'artist') {
-        if (isAudiobook(lib.section_name || '')) {
-          audiobookCount += child || count;  // child = tracks (chapters)
-        } else {
-          musicTracks += child || count;     // child = tracks
-        }
+    const result = getServerLibraryStats();
+    if (!result?.available) {
+      const stale = cache.get(staleCacheKey);
+      if (stale) {
+        logSrv.warn(`Lecture DB librairies indisponible (${result?.reason || 'unknown'}) — utilisation du dernier cache valide`);
+        return res.json({ ...stale, stale: true });
       }
+      return res.json(result || { available: false, reason: 'tautulli_db_unavailable' });
     }
-
-    const result = { available: true, movies, shows, episodes, musicTracks, audiobookCount };
     cache.set(cacheKey, result, 10 * 60 * 1000); // 10 min
-    logSrv.debug(`Films:${movies} Séries:${shows} Épisodes:${episodes} Musiques:${musicTracks} Audiobooks:${audiobookCount}`);
+    cache.set(staleCacheKey, result, 60 * 60 * 1000); // 1 h fallback
+    logSrv.debug(`Films:${result.movies} Séries:${result.shows} Épisodes:${result.episodes} Musiques:${result.musicTracks} Audiobooks:${result.audiobookCount}`);
     res.json(result);
   } catch (err) {
+    const stale = cache.get(staleCacheKey);
+    if (stale) {
+      logSrv.warn(`Erreur librairies: ${err.message} — utilisation du dernier cache valide`);
+      return res.json({ ...stale, stale: true });
+    }
+
     logSrv.warn('Erreur librairies:', err.message);
     res.json({ available: false, reason: err.message });
   }

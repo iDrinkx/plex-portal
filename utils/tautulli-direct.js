@@ -889,6 +889,169 @@ function isTautulliReady() {
   return tautulliDb !== null;
 }
 
+function getServerLibraryStats() {
+  if (!tautulliDb) {
+    return { available: false, reason: 'tautulli_not_ready' };
+  }
+
+  const sectionTypeExpr = hasTableColumn('library_sections', 'section_type')
+    ? 'section_type'
+    : (hasTableColumn('library_sections', 'section_kind') ? 'section_kind' : null);
+
+  if (!sectionTypeExpr) {
+    return { available: false, reason: 'library_sections_missing_section_type' };
+  }
+
+  const sectionNameExpr = hasTableColumn('library_sections', 'section_name')
+    ? 'section_name'
+    : (hasTableColumn('library_sections', 'name') ? 'name' : null);
+  const countExpr = hasTableColumn('library_sections', 'count') ? 'count' : null;
+  const childCountExpr = hasTableColumn('library_sections', 'child_count')
+    ? 'child_count'
+    : (hasTableColumn('library_sections', 'children_count') ? 'children_count' : null);
+
+  const filters = ['1=1'];
+  if (hasTableColumn('library_sections', 'is_active')) filters.push('is_active = 1');
+  if (hasTableColumn('library_sections', 'deleted_section')) filters.push('deleted_section = 0');
+
+  try {
+    const rows = tautulliDb.prepare(`
+      SELECT
+        ${sectionTypeExpr} AS section_type,
+        ${sectionNameExpr ? `COALESCE(${sectionNameExpr}, '')` : "''"} AS section_name,
+        ${countExpr ? `COALESCE(${countExpr}, 0)` : '0'} AS count,
+        ${childCountExpr ? `COALESCE(${childCountExpr}, 0)` : '0'} AS child_count
+      FROM library_sections
+      WHERE ${filters.join(' AND ')}
+    `).all();
+
+    if (!Array.isArray(rows) || rows.length === 0) {
+      return { available: false, reason: 'no_library_sections' };
+    }
+
+    const AUDIOBOOK_KEYWORDS = ['audio', 'livre', 'audiobook', 'podcast'];
+    const isAudiobook = name => AUDIOBOOK_KEYWORDS.some(keyword => String(name || '').toLowerCase().includes(keyword));
+
+    let movies = 0;
+    let shows = 0;
+    let episodes = 0;
+    let musicTracks = 0;
+    let audiobookCount = 0;
+
+    for (const row of rows) {
+      const type = String(row.section_type || '').toLowerCase();
+      const count = Number.parseInt(row.count, 10) || 0;
+      const child = Number.parseInt(row.child_count, 10) || 0;
+
+      if (type === 'movie') {
+        movies += count;
+      } else if (type === 'show') {
+        shows += count;
+        episodes += child;
+      } else if (type === 'artist') {
+        if (isAudiobook(row.section_name)) {
+          audiobookCount += child || count;
+        } else {
+          musicTracks += child || count;
+        }
+      }
+    }
+
+    return { available: true, movies, shows, episodes, musicTracks, audiobookCount };
+  } catch (err) {
+    log.warn(`getServerLibraryStats: ${err.message}`);
+    return { available: false, reason: err.message };
+  }
+}
+
+function getHistorySyncRows(options = {}) {
+  if (!tautulliDb) return [];
+
+  const sinceTimestamp = Number(options.sinceTimestamp) || 0;
+  const limit = Math.max(1, Number(options.limit) || 500);
+  const offset = Math.max(0, Number(options.offset) || 0);
+
+  const hasMetadataId = hasTableColumn('session_history_metadata', 'id');
+  const titleCandidates = [];
+  if (hasMetadataId && hasTableColumn('session_history_metadata', 'full_title')) titleCandidates.push('shm.full_title');
+  if (hasMetadataId && hasTableColumn('session_history_metadata', 'title')) titleCandidates.push('shm.title');
+  if (hasTableColumn('session_history', 'full_title')) titleCandidates.push('sh.full_title');
+  if (hasTableColumn('session_history', 'title')) titleCandidates.push('sh.title');
+
+  const titleExpr = titleCandidates.length
+    ? `COALESCE(${titleCandidates.join(', ')}, 'Unknown')`
+    : `'Unknown'`;
+  const hasHistoryUserId = hasTableColumn('session_history', 'user_id');
+  const hasHistoryUsername = hasTableColumn('session_history', 'user');
+  const ratingKeyExpr = hasTableColumn('session_history', 'rating_key')
+    ? 'COALESCE(sh.rating_key, 0)'
+    : (hasMetadataId && hasTableColumn('session_history_metadata', 'rating_key') ? 'COALESCE(shm.rating_key, 0)' : '0');
+  const watchedStatusExpr = hasTableColumn('session_history', 'watched_status')
+    ? 'COALESCE(sh.watched_status, 0)'
+    : (hasTableColumn('session_history', 'percent_complete') ? 'COALESCE(sh.percent_complete, 0) / 100.0' : '0');
+  const durationExpr = hasTableColumn('session_history', 'play_duration')
+    ? `COALESCE(sh.play_duration, CASE WHEN COALESCE(sh.stopped, 0) > COALESCE(sh.started, 0) THEN (sh.stopped - sh.started) ELSE 0 END)`
+    : `CASE WHEN COALESCE(sh.stopped, 0) > COALESCE(sh.started, 0) THEN (sh.stopped - sh.started) ELSE 0 END`;
+  const timestampExpr = hasTableColumn('session_history', 'stopped')
+    ? 'COALESCE(NULLIF(sh.stopped, 0), sh.started, 0)'
+    : 'COALESCE(sh.started, 0)';
+  const userIdExpr = hasHistoryUserId ? 'COALESCE(sh.user_id, u.user_id, 0)' : 'COALESCE(u.user_id, 0)';
+  const usernameExpr = hasHistoryUsername
+    ? "LOWER(COALESCE(u.username, sh.user, 'unknown'))"
+    : "LOWER(COALESCE(u.username, 'unknown'))";
+
+  const whereClauses = ['COALESCE(sh.started, 0) > 0'];
+  if (hasTableColumn('session_history', 'stopped')) {
+    whereClauses.push('COALESCE(sh.stopped, 0) > COALESCE(sh.started, 0)');
+  }
+  if (sinceTimestamp > 0) {
+    whereClauses.push(`${timestampExpr} > ?`);
+  }
+
+  const params = [];
+  if (sinceTimestamp > 0) params.push(sinceTimestamp);
+  params.push(limit, offset);
+
+  try {
+    return tautulliDb.prepare(`
+      SELECT
+        ${userIdExpr} AS user_id,
+        ${usernameExpr} AS username,
+        COALESCE(sh.media_type, 'unknown') AS media_type,
+        ${titleExpr} AS full_title,
+        ${durationExpr} AS play_duration,
+        ${timestampExpr} AS date,
+        ${watchedStatusExpr} AS watched_status,
+        ${ratingKeyExpr} AS rating_key
+      FROM session_history sh
+      LEFT JOIN users u ON ${hasHistoryUserId ? 'u.user_id = sh.user_id' : '1 = 0'}
+      ${hasMetadataId ? 'LEFT JOIN session_history_metadata shm ON shm.id = sh.id' : ''}
+      WHERE ${whereClauses.join(' AND ')}
+      ORDER BY ${timestampExpr} ASC
+      LIMIT ? OFFSET ?
+    `).all(...params);
+  } catch (err) {
+    log.warn(`getHistorySyncRows: ${err.message}`);
+    return [];
+  }
+}
+
+function getTautulliUserInfoFromDb(username) {
+  if (!tautulliDb || !hasTableColumn('users', 'username')) return null;
+
+  try {
+    return tautulliDb.prepare(`
+      SELECT *
+      FROM users
+      WHERE LOWER(username) = ?
+      LIMIT 1
+    `).get(String(username || '').toLowerCase().trim()) || null;
+  } catch (err) {
+    log.warn(`getTautulliUserInfoFromDb: ${err.message}`);
+    return null;
+  }
+}
+
 /**
  * 📊 Récupérer les stats de visionnage pour UN utilisateur
  * Agrégation optimisée directement en SQL
@@ -908,7 +1071,7 @@ function getUserStatsFromTautulli(username) {
       SELECT 
         u.user_id,
         u.username,
-        COUNT(*) as session_count,
+        COUNT(sh.id) as session_count,
         SUM(CAST((sh.stopped - sh.started) AS INTEGER)) as total_duration_seconds,
         MAX(sh.stopped) as last_session_timestamp,
         SUM(CASE WHEN sh.media_type = 'movie' THEN 1 ELSE 0 END) as movie_count,
@@ -970,7 +1133,7 @@ function getAllUserStatsFromTautulli() {
       SELECT
         u.user_id,
         u.username,
-        COUNT(*) as session_count,
+        COUNT(sh.id) as session_count,
         SUM(CAST((sh.stopped - sh.started) AS INTEGER)) as total_duration_seconds,
         MAX(sh.stopped) as last_session_timestamp,
         SUM(CASE WHEN sh.media_type = 'movie' THEN 1 ELSE 0 END) as movie_count,
@@ -2403,6 +2566,9 @@ function closeTautulliDatabase() {
 module.exports = {
   initTautulliDatabase,
   isTautulliReady,
+  getServerLibraryStats,
+  getHistorySyncRows,
+  getTautulliUserInfoFromDb,
   getUserStatsFromTautulli,
   getAllUserStatsFromTautulli,
   getMonthlyHoursFromTautulli,
