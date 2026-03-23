@@ -11,7 +11,7 @@ const { getConfigValue } = require('./config');
 
 const logCR = log.create('[Classement-Refresh]');
 const CLASSEMENT_REFRESH_CRON = '*/30 * * * *';
-const CLASSEMENT_USER_BATCH_SIZE = 4;
+const CLASSEMENT_USER_BATCH_SIZE = 1;
 
 let classementCache = {
   data: { byHours: [], byLevel: [] },
@@ -108,11 +108,13 @@ const AppSettingQueriesSafe = {
 async function mapInBatches(items, batchSize, mapper) {
   const results = [];
   const size = Math.max(1, Number(batchSize || 1));
+  const yieldToEventLoop = () => new Promise(resolve => setImmediate(resolve));
 
   for (let i = 0; i < items.length; i += size) {
     const batch = items.slice(i, i + size);
     const batchResults = await Promise.all(batch.map(mapper));
     results.push(...batchResults);
+    await yieldToEventLoop();
   }
 
   return results;
