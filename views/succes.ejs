@@ -871,6 +871,13 @@
     var successIsEmbed = <%= (typeof embed !== 'undefined' && embed) ? 'true' : 'false' %>;
     var successRefreshTimerEl = document.getElementById('successRefreshTimer');
     var successAutoRefreshPending = false;
+    var successAutoRefreshCooldownKey = 'portall.success.autoRefreshAt';
+    var successLastAutoRefreshAt = 0;
+    try {
+      successLastAutoRefreshAt = Number(sessionStorage.getItem(successAutoRefreshCooldownKey) || '0');
+    } catch (_) {
+      successLastAutoRefreshAt = 0;
+    }
 
     function formatRefreshDuration(totalSeconds) {
       if (totalSeconds < 60) return totalSeconds + 's';
@@ -938,8 +945,19 @@
           : 'Prochaine actualisation : imminente')
         : 'Données succès à jour';
 
+      var autoRefreshCooldownActive = successLastAutoRefreshAt > 0 && (now - successLastAutoRefreshAt) < 30000;
+
+      if (successRefreshMeta.ttlMs > 0 && remainingSeconds <= 0 && autoRefreshCooldownActive) {
+        successRefreshTimerEl.textContent = 'Actualisation récente, synchronisation en attente...';
+        return;
+      }
+
       if (successRefreshMeta.ttlMs > 0 && remainingSeconds <= 0 && !successAutoRefreshPending) {
         successAutoRefreshPending = true;
+        successLastAutoRefreshAt = now;
+        try {
+          sessionStorage.setItem(successAutoRefreshCooldownKey, String(now));
+        } catch (_) {}
         successRefreshTimerEl.textContent = 'Actualisation en cours...';
         fetch(successBasePath + '/api/badges-eval')
           .then(function() {
