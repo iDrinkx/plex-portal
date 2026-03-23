@@ -28,6 +28,7 @@ const TautulliEvents = require("../utils/tautulli-events");  // ?? Import EventE
 const { calculateUserXp } = require("../utils/xp-calculator");  // ?? Fonction centralisée XP
 const {
   getUserAchievementState,
+  refreshUserAchievementState,
   SUCCESS_REFRESH_TTL_MS,
   queueBackgroundAchievementRefresh,
   getBackgroundAchievementRefreshStatus
@@ -1250,12 +1251,8 @@ const logBadges = log.create('[Badges]');
 
 router.get('/api/badges-eval', requireAuth, async (req, res) => {
   try {
-    const state = await getUserAchievementState(req.session.user, { skipRefresh: true });
-    let refreshStatus = getBackgroundAchievementRefreshStatus(req.session.user);
-    if (!refreshStatus.running && !refreshStatus.queued) {
-      queueBackgroundAchievementRefresh(req.session.user, { includeSecretEvaluation: true });
-      refreshStatus = getBackgroundAchievementRefreshStatus(req.session.user);
-    }
+    const state = await refreshUserAchievementState(req.session.user, { includeSecretEvaluation: true });
+    const refreshStatus = getBackgroundAchievementRefreshStatus(req.session.user);
     res.json({
       success: true,
       refreshed: state.refreshed,
@@ -1963,14 +1960,35 @@ router.delete("/api/admin/dashboard-cards/:id", requireAuth, requireAdmin, (req,
 router.get("/api/now-playing", requireAuth, async (req, res) => {
   const plexUrl   = String(getConfigValue("PLEX_URL", "") || "").replace(/\/$/, "");
   const plexToken = String(getConfigValue("PLEX_TOKEN", "") || "");
-  if (!plexUrl || !plexToken) return res.json({ playing: false });
+  const buildLastPlayedResponse = () => {
+    const username = String(req.session.user.username || "");
+    const last = getLastPlayedItem(username);
+    if (!last) return { playing: false };
+
+    const thumbUrl = last.thumb
+      ? (req.basePath || "") + "/api/plex-thumb?path=" + encodeURIComponent(last.thumb)
+      : null;
+
+    return {
+      playing: false,
+      lastPlayed: true,
+      type: last.mediaType,
+      title: last.title,
+      grandTitle: last.grandTitle,
+      year: last.year,
+      thumb: thumbUrl,
+      stoppedAt: last.stoppedAt
+    };
+  };
+
+  if (!plexUrl || !plexToken) return res.json(buildLastPlayedResponse());
 
   try {
     const r = await fetch(`${plexUrl}/status/sessions`, {
       headers: { "X-Plex-Token": plexToken, "Accept": "application/json" },
       timeout: 5000
     });
-    if (!r.ok) return res.json({ playing: false });
+    if (!r.ok) return res.json(buildLastPlayedResponse());
     const json = await r.json();
     const sessions = json?.MediaContainer?.Metadata || [];
 
@@ -1985,25 +2003,7 @@ router.get("/api/now-playing", requireAuth, async (req, res) => {
     });
 
     if (!mySession) {
-      // Fallback : dernier contenu regardé
-      const username = (req.session.user.username || "");
-      const last = getLastPlayedItem(username);
-      if (!last) return res.json({ playing: false });
-
-      const thumbUrl = last.thumb
-        ? (req.basePath || "") + "/api/plex-thumb?path=" + encodeURIComponent(last.thumb)
-        : null;
-
-      return res.json({
-        playing:      false,
-        lastPlayed:   true,
-        type:         last.mediaType,
-        title:        last.title,
-        grandTitle:   last.grandTitle,
-        year:         last.year,
-        thumb:        thumbUrl,
-        stoppedAt:    last.stoppedAt,
-      });
+      return res.json(buildLastPlayedResponse());
     }
 
     const duration    = mySession.duration || 0;
@@ -2027,7 +2027,7 @@ router.get("/api/now-playing", requireAuth, async (req, res) => {
     });
   } catch (e) {
     log.create('[NowPlaying]').warn(e.message);
-    res.json({ playing: false });
+    res.json(buildLastPlayedResponse());
   }
 });
 

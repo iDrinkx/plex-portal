@@ -276,26 +276,34 @@ async function getSeerrStats(userEmail, username, SEERR_URL, SEERR_API_KEY, opti
     const now = Date.now();
 
     const buildQuotaSummary = (type, limit, days, explicitUsed = null, explicitRemaining = null, restricted = false) => {
+      const numericExplicitUsed = Number(explicitUsed);
+      const numericExplicitRemaining = Number(explicitRemaining);
+      const inferredLimit = Number.isFinite(numericExplicitUsed) && Number.isFinite(numericExplicitRemaining)
+        ? numericExplicitUsed + numericExplicitRemaining
+        : NaN;
       const normalizedLimit = Number(limit);
       const normalizedDays = Number(days);
-      const hasLimit = Number.isFinite(normalizedLimit) && normalizedLimit > 0;
+      const effectiveLimit = Number.isFinite(normalizedLimit) && normalizedLimit > 0
+        ? normalizedLimit
+        : (Number.isFinite(inferredLimit) && inferredLimit > 0 ? inferredLimit : NaN);
+      const hasLimit = Number.isFinite(effectiveLimit) && effectiveLimit > 0;
       const hasDays = Number.isFinite(normalizedDays) && normalizedDays > 0;
 
-      if (hasLimit && hasDays && Number.isFinite(Number(explicitUsed)) && Number.isFinite(Number(explicitRemaining))) {
-        const remaining = Math.max(0, Number(explicitRemaining));
+      if (hasLimit && hasDays && Number.isFinite(numericExplicitUsed) && Number.isFinite(numericExplicitRemaining)) {
+        const remaining = Math.max(0, numericExplicitRemaining);
         return {
-          limit: normalizedLimit,
+          limit: effectiveLimit,
           days: normalizedDays,
-          used: Number(explicitUsed),
+          used: numericExplicitUsed,
           remaining,
           restricted: Boolean(restricted),
-          text: `${remaining} sur ${normalizedLimit} restantes`
+          text: `${remaining} sur ${effectiveLimit} restantes`
         };
       }
 
       if (!hasLimit || !hasDays) {
         return {
-          limit: hasLimit ? normalizedLimit : null,
+          limit: hasLimit ? effectiveLimit : null,
           days: hasDays ? normalizedDays : null,
           used: 0,
           remaining: null,
@@ -312,14 +320,14 @@ async function getSeerrStats(userEmail, username, SEERR_URL, SEERR_API_KEY, opti
         return Number.isFinite(createdAtMs) && createdAtMs >= cutoff;
       }).length;
 
-      const remaining = Math.max(0, normalizedLimit - used);
+      const remaining = Math.max(0, effectiveLimit - used);
       return {
-        limit: normalizedLimit,
+        limit: effectiveLimit,
         days: normalizedDays,
         used,
         remaining,
         restricted: Boolean(restricted),
-        text: `${remaining} sur ${normalizedLimit} restantes`
+        text: `${remaining} sur ${effectiveLimit} restantes`
       };
     };
 
