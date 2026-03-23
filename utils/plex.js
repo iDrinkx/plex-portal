@@ -2,6 +2,22 @@ const fetch = require("node-fetch");
 const log = require("./logger");
 const logPlex = log.create('[Plex]');
 
+function getEffectivePlexToken() {
+  try {
+    const { AppSettingQueries } = require("./database");
+    const runtimeToken = String(AppSettingQueries.get("runtime_plex_cloud_token", "") || "").trim();
+    if (runtimeToken) return runtimeToken;
+  } catch (_) {}
+
+  try {
+    const { getConfigValue } = require("./config");
+    const configuredToken = String(getConfigValue("PLEX_TOKEN", "") || "").trim();
+    if (configuredToken) return configuredToken;
+  } catch (_) {}
+
+  return String(process.env.PLEX_TOKEN || "").trim();
+}
+
 // ─── Cache permanent (ne change jamais tant que la config ne change pas) ────
 let _cachedOwnerId   = null;      // ID Plex de l'admin — chargé une seule fois
 let _cachedMachineId = undefined; // undefined = pas encore chargé, null = échec
@@ -250,6 +266,7 @@ async function getPlexJoinDate(plexUserId, PLEX_URL, PLEX_TOKEN, joinedAtTimesta
 }
 
 module.exports = {
+  getEffectivePlexToken,
   getPlexUsers,
   getPlexUserInfo,
   isUserAuthorized,

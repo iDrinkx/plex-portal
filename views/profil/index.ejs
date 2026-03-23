@@ -2606,12 +2606,23 @@
         // Fond flouté = même image que l'affiche
         if (d.thumb) {
           document.getElementById("npBg").style.backgroundImage = `url('${d.thumb}')`;
+        } else {
+          document.getElementById("npBg").style.backgroundImage = "none";
         }
 
         // Affiche
         const img = document.getElementById("npThumb");
-        if (d.thumb) { img.src = d.thumb; img.style.display = ""; }
-        else img.style.display = "none";
+        if (d.thumb) {
+          img.onerror = () => {
+            img.removeAttribute("src");
+            img.style.display = "none";
+          };
+          img.src = d.thumb;
+          img.style.display = "";
+        } else {
+          img.removeAttribute("src");
+          img.style.display = "none";
+        }
 
         // Textes
         const grand  = document.getElementById("npGrand");

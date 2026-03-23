@@ -9,7 +9,7 @@ const logRomm = log.create("[RomM]");
 const { computeSubscription, getAllWizarrUsersDetailed } = require("../utils/wizarr");
 const { getTautulliStats } = require("../utils/tautulli");
 const { getSeerrStats } = require("../utils/seerr");
-const { getPlexJoinDate, getServerOwnerId } = require("../utils/plex");
+const { getEffectivePlexToken, getPlexJoinDate, getServerOwnerId } = require("../utils/plex");
 const { getRadarrCalendar, getSonarrCalendar } = require("../utils/radarr-sonarr");
 const { XP_SYSTEM } = require("../utils/xp-system");
 const { ACHIEVEMENTS, hydrateAchievementTexts, areCollectionAchievementsEnabled, getAchievementXp } = require("../utils/achievements");
@@ -73,6 +73,60 @@ async function ensureAdminFlag(req) {
     isAdmin = false;
   }
   req.session.user.isAdmin = isAdmin;
+}
+
+function decodeXmlEntities(value) {
+  return String(value || "")
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&");
+}
+
+function parseXmlAttributes(fragment = "") {
+  const attrs = {};
+  const attrRegex = /([A-Za-z0-9:_-]+)="([^"]*)"/g;
+  let match = null;
+  while ((match = attrRegex.exec(fragment)) !== null) {
+    attrs[match[1]] = decodeXmlEntities(match[2]);
+  }
+  return attrs;
+}
+
+function parsePlexSessionsResponse(rawBody = "") {
+  const sessions = [];
+  const itemRegex = /<(Video|Track|Photo)\b([^>]*)>([\s\S]*?)<\/\1>/g;
+  let match = null;
+
+  while ((match = itemRegex.exec(rawBody)) !== null) {
+    const [, mediaType, attrSource, innerXml] = match;
+    const mediaAttrs = parseXmlAttributes(attrSource);
+    const userMatch = innerXml.match(/<User\b([^>]*)\/?>/i);
+    const playerMatch = innerXml.match(/<Player\b([^>]*)\/?>/i);
+    const userAttrs = parseXmlAttributes(userMatch?.[1] || "");
+    const playerAttrs = parseXmlAttributes(playerMatch?.[1] || "");
+
+    sessions.push({
+      type: String(mediaAttrs.type || mediaType || "").toLowerCase(),
+      title: mediaAttrs.title || "",
+      grandparentTitle: mediaAttrs.grandparentTitle || "",
+      year: mediaAttrs.year ? Number(mediaAttrs.year) : null,
+      thumb: mediaAttrs.thumb || null,
+      duration: mediaAttrs.duration ? Number(mediaAttrs.duration) : 0,
+      viewOffset: mediaAttrs.viewOffset ? Number(mediaAttrs.viewOffset) : 0,
+      User: {
+        title: userAttrs.title || "",
+        id: userAttrs.id || userAttrs.userID || userAttrs.userId || ""
+      },
+      Player: {
+        title: playerAttrs.title || "",
+        state: playerAttrs.state || "playing"
+      }
+    });
+  }
+
+  return sessions;
 }
 
 async function requireAuth(req, res, next) {
@@ -1959,15 +2013,11 @@ router.delete("/api/admin/dashboard-cards/:id", requireAuth, requireAdmin, (req,
 =============================== */
 router.get("/api/now-playing", requireAuth, async (req, res) => {
   const plexUrl   = String(getConfigValue("PLEX_URL", "") || "").replace(/\/$/, "");
-  const plexToken = String(getConfigValue("PLEX_TOKEN", "") || "");
+  const plexToken = getEffectivePlexToken();
   const buildLastPlayedResponse = () => {
     const username = String(req.session.user.username || "");
     const last = getLastPlayedItem(username);
     if (!last) return { playing: false };
-
-    const thumbUrl = last.thumb
-      ? (req.basePath || "") + "/api/plex-thumb?path=" + encodeURIComponent(last.thumb)
-      : null;
 
     return {
       playing: false,
@@ -1976,7 +2026,7 @@ router.get("/api/now-playing", requireAuth, async (req, res) => {
       title: last.title,
       grandTitle: last.grandTitle,
       year: last.year,
-      thumb: thumbUrl,
+      thumb: null,
       stoppedAt: last.stoppedAt
     };
   };
@@ -1989,8 +2039,14 @@ router.get("/api/now-playing", requireAuth, async (req, res) => {
       timeout: 5000
     });
     if (!r.ok) return res.json(buildLastPlayedResponse());
-    const json = await r.json();
-    const sessions = json?.MediaContainer?.Metadata || [];
+    const bodyText = await r.text();
+    let sessions = [];
+    try {
+      const json = JSON.parse(bodyText);
+      sessions = json?.MediaContainer?.Metadata || [];
+    } catch (_) {
+      sessions = parsePlexSessionsResponse(bodyText);
+    }
 
     // Trouver la session de l'utilisateur connecté (par username ou titre)
     const username = (req.session.user.username || "").toLowerCase();
@@ -2038,7 +2094,7 @@ router.get("/api/now-playing", requireAuth, async (req, res) => {
 =============================== */
 router.get("/api/plex-thumb", requireAuth, async (req, res) => {
   const plexUrl   = String(getConfigValue("PLEX_URL", "") || "").replace(/\/$/, "");
-  const plexToken = String(getConfigValue("PLEX_TOKEN", "") || "");
+  const plexToken = getEffectivePlexToken();
   const thumbPath = req.query.path;
   if (!plexUrl || !plexToken || !thumbPath) return res.status(400).end();
 
