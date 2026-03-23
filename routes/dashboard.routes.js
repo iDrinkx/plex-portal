@@ -25,7 +25,6 @@ const {
 const { getLastPlayedItem, getUserStatsFromTautulli, getServerLibraryStats } = require("../utils/tautulli-direct");
 const CacheManager = require("../utils/cache");
 const TautulliEvents = require("../utils/tautulli-events");  // ?? Import EventEmitter
-const { calculateUserXp } = require("../utils/xp-calculator");  // ?? Fonction centralisée XP
 const {
   getUserAchievementState,
   refreshUserAchievementState,
@@ -130,6 +129,13 @@ function parsePlexSessionsResponse(rawBody = "") {
   }
 
   return sessions;
+}
+
+function normalizePlexIdentity(value = "") {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "");
 }
 
 async function requireAuth(req, res, next) {
@@ -1112,29 +1118,23 @@ router.get("/dashboard", requireAuth, (req, res) => {
 
 router.get("/profil", requireAuth, async (req, res) => {
   try {
-    // ? Rendu ultra-rapide: on ne bloque plus la page profil sur les appels stats.
-    // Les données dynamiques sont hydratées côté client via /api/stats, /api/xp-snapshot, etc.
-    // Pour l'entête profil, on utilise uniquement l'état DB des succès déjà débloqués.
-    const dbUser = UserQueries.upsert(
-      req.session.user.username,
-      req.session.user.id || null,
-      req.session.user.email || null,
-      req.session.user.joinedAt || req.session.user.joinedAtTimestamp || null
-    );
-    const userUnlockedMap = dbUser ? UserAchievementQueries.getForUser(dbUser.id) : {};
-    const progressMap = dbUser ? AchievementProgressQueries.getForUser(dbUser.id) : {};
+    // Rendu rapide : l'entête lit le snapshot progression persistant partagé avec le classement.
+    const achievementState = await getUserAchievementState(req.session.user, { skipRefresh: true });
+    const userUnlockedMap = achievementState.userUnlockedMap || {};
     const allAchievements = ACHIEVEMENTS.getAll();
     const unlockedAchievementIds = new Set(Object.keys(userUnlockedMap || {}));
     const unlockedAchievements = allAchievements.filter(a => unlockedAchievementIds.has(a.id));
-    const totalAchievementsXp = unlockedAchievements.reduce((sum, ach) => sum + getAchievementXp(ach, progressMap[ach.id]), 0);
+    const totalAchievementsXp = Number(achievementState.snapshot?.totalXp || 0)
+      - Math.round(Number(achievementState.snapshot?.totalHours || 0) * 10)
+      - Math.round(Number(achievementState.snapshot?.daysJoined || 0) * 1.5);
 
     res.render("profil/index", {
       user: req.session.user,
       basePath: req.basePath,
       XP_SYSTEM,
-      unlockedBadgesCount: unlockedAchievements.length,
+      unlockedBadgesCount: Number(achievementState.snapshot?.badgeCount || unlockedAchievements.length),
       totalBadgesCount: allAchievements.length,
-      totalAchievementsXp
+      totalAchievementsXp: Math.max(0, totalAchievementsXp)
     });
   } catch (err) {
     log.create('[Profil]').error(err.message);
@@ -1462,32 +1462,25 @@ router.get("/api/stats-wait", requireAuth, async (req, res) => {
 
 router.get("/api/xp-snapshot", requireAuth, async (req, res) => {
   try {
-    const user         = req.session.user;
-    const joinedAtTs   = user.joinedAtTimestamp || 0;
-
-    // ? Heures depuis DB directe (synchrone, pas d'appel HTTP lent)
-    const directStats  = getUserStatsFromTautulli(user.username);
-    const hoursHint    = directStats?.totalHours ?? null;
-    const statsHint    = directStats ? {
-      totalHours: directStats.totalHours || 0,
-      sessionCount: directStats.sessionCount || 0,
-      movieCount: directStats.movieCount || 0,
-      episodeCount: directStats.episodeCount || 0,
-      monthlyHours: 0,
-      nightCount: 0,
-      morningCount: 0
-    } : null;
-
-    // ?? Utiliser la fonction centralisée pour GARANTIR la cohérence avec le classement
-    const xpData = await calculateUserXp(user.username, joinedAtTs, hoursHint, statsHint);
+    const state = await getUserAchievementState(req.session.user, {
+      maxAgeMs: SUCCESS_REFRESH_TTL_MS
+    });
+    const snapshot = state.snapshot || {};
+    const rank = snapshot.rank || XP_SYSTEM.getRankByLevel(snapshot.level || 1);
 
     res.json({
-      rank: { color: xpData.rank.color, name: xpData.rank.name, icon: xpData.rank.icon, bgColor: xpData.rank.bgColor, borderColor: xpData.rank.borderColor },
-      level: xpData.level,
-      totalXp: xpData.totalXp,
-      badgeCount: xpData.badgeCount,
-      progressPercent: xpData.progressPercent,
-      xpNeeded: xpData.xpNeeded
+      rank: {
+        color: rank.color,
+        name: rank.name,
+        icon: rank.icon,
+        bgColor: rank.bgColor,
+        borderColor: rank.borderColor
+      },
+      level: Number(snapshot.level || 1),
+      totalXp: Number(snapshot.totalXp || 0),
+      badgeCount: Number(snapshot.badgeCount || 0),
+      progressPercent: Number(snapshot.progressPercent || 0),
+      xpNeeded: Number(snapshot.xpNeeded || 0)
     });
   } catch (err) {
     log.create('[XP-SNAPSHOT]').error(`Erreur: ${err.message}`);
@@ -2022,6 +2015,9 @@ router.get("/api/now-playing", requireAuth, async (req, res) => {
     const username = String(req.session.user.username || "");
     const last = getLastPlayedItem(username);
     if (!last) return { playing: false };
+    const thumb = last.thumb
+      ? (req.basePath || "") + "/api/plex-thumb?path=" + encodeURIComponent(last.thumb)
+      : null;
 
     return {
       playing: false,
@@ -2030,7 +2026,7 @@ router.get("/api/now-playing", requireAuth, async (req, res) => {
       title: last.title,
       grandTitle: last.grandTitle,
       year: last.year,
-      thumb: null,
+      thumb,
       stoppedAt: last.stoppedAt
     };
   };
@@ -2052,14 +2048,20 @@ router.get("/api/now-playing", requireAuth, async (req, res) => {
       sessions = parsePlexSessionsResponse(bodyText);
     }
 
-    // Trouver la session de l'utilisateur connecté (par username ou titre)
-    const username = (req.session.user.username || "").toLowerCase();
-    const userId   = req.session.user.id;
+    // Trouver la session de l'utilisateur connecté.
+    // Plex peut remonter un userId cloud, un userId local PMS (= 1 pour le proprio),
+    // ou un username avec casse/espaces différents.
+    const username = normalizePlexIdentity(req.session.user.username || "");
+    const userId   = String(req.session.user.id || "").trim();
+    const isAdminSession = !!req.session.user.isAdmin;
 
     const mySession = sessions.find(s => {
-      const su = (s.User?.title || "").toLowerCase();
+      const su = normalizePlexIdentity(s.User?.title || "");
       const sid = String(s.User?.id || "");
-      return su === username || sid === String(userId);
+      if (su && su === username) return true;
+      if (sid && sid === userId) return true;
+      if (isAdminSession && sid === "1" && su === username) return true;
+      return false;
     });
 
     if (!mySession) {

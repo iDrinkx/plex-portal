@@ -2807,7 +2807,7 @@
 
     function startPolling() {
       _timerNowPlaying = setInterval(refreshNowPlaying, 10000);   // 10 s
-      _timerStats      = setInterval(refreshStats,      300000);  // 5 min
+      _timerStats      = setInterval(refreshStats,      1800000); // 30 min
     }
 
     function stopPolling() {

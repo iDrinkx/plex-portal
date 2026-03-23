@@ -211,9 +211,13 @@ function mergeUsersCaseInsensitive() {
 
       db.prepare(`
         INSERT INTO achievement_snapshots (
-          user_id, total_hours, movie_count, episode_count, session_count, monthly_hours, night_count, morning_count, updated_at
+          user_id, total_hours, movie_count, episode_count, session_count, monthly_hours, night_count, morning_count,
+          days_joined, badge_count, total_xp, level, rank_name, rank_icon, rank_color, rank_bg_color, rank_border_color,
+          progress_percent, xp_needed, updated_at
         )
-        SELECT ?, total_hours, movie_count, episode_count, session_count, monthly_hours, night_count, morning_count, updated_at
+        SELECT ?, total_hours, movie_count, episode_count, session_count, monthly_hours, night_count, morning_count,
+          days_joined, badge_count, total_xp, level, rank_name, rank_icon, rank_color, rank_bg_color, rank_border_color,
+          progress_percent, xp_needed, updated_at
         FROM achievement_snapshots
         WHERE user_id = ?
         ON CONFLICT(user_id) DO UPDATE SET
@@ -224,6 +228,17 @@ function mergeUsersCaseInsensitive() {
           monthly_hours = MAX(achievement_snapshots.monthly_hours, excluded.monthly_hours),
           night_count = MAX(achievement_snapshots.night_count, excluded.night_count),
           morning_count = MAX(achievement_snapshots.morning_count, excluded.morning_count),
+          days_joined = MAX(achievement_snapshots.days_joined, excluded.days_joined),
+          badge_count = MAX(achievement_snapshots.badge_count, excluded.badge_count),
+          total_xp = MAX(achievement_snapshots.total_xp, excluded.total_xp),
+          level = MAX(achievement_snapshots.level, excluded.level),
+          rank_name = CASE WHEN excluded.total_xp >= achievement_snapshots.total_xp THEN excluded.rank_name ELSE achievement_snapshots.rank_name END,
+          rank_icon = CASE WHEN excluded.total_xp >= achievement_snapshots.total_xp THEN excluded.rank_icon ELSE achievement_snapshots.rank_icon END,
+          rank_color = CASE WHEN excluded.total_xp >= achievement_snapshots.total_xp THEN excluded.rank_color ELSE achievement_snapshots.rank_color END,
+          rank_bg_color = CASE WHEN excluded.total_xp >= achievement_snapshots.total_xp THEN excluded.rank_bg_color ELSE achievement_snapshots.rank_bg_color END,
+          rank_border_color = CASE WHEN excluded.total_xp >= achievement_snapshots.total_xp THEN excluded.rank_border_color ELSE achievement_snapshots.rank_border_color END,
+          progress_percent = CASE WHEN excluded.total_xp >= achievement_snapshots.total_xp THEN excluded.progress_percent ELSE achievement_snapshots.progress_percent END,
+          xp_needed = CASE WHEN excluded.total_xp >= achievement_snapshots.total_xp THEN excluded.xp_needed ELSE achievement_snapshots.xp_needed END,
           updated_at = CURRENT_TIMESTAMP
       `).run(canonical.id, duplicate.id);
       db.prepare(`DELETE FROM achievement_snapshots WHERE user_id = ?`).run(duplicate.id);
@@ -281,6 +296,17 @@ function runMigrations() {
     attemptAddColumn('dashboard_custom_cards', 'open_in_iframe', 'INTEGER NOT NULL DEFAULT 1');
     attemptAddColumn('dashboard_custom_cards', 'integration_key', "TEXT NOT NULL DEFAULT 'custom'");
     attemptAddColumn('dashboard_custom_cards', 'open_in_new_tab', 'INTEGER NOT NULL DEFAULT 0');
+    attemptAddColumn('achievement_snapshots', 'days_joined', 'INTEGER DEFAULT 0');
+    attemptAddColumn('achievement_snapshots', 'badge_count', 'INTEGER DEFAULT 0');
+    attemptAddColumn('achievement_snapshots', 'total_xp', 'INTEGER DEFAULT 0');
+    attemptAddColumn('achievement_snapshots', 'level', 'INTEGER DEFAULT 1');
+    attemptAddColumn('achievement_snapshots', 'rank_name', "TEXT DEFAULT ''");
+    attemptAddColumn('achievement_snapshots', 'rank_icon', "TEXT DEFAULT ''");
+    attemptAddColumn('achievement_snapshots', 'rank_color', "TEXT DEFAULT ''");
+    attemptAddColumn('achievement_snapshots', 'rank_bg_color', "TEXT DEFAULT ''");
+    attemptAddColumn('achievement_snapshots', 'rank_border_color', "TEXT DEFAULT ''");
+    attemptAddColumn('achievement_snapshots', 'progress_percent', 'REAL DEFAULT 0');
+    attemptAddColumn('achievement_snapshots', 'xp_needed', 'INTEGER DEFAULT 0');
     
     // Table: users
     db.exec(`
@@ -427,6 +453,17 @@ function runMigrations() {
         monthly_hours REAL DEFAULT 0,
         night_count INTEGER DEFAULT 0,
         morning_count INTEGER DEFAULT 0,
+        days_joined INTEGER DEFAULT 0,
+        badge_count INTEGER DEFAULT 0,
+        total_xp INTEGER DEFAULT 0,
+        level INTEGER DEFAULT 1,
+        rank_name TEXT DEFAULT '',
+        rank_icon TEXT DEFAULT '',
+        rank_color TEXT DEFAULT '',
+        rank_bg_color TEXT DEFAULT '',
+        rank_border_color TEXT DEFAULT '',
+        progress_percent REAL DEFAULT 0,
+        xp_needed INTEGER DEFAULT 0,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
       )
@@ -982,9 +1019,11 @@ const AchievementSnapshotQueries = {
     const db = getDb();
     return db.prepare(`
       INSERT INTO achievement_snapshots (
-        user_id, total_hours, movie_count, episode_count, session_count, monthly_hours, night_count, morning_count, updated_at
+        user_id, total_hours, movie_count, episode_count, session_count, monthly_hours, night_count, morning_count,
+        days_joined, badge_count, total_xp, level, rank_name, rank_icon, rank_color, rank_bg_color, rank_border_color,
+        progress_percent, xp_needed, updated_at
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
       ON CONFLICT(user_id) DO UPDATE SET
         total_hours = excluded.total_hours,
         movie_count = excluded.movie_count,
@@ -993,6 +1032,17 @@ const AchievementSnapshotQueries = {
         monthly_hours = excluded.monthly_hours,
         night_count = excluded.night_count,
         morning_count = excluded.morning_count,
+        days_joined = excluded.days_joined,
+        badge_count = excluded.badge_count,
+        total_xp = excluded.total_xp,
+        level = excluded.level,
+        rank_name = excluded.rank_name,
+        rank_icon = excluded.rank_icon,
+        rank_color = excluded.rank_color,
+        rank_bg_color = excluded.rank_bg_color,
+        rank_border_color = excluded.rank_border_color,
+        progress_percent = excluded.progress_percent,
+        xp_needed = excluded.xp_needed,
         updated_at = CURRENT_TIMESTAMP
     `).run(
       userId,
@@ -1002,7 +1052,18 @@ const AchievementSnapshotQueries = {
       Number(stats.sessionCount || 0),
       Number(stats.monthlyHours || 0),
       Number(stats.nightCount || 0),
-      Number(stats.morningCount || 0)
+      Number(stats.morningCount || 0),
+      Number(stats.daysJoined || 0),
+      Number(stats.badgeCount || 0),
+      Number(stats.totalXp || 0),
+      Math.max(1, Number(stats.level || 1)),
+      String(stats.rank?.name || stats.rankName || ""),
+      String(stats.rank?.icon || stats.rankIcon || ""),
+      String(stats.rank?.color || stats.rankColor || ""),
+      String(stats.rank?.bgColor || stats.rankBgColor || ""),
+      String(stats.rank?.borderColor || stats.rankBorderColor || ""),
+      Number(stats.progressPercent || 0),
+      Number(stats.xpNeeded || 0)
     );
   },
 
@@ -1017,6 +1078,17 @@ const AchievementSnapshotQueries = {
         monthly_hours as monthlyHours,
         night_count as nightCount,
         morning_count as morningCount,
+        days_joined as daysJoined,
+        badge_count as badgeCount,
+        total_xp as totalXp,
+        level,
+        rank_name as rankName,
+        rank_icon as rankIcon,
+        rank_color as rankColor,
+        rank_bg_color as rankBgColor,
+        rank_border_color as rankBorderColor,
+        progress_percent as progressPercent,
+        xp_needed as xpNeeded,
         strftime('%Y-%m-%dT%H:%M:%SZ', updated_at) as updatedAt
       FROM achievement_snapshots
       WHERE user_id = ?

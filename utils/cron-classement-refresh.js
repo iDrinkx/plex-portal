@@ -4,7 +4,6 @@ const log = require('./logger');
 const { UserQueries } = require('./database');
 const { XP_SYSTEM } = require('./xp-system');
 const { getUserStatsFromTautulli, getAllUserStatsFromTautulli, isTautulliReady } = require('./tautulli-direct');
-const { calculateUserXp } = require('./xp-calculator');  // 🎯 Fonction centralisée XP
 const { refreshUserAchievementState, queueBackgroundAchievementRefresh } = require('./achievement-state');
 const { getAllWizarrUsers, getAllWizarrUsersDetailed } = require('./wizarr');       // 🔑 Source de vérité
 const { getConfigValue } = require('./config');
@@ -430,7 +429,7 @@ async function refreshClassementCache() {
           nightCount: Number(stats.nightCount ?? 0),
           morningCount: Number(stats.morningCount ?? 0)
         };
-        await refreshUserAchievementState({
+        const progressionState = await refreshUserAchievementState({
           username: stats.username,
           id: wizarrUser?.plexUserId || stats.userId || null,
           email: wizarrUser?.email || null,
@@ -448,17 +447,18 @@ async function refreshClassementCache() {
           precomputedStats: statsHint,
           includeSecretEvaluation: true
         });
-        const xpData = await calculateUserXp(stats.username, joinedAtTs, stats.totalHours ?? null, statsHint);
-        logCR.debug(`✅ ${stats.username}: XP=${xpData.totalXp}, level=${xpData.level}, hours=${xpData.totalHours}`);
+        const snapshot = progressionState?.snapshot || {};
+        const rank = snapshot.rank || XP_SYSTEM.getRankByLevel(snapshot.level || 1);
+        logCR.debug(`✅ ${stats.username}: XP=${snapshot.totalXp || 0}, level=${snapshot.level || 1}, hours=${snapshot.totalHours || 0}`);
 
         return {
           username: stats.username,
           thumb,
-          totalHours: xpData.totalHours,
-          totalXp: xpData.totalXp,
-          level: xpData.level,
-          rank: xpData.rank,
-          badgeCount: xpData.badgeCount
+          totalHours: Number(snapshot.totalHours || stats.totalHours || 0),
+          totalXp: Number(snapshot.totalXp || 0),
+          level: Number(snapshot.level || 1),
+          rank,
+          badgeCount: Number(snapshot.badgeCount || 0)
         };
       } catch (err) {
         logCR.error(`⚠️  Erreur XP pour ${stats.username}: ${err.message}`);
