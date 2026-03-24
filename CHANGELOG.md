@@ -1,3 +1,14 @@
+## [1.41.3](https://github.com/iDrinkx/portall/compare/v1.41.2...v1.41.3) (2026-03-24)
+
+### Corrections de bugs
+
+* boucle succès ([3665bee](https://github.com/iDrinkx/portall/commit/3665bee3789fe0e0f32454fcaa086aa1e12d362b))
+* check connexion ([9704689](https://github.com/iDrinkx/portall/commit/97046898fda68c445fefeee2a628217801039373))
+* probleme et opti ([b92c4db](https://github.com/iDrinkx/portall/commit/b92c4dbc5f9bc8371200fda3ff6956f99b8cbeab))
+* succès classement ([a49bc63](https://github.com/iDrinkx/portall/commit/a49bc63479437d5b1012ef1b2e1a084c0202388d))
+* test ([95d20cb](https://github.com/iDrinkx/portall/commit/95d20cb8daddd6bfdb0346745af182a0cdd9c6b4))
+* trakt api cache ([63d2b39](https://github.com/iDrinkx/portall/commit/63d2b39d26848455568884fd054fa6ac80cbbc34))
+
 ## [1.41.2](https://github.com/iDrinkx/portall/compare/v1.41.1...v1.41.2) (2026-03-24)
 
 ### Corrections de bugs
