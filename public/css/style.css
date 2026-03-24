@@ -1369,6 +1369,14 @@ body.site-bg-mode-custom .site-bg-image {
   border: 1px solid rgba(109, 73, 171, 0.25);
 }
 
+.hero-icon-thumb {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: cover;
+  display: block;
+}
+
 .hero-card-info {
   flex: 1;
   min-width: 0;
@@ -1455,6 +1463,25 @@ body.site-bg-mode-custom .site-bg-image {
   font-size: 28px;
 }
 
+.hero-icon--rank-live {
+  gap: 1px;
+  flex-direction: column;
+  line-height: 1;
+}
+
+.hero-rank-prefix {
+  font-size: 10px;
+  font-weight: 800;
+  color: rgba(96, 165, 250, 0.78);
+  transform: translateY(2px);
+}
+
+.hero-rank-value {
+  font-size: 22px;
+  font-weight: 800;
+  color: #eff6ff;
+}
+
 .hero-card-stats {
   background: linear-gradient(135deg, rgba(13, 26, 24, 0.72) 0%, rgba(11, 28, 21, 0.68) 100%);
   border-color: rgba(16, 185, 129, 0.2);
@@ -1485,6 +1512,11 @@ body.site-bg-mode-custom .site-bg-image {
   border-radius: 50%;
   box-shadow: 0 4px 14px rgba(16, 185, 129, 0.2);
   font-size: 28px;
+  overflow: hidden;
+}
+
+.hero-icon--media-thumb {
+  padding: 0;
 }
 
 /* 📅 CALENDRIER CARD */
@@ -1613,6 +1645,26 @@ body.site-bg-mode-custom .site-bg-image {
 
 .hero-icon--calendrier > * {
   transform: translateY(1px);
+  line-height: 1;
+}
+
+.hero-icon--date-live {
+  gap: 1px;
+  flex-direction: column;
+}
+
+.hero-date-day {
+  font-size: 22px;
+  font-weight: 800;
+  color: #fff5f5;
+  line-height: 1;
+}
+
+.hero-date-month {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: rgba(254, 202, 202, 0.82);
   line-height: 1;
 }
 

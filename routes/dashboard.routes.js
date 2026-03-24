@@ -1178,8 +1178,70 @@ router.get("/dashboard", requireAuth, async (req, res) => {
   });
   const layoutEnabledMap = new Map(dashboardLayoutItems.map(item => [item.id, item.enabled !== false]));
   const dashboardServerStatsEnabled = !!layoutEnabledMap.get("section:server-stats");
+  const usernameNormalized = String(req.session.user?.username || "").trim().toLowerCase();
+
+  let classementPosition = null;
+  try {
+    const { getClassementCache } = require("../utils/cron-classement-refresh");
+    const cacheData = getClassementCache();
+    const byLevel = Array.isArray(cacheData?.data?.byLevel) ? cacheData.data.byLevel : [];
+    const rankIndex = byLevel.findIndex(entry => String(entry?.username || "").trim().toLowerCase() === usernameNormalized);
+    if (rankIndex >= 0) classementPosition = rankIndex + 1;
+  } catch (_) {
+    classementPosition = null;
+  }
+
+  let lastPlayedThumb = null;
+  try {
+    const lastPlayed = getLastPlayedItem(String(req.session.user?.username || ""));
+    if (lastPlayed?.thumb) {
+      lastPlayedThumb = `${req.basePath || ""}/api/plex-thumb?path=${encodeURIComponent(lastPlayed.thumb)}`;
+    }
+  } catch (_) {
+    lastPlayedThumb = null;
+  }
+
+  const calendarNow = new Date();
+  const calendarDay = String(calendarNow.getDate());
+  const calendarMonth = calendarNow.toLocaleDateString(res.locals.locale || "fr-FR", { month: "short" }).replace(".", "");
+
   const dashboardBuiltinCards = buildDashboardBuiltinCards(req.session.user, req.basePath || "", res.locals.t)
-    .filter(card => layoutEnabledMap.get(`builtin:${card.key}`) !== false);
+    .filter(card => layoutEnabledMap.get(`builtin:${card.key}`) !== false)
+    .map(card => {
+      if (card.key === "classement" && Number.isInteger(classementPosition) && classementPosition > 0) {
+        return {
+          ...card,
+          visual: {
+            type: "rank",
+            value: classementPosition
+          }
+        };
+      }
+
+      if (card.key === "calendrier") {
+        return {
+          ...card,
+          visual: {
+            type: "date",
+            day: calendarDay,
+            month: String(calendarMonth || "").toUpperCase()
+          }
+        };
+      }
+
+      if (card.key === "mes-stats" && lastPlayedThumb) {
+        return {
+          ...card,
+          visual: {
+            type: "thumb",
+            src: lastPlayedThumb,
+            alt: res.locals.t ? res.locals.t("dashboardBuiltins.mes-stats.title") : "Derniere lecture"
+          }
+        };
+      }
+
+      return card;
+    });
 
   res.render("dashboard/index", {
     user: req.session.user,

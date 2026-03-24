@@ -113,6 +113,20 @@
                   <% } else { %>
                     <div class="hero-avatar-placeholder">👤</div>
                   <% } %>
+                <% } else if (card.visual && card.visual.type === "thumb") { %>
+                  <div class="hero-icon <%= card.iconClass %> hero-icon--media-thumb">
+                    <img src="<%= card.visual.src %>" alt="<%= card.visual.alt %>" class="hero-icon-thumb">
+                  </div>
+                <% } else if (card.visual && card.visual.type === "rank") { %>
+                  <div class="hero-icon <%= card.iconClass %> hero-icon--rank-live">
+                    <span class="hero-rank-prefix">#</span>
+                    <span class="hero-rank-value"><%= card.visual.value %></span>
+                  </div>
+                <% } else if (card.visual && card.visual.type === "date") { %>
+                  <div class="hero-icon <%= card.iconClass %> hero-icon--date-live">
+                    <span class="hero-date-day"><%= card.visual.day %></span>
+                    <span class="hero-date-month"><%= card.visual.month %></span>
+                  </div>
                 <% } else if (card.kind === "image") { %>
                   <div class="hero-icon <%= card.iconClass %>">
                     <img src="<%= card.iconSrc %>" alt="<%= card.iconAlt %>" class="hero-icon-logo">
