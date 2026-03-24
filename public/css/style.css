@@ -1146,7 +1146,7 @@ body.site-bg-mode-custom .site-bg-image {
   .login-status-panel--dashboard .login-status-item__state-block {
     width: 100%;
     display: grid;
-    grid-template-columns: minmax(122px, 1fr) minmax(102px, auto);
+    grid-template-columns: minmax(118px, 1fr) minmax(110px, auto);
     align-items: center;
     justify-items: start;
     text-align: left;
@@ -1158,8 +1158,9 @@ body.site-bg-mode-custom .site-bg-image {
     margin-top: 0;
     text-align: right;
     white-space: nowrap;
-    font-size: 9px;
-    max-width: 102px;
+    font-size: 10px;
+    width: 100%;
+    max-width: 110px;
     justify-self: end;
   }
 
