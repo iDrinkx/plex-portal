@@ -26,6 +26,7 @@
     min-height: 48px;
     gap: 4px;
     padding: 12px 24px;
+    justify-content: center;
     color: #f4f1ec;
     background: #533f2b;
     border: 1px solid #a66822;
@@ -34,6 +35,8 @@
   }
 
   .plex-btn-label {
+    display: inline-flex;
+    align-items: center;
     line-height: 1;
     font-size: 15px;
     font-weight: 700;
@@ -44,7 +47,8 @@
     width: 36px;
     height: auto;
     display: block;
-    transform: translateY(1px);
+    flex-shrink: 0;
+    transform: none;
   }
 
   .plex-btn--logo::before {
