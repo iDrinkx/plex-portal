@@ -12,6 +12,7 @@ const reverseProxyMiddleware = require("./middleware/reverseproxy.middleware");
 const { startSessionCronJob } = require("./utils/cron-session-job");
 const { startDatabaseMaintenanceJob } = require("./utils/cron-maintenance-job");  // 🧹 Database maintenance
 const { startClassementRefreshJob } = require("./utils/cron-classement-refresh");  // 🏆 Classement refresh
+const { startAchievementRefreshJob } = require("./utils/cron-achievement-job");  // 🏅 Achievements refresh
 const { runHealthCheck } = require("./utils/health-check");  // 🏥 Health check au boot
 const { initDatabase, DashboardCardQueries, AppSettingQueries } = require("./utils/database");  // 🗄️  Database initialization
 const { applyRuntimeConfig, isSetupComplete, getConfigValue } = require("./utils/config");
@@ -557,5 +558,15 @@ app.listen(PORT, async () => {
     initialDelayMs: 5000
   }).catch(err => {
     console.warn("[SETUP] ⚠️  Impossible de démarrer le refresh classement:", err.message);
+  });
+
+  startAchievementRefreshJob({
+    backgroundInitialRefresh: true,
+    initialDelayMs: 120000,
+    refreshOptions: {
+      includeSecretEvaluation: true
+    }
+  }).catch(err => {
+    console.warn("[SETUP] ⚠️  Impossible de démarrer le refresh succès:", err.message);
   });
 });

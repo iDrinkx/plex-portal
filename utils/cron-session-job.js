@@ -67,18 +67,6 @@ function startSessionCronJob(TAUTULLI_URL, TAUTULLI_API_KEY, PLEX_URL, PLEX_TOKE
   console.log(`[CRON] Mode: Scan intelligent avec delta sync - source prioritaire: ${isTautulliReady() ? 'tautulli.db' : 'api'}`);
 
   return cronJob;
-  // Execution immediate au demarrage
-  (async () => {
-    try {
-      console.log("[CRON-JOB] Scan sessions immediat au demarrage");
-      await scanTautulliHistoryForAllUsers(TAUTULLI_URL, TAUTULLI_API_KEY);
-      const { refreshClassementCache } = require('./cron-classement-refresh');
-      await refreshClassementCache();
-      console.log("[CRON-JOB] Classement rafraichi au demarrage.");
-    } catch (err) {
-      console.error("[CRON-JOB] Erreur scan/refresh au demarrage:", err.message);
-    }
-  })();
 }
 
 /**
