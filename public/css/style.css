@@ -2561,29 +2561,26 @@ body.site-bg-mode-custom .site-bg-image {
 
 @media (max-width: 600px) {
   .server-stats-bar {
-    display: flex;
-    flex-wrap: nowrap;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     align-items: stretch;
-    justify-content: flex-start;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    padding: 14px 12px;
+    padding: 14px 10px;
     gap: 8px;
     row-gap: 0;
-    scrollbar-width: none;
+    overflow: visible;
   }
-  .server-stats-bar::-webkit-scrollbar { display: none; }
   .ssb-item {
-    min-width: 112px;
-    padding: 8px 10px;
+    min-width: 0;
+    width: auto;
+    padding: 8px 6px;
     align-self: stretch;
     justify-content: center;
     display: flex;
     flex-direction: column;
-    justify-items: center;
+    align-items: center;
     min-height: 82px;
     gap: 2px;
-    flex: 0 0 auto;
+    flex: initial;
   }
   .ssb-divider {
     display: none;
