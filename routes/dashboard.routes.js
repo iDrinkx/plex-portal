@@ -1334,7 +1334,16 @@ router.get("/mes-stats", requireAuth, (req, res) => {
 router.get("/succes", requireAuth, async (req, res) => {
   try {
     const collectionsEnabled = areCollectionAchievementsEnabled();
-    const achievementState = await getUserAchievementState(req.session.user, { skipRefresh: true });
+    let achievementState = await getUserAchievementState(req.session.user, { skipRefresh: true });
+    const hasCollectionProgress = collectionsEnabled && ACHIEVEMENTS.collections.some((achievement) => {
+      const progressEntry = achievementState.renderProgressMap?.[achievement.id];
+      return Number(progressEntry?.total || 0) > 0;
+    });
+
+    if (collectionsEnabled && achievementState.needsRefresh && !hasCollectionProgress) {
+      await refreshUserAchievementState(req.session.user, { includeSecretEvaluation: true });
+      achievementState = await getUserAchievementState(req.session.user, { skipRefresh: true });
+    }
 
     let backgroundRefreshStatus = getBackgroundAchievementRefreshStatus(req.session.user);
     if ((achievementState.needsRefresh || !achievementState.snapshot?.updatedAt) && !backgroundRefreshStatus.running && !backgroundRefreshStatus.queued) {
@@ -1481,12 +1490,26 @@ const logBadges = log.create('[Badges]');
 
 router.get('/api/badges-eval', requireAuth, async (req, res) => {
   try {
-    const state = await getUserAchievementState(req.session.user, { skipRefresh: true });
+    let state = await getUserAchievementState(req.session.user, { skipRefresh: true });
     let refreshStatus = getBackgroundAchievementRefreshStatus(req.session.user);
     if ((state.needsRefresh || !state.snapshot?.updatedAt) && !refreshStatus.running && !refreshStatus.queued) {
       queueBackgroundAchievementRefresh(req.session.user, { includeSecretEvaluation: true });
       refreshStatus = getBackgroundAchievementRefreshStatus(req.session.user);
     }
+
+    if (refreshStatus.running || refreshStatus.queued || state.needsRefresh) {
+      const waitStart = Date.now();
+      const maxWaitMs = 12000;
+      while ((Date.now() - waitStart) < maxWaitMs) {
+        await new Promise(resolve => setTimeout(resolve, 400));
+        state = await getUserAchievementState(req.session.user, { skipRefresh: true });
+        refreshStatus = getBackgroundAchievementRefreshStatus(req.session.user);
+        if (!refreshStatus.running && !refreshStatus.queued && !state.needsRefresh) {
+          break;
+        }
+      }
+    }
+
     res.json({
       success: true,
       refreshed: !!state.refreshed,
