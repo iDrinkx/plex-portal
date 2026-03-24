@@ -1147,18 +1147,17 @@ body.site-bg-mode-custom .site-bg-image {
     width: 100%;
     display: flex;
     align-items: center;
-    justify-content: flex-end;
-    position: relative;
-    align-items: center;
-    text-align: right;
+    justify-content: space-between;
+    text-align: left;
     min-height: 40px;
+    gap: 12px;
   }
 
   .login-status-panel--dashboard .login-status-item__since {
     margin-top: 0;
     text-align: right;
-    margin-left: auto;
     white-space: nowrap;
+    flex: 0 0 auto;
   }
 
   .login-status-panel--dashboard .login-status-item__meta {
@@ -1175,9 +1174,8 @@ body.site-bg-mode-custom .site-bg-image {
   }
 
   .login-status-panel--dashboard .login-status-state {
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
+    flex: 0 0 auto;
+    margin-left: 6px;
   }
 }
 
@@ -2570,14 +2568,14 @@ body.site-bg-mode-custom .site-bg-image {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     padding: 14px 12px;
-    gap: 0;
+    gap: 8px;
     row-gap: 0;
     scrollbar-width: none;
   }
   .server-stats-bar::-webkit-scrollbar { display: none; }
   .ssb-item {
-    min-width: 108px;
-    padding: 6px 8px;
+    min-width: 112px;
+    padding: 8px 10px;
     align-self: stretch;
     justify-content: center;
     display: flex;
@@ -2588,8 +2586,7 @@ body.site-bg-mode-custom .site-bg-image {
     flex: 0 0 auto;
   }
   .ssb-divider {
-    align-self: center;
-    flex: 0 0 auto;
+    display: none;
   }
   .ssb-num  { font-size: 17px; line-height: 1.05; }
   .ssb-label { font-size: 10px; letter-spacing: 0.5px; }

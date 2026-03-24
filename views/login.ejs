@@ -66,11 +66,16 @@
     .plex-btn--logo {
       width: min(100%, 320px);
       min-width: 0;
-      gap: 8px;
+      display: grid;
+      grid-template-columns: 1fr auto auto 1fr;
+      align-items: center;
+      column-gap: 8px;
       padding: 12px 18px;
+      margin-inline: auto;
     }
 
     .plex-btn-label {
+      grid-column: 2;
       justify-content: center;
       text-align: center;
       white-space: nowrap;
@@ -78,6 +83,8 @@
     }
 
     .plex-btn-logo {
+      grid-column: 3;
+      justify-self: start;
       width: 34px;
     }
   }
