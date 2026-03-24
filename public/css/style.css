@@ -1649,23 +1649,25 @@ body.site-bg-mode-custom .site-bg-image {
 }
 
 .hero-icon--date-live {
-  gap: 1px;
+  gap: 0;
   flex-direction: column;
+  padding-top: 2px;
 }
 
 .hero-date-day {
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 800;
   color: #fff5f5;
   line-height: 1;
 }
 
 .hero-date-month {
-  font-size: 9px;
+  font-size: 8px;
   font-weight: 800;
-  letter-spacing: 1px;
+  letter-spacing: 0.7px;
   color: rgba(254, 202, 202, 0.82);
   line-height: 1;
+  transform: translateY(-1px);
 }
 
 /* Logo Seerr dans la navbar */

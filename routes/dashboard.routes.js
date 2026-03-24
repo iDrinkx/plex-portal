@@ -1178,14 +1178,19 @@ router.get("/dashboard", requireAuth, async (req, res) => {
   });
   const layoutEnabledMap = new Map(dashboardLayoutItems.map(item => [item.id, item.enabled !== false]));
   const dashboardServerStatsEnabled = !!layoutEnabledMap.get("section:server-stats");
-  const usernameNormalized = String(req.session.user?.username || "").trim().toLowerCase();
+  const normalizeLeaderboardUsername = (value) => String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+  const usernameNormalized = normalizeLeaderboardUsername(req.session.user?.username || "");
 
   let classementPosition = null;
   try {
     const { getClassementCache } = require("../utils/cron-classement-refresh");
     const cacheData = getClassementCache();
     const byLevel = Array.isArray(cacheData?.data?.byLevel) ? cacheData.data.byLevel : [];
-    const rankIndex = byLevel.findIndex(entry => String(entry?.username || "").trim().toLowerCase() === usernameNormalized);
+    const rankIndex = byLevel.findIndex(entry => normalizeLeaderboardUsername(entry?.username || "") === usernameNormalized);
     if (rankIndex >= 0) classementPosition = rankIndex + 1;
   } catch (_) {
     classementPosition = null;
