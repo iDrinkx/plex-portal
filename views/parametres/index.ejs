@@ -942,7 +942,7 @@
             </div>
           <% }) %>
         </div>
-        <div class="settings-inline-note" id="dashboardLayoutState"><%= t("settings.dashboardLayout.note") %></div>
+        <div class="settings-inline-note" id="dashboardLayoutState"><%- t("settings.dashboardLayout.note") %></div>
         </div>
 
         <div class="settings-card">
@@ -1279,6 +1279,9 @@
       waves: "<%= t('settings.background.presets.waves') %>",
       custom: "<%= t('settings.background.presets.custom') %>"
     };
+    const DASHBOARD_LAYOUT_IDLE_NOTE = "<%- t('settings.dashboardLayout.note') %>";
+    const DASHBOARD_LAYOUT_SAVING_NOTE = "<%- t('settings.dashboardLayout.saving') %>";
+    const DASHBOARD_LAYOUT_SAVED_NOTE = "<%- t('settings.dashboardLayout.saved') %>";
 
     function escHtml(v) {
       return String(v == null ? "" : v)
@@ -1471,18 +1474,19 @@
     function syncDashboardLayoutItems() {
       const catalog = getDashboardLayoutCatalog();
       const byId = new Map(catalog.map(function (item) { return [item.id, item]; }));
+      const enabledById = new Map(dashboardLayoutItems.map(function (item) { return [item.id, item.enabled !== false]; }));
       const next = [];
       const seen = new Set();
 
       dashboardLayoutItems.forEach(function (item) {
         if (!item || !byId.has(item.id) || seen.has(item.id)) return;
-        next.push({ ...byId.get(item.id) });
+        next.push({ ...byId.get(item.id), enabled: enabledById.get(item.id) !== false });
         seen.add(item.id);
       });
 
       catalog.forEach(function (item) {
         if (seen.has(item.id)) return;
-        next.push({ ...item });
+        next.push({ ...item, enabled: enabledById.has(item.id) ? enabledById.get(item.id) !== false : true });
       });
 
       dashboardLayoutItems = next;
@@ -1491,7 +1495,7 @@
 
     async function saveDashboardLayout(previousItems) {
       if (!dashboardLayoutState) return;
-      dashboardLayoutState.textContent = "<%= t('settings.dashboardLayout.note') %>";
+      dashboardLayoutState.textContent = DASHBOARD_LAYOUT_SAVING_NOTE;
 
       try {
         const payload = dashboardLayoutItems.map(function (item) {
@@ -1511,11 +1515,11 @@
           return current ? { ...current, enabled: item.enabled !== false } : null;
         }).filter(Boolean);
         syncDashboardLayoutItems();
-        dashboardLayoutState.textContent = "<%= t('settings.dashboardLayout.note') %>";
+        dashboardLayoutState.textContent = DASHBOARD_LAYOUT_SAVED_NOTE;
       } catch (_) {
         dashboardLayoutItems = previousItems.map(function (item) { return { ...item }; });
         syncDashboardLayoutItems();
-        dashboardLayoutState.textContent = "<%= t('settings.dashboardLayout.note') %>";
+        dashboardLayoutState.textContent = DASHBOARD_LAYOUT_IDLE_NOTE;
       }
     }
 
