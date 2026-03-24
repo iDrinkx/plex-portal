@@ -48,6 +48,7 @@ const {
 } = require("../utils/dashboard-custom-html");
 const { SUPPORTED_LOCALES, getSiteLanguage } = require("../utils/i18n");
 const { BACKGROUND_PRESETS, getSiteBackgroundSettings, saveSiteBackgroundSettings } = require("../utils/site-background");
+const { getPublicStatusPageSummary } = require("../utils/uptime-kuma");
 
 const PLEX_LIVE_TIMEOUT_MS = 12000;
 const NOW_PLAYING_CACHE_TTL_MS = 45 * 1000;
@@ -1083,7 +1084,7 @@ async function getWizarrSubscription(user) {
    ?? PAGES
 =============================== */
 
-router.get("/dashboard", requireAuth, (req, res) => {
+router.get("/dashboard", requireAuth, async (req, res) => {
   const colorMap = getColorMap();
   const dashboardServerStatsEnabled = AppSettingQueries.getBool("dashboard_server_stats_enabled", true);
   const dashboardBuiltinCards = buildDashboardBuiltinCards(req.session.user, req.basePath || "", res.locals.t);
@@ -1103,6 +1104,22 @@ router.get("/dashboard", requireAuth, (req, res) => {
     })
     .filter(Boolean);
 
+  let uptimeKuma = null;
+  const uptimeKumaUrl = String(getConfigValue("UPTIME_KUMA_URL", "") || "").trim();
+  const uptimeKumaUsername = String(getConfigValue("UPTIME_KUMA_USERNAME", "") || "").trim();
+  const uptimeKumaPassword = String(getConfigValue("UPTIME_KUMA_PASSWORD", "") || "").trim();
+  if (uptimeKumaUrl && uptimeKumaUsername && uptimeKumaPassword) {
+    try {
+      uptimeKuma = await getPublicStatusPageSummary({
+        baseUrl: uptimeKumaUrl,
+        username: uptimeKumaUsername,
+        password: uptimeKumaPassword
+      });
+    } catch (_) {
+      uptimeKuma = null;
+    }
+  }
+
   res.render("dashboard/index", {
     user: req.session.user,
     basePath: req.basePath,
@@ -1111,7 +1128,8 @@ router.get("/dashboard", requireAuth, (req, res) => {
     dashboardCustomHtmlBlocks: getDashboardCustomHtmlBlocks(),
     dashboardCustomHtml: getDashboardCustomHtml(),
     dashboardCustomHtmlMode: getDashboardCustomHtmlMode(),
-    dashboardServerStatsEnabled
+    dashboardServerStatsEnabled,
+    uptimeKuma
   });
 });
 

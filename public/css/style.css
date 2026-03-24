@@ -989,10 +989,65 @@ body.site-bg-mode-custom .site-bg-image {
   background: #7a8ba0;
 }
 
+.login-status-panel--dashboard {
+  width: 100%;
+  margin: 28px 0 24px;
+}
+
+.login-status-panel--dashboard .login-status-summary {
+  margin-bottom: 16px;
+}
+
+.login-status-panel--dashboard .login-status-list {
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 12px;
+}
+
+.login-status-panel--dashboard .login-status-item {
+  min-height: 116px;
+  padding: 14px 15px;
+}
+
+.login-status-panel--dashboard .login-status-item__row {
+  grid-template-columns: 1fr;
+  gap: 12px;
+  height: 100%;
+}
+
+.login-status-panel--dashboard .login-status-item__meta {
+  justify-content: flex-start;
+}
+
+.login-status-panel--dashboard .login-status-item__headline {
+  min-height: 44px;
+}
+
+.login-status-panel--dashboard .login-status-item__service-brand {
+  min-width: 0;
+}
+
+.login-status-panel--dashboard .login-status-item__state-block {
+  align-items: flex-start;
+  text-align: left;
+}
+
+.login-status-panel--dashboard .login-status-item__since {
+  text-align: left;
+}
+
 @media (max-width: 900px) {
   .login-status-panel {
     width: min(440px, 100%);
     padding: 20px 18px 16px;
+  }
+
+  .login-status-panel--dashboard {
+    width: 100%;
+    padding: 22px 20px 18px;
+  }
+
+  .login-status-panel--dashboard .login-status-list {
+    grid-template-columns: repeat(auto-fit, minmax(176px, 1fr));
   }
 }
 
@@ -1054,6 +1109,29 @@ body.site-bg-mode-custom .site-bg-image {
 
   .login-status-item__state-block {
     align-items: flex-end;
+  }
+
+  .login-status-panel--dashboard .login-status-list {
+    grid-template-columns: 1fr;
+  }
+
+  .login-status-panel--dashboard .login-status-item {
+    min-height: 0;
+    padding: 14px;
+  }
+
+  .login-status-panel--dashboard .login-status-item__row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
+  }
+
+  .login-status-panel--dashboard .login-status-item__state-block {
+    align-items: flex-end;
+    text-align: right;
+  }
+
+  .login-status-panel--dashboard .login-status-item__since {
+    text-align: right;
   }
 }
 
