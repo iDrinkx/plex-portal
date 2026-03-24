@@ -932,6 +932,10 @@
                 <div class="dash-card-sub"><%= item.category %> · <%= item.description %></div>
               </div>
               <div class="builtin-card-actions">
+                <label class="switch" aria-label="Activer ou desactiver <%= item.label %>">
+                  <input type="checkbox" data-layout-enabled <%= item.enabled ? "checked" : "" %>>
+                  <span class="slider"></span>
+                </label>
                 <button class="builtin-card-order-btn" type="button" data-layout-move="up" <%= index === 0 ? "disabled" : "" %>><%= t("settings.dashboardBuiltins.up") %></button>
                 <button class="builtin-card-order-btn" type="button" data-layout-move="down" <%= index === (dashboardLayoutItems || []).length - 1 ? "disabled" : "" %>><%= t("settings.dashboardBuiltins.down") %></button>
               </div>
@@ -939,58 +943,6 @@
           <% }) %>
         </div>
         <div class="settings-inline-note" id="dashboardLayoutState"><%= t("settings.dashboardLayout.note") %></div>
-        </div>
-
-        <div class="settings-card">
-        <h3 class="settings-card-title"><%= t("settings.dashboardBuiltins.title") %></h3>
-        <p class="settings-card-sub"><%= t("settings.dashboardBuiltins.desc") %></p>
-        <div class="builtin-cards-list" id="dashboardBuiltinList">
-          <% (dashboardBuiltinItems || []).forEach(function(item, index) { %>
-            <div class="builtin-card-row" data-builtin-key="<%= item.key %>">
-              <div class="dash-card-meta">
-                <div class="dash-card-main"><%= item.label %></div>
-                <div class="dash-card-sub"><%= item.description %></div>
-              </div>
-              <div class="builtin-card-actions">
-                <button class="builtin-card-order-btn" type="button" data-builtin-move="up" <%= index === 0 ? "disabled" : "" %>><%= t("settings.dashboardBuiltins.up") %></button>
-                <button class="builtin-card-order-btn" type="button" data-builtin-move="down" <%= index === (dashboardBuiltinItems || []).length - 1 ? "disabled" : "" %>><%= t("settings.dashboardBuiltins.down") %></button>
-                <label class="switch" aria-label="Activer ou desactiver <%= item.label %>">
-                  <input type="checkbox" data-builtin-enabled <%= item.enabled ? "checked" : "" %>>
-                  <span class="slider"></span>
-                </label>
-              </div>
-            </div>
-          <% }) %>
-        </div>
-        <div class="settings-inline-note" id="dashboardBuiltinState"><%= t("settings.dashboardBuiltins.note") %></div>
-        </div>
-
-        <div class="settings-card">
-        <h3 class="settings-card-title"><%= t("settings.dashboardSections.title") %></h3>
-        <p class="settings-card-sub"><%= t("settings.dashboardSections.desc") %></p>
-        <div class="builtin-cards-list" id="dashboardSectionList">
-          <% (dashboardSectionItems || []).forEach(function(item, index) { %>
-            <div class="builtin-card-row" data-section-key="<%= item.key %>">
-              <div class="dash-card-meta">
-                <div class="dash-card-main"><%= item.label %></div>
-                <div class="dash-card-sub"><%= item.description %></div>
-              </div>
-              <div class="builtin-card-actions">
-                <label class="switch" aria-label="Activer ou desactiver <%= item.label %>">
-                  <input type="checkbox" data-section-enabled <%= item.enabled ? "checked" : "" %>>
-                  <span class="slider"></span>
-                </label>
-                <select class="settings-inline-select" data-section-position>
-                  <option value="above" <%= item.position === "above" ? "selected" : "" %>><%= t("settings.dashboardSections.position.above") %></option>
-                  <option value="below" <%= item.position === "below" ? "selected" : "" %>><%= t("settings.dashboardSections.position.below") %></option>
-                </select>
-                <button class="builtin-card-order-btn" type="button" data-section-move="up" <%= index === 0 ? "disabled" : "" %>><%= t("settings.dashboardBuiltins.up") %></button>
-                <button class="builtin-card-order-btn" type="button" data-section-move="down" <%= index === (dashboardSectionItems || []).length - 1 ? "disabled" : "" %>><%= t("settings.dashboardBuiltins.down") %></button>
-              </div>
-            </div>
-          <% }) %>
-        </div>
-        <div class="settings-inline-note" id="dashboardSectionState"><%= t("settings.dashboardSections.note") %></div>
         </div>
 
         <div class="settings-card">
@@ -1255,12 +1207,8 @@
     const state = document.getElementById("settingsState");
     const navSubscriptionPillToggle = document.getElementById("navSubscriptionPillToggle");
     const navSubscriptionPillState = document.getElementById("navSubscriptionPillState");
-    const dashboardBuiltinList = document.getElementById("dashboardBuiltinList");
-    const dashboardBuiltinState = document.getElementById("dashboardBuiltinState");
     const dashboardLayoutList = document.getElementById("dashboardLayoutList");
     const dashboardLayoutState = document.getElementById("dashboardLayoutState");
-    const dashboardSectionList = document.getElementById("dashboardSectionList");
-    const dashboardSectionState = document.getElementById("dashboardSectionState");
     const addBtn = document.getElementById("addDashboardCardBtn");
     const dashCardState = document.getElementById("dashCardState");
     const dashCardsList = document.getElementById("dashboardCardsList");
@@ -1313,9 +1261,7 @@
     let cardBusy = false;
     let editingCardId = null;
     let canCreate = true;
-    let dashboardBuiltinsInFlight = false;
     let dashboardLayoutInFlight = false;
-    let dashboardSectionsInFlight = false;
     let siteBackgroundFileDataUrl = <%- JSON.stringify(siteBackground && String(siteBackground.customUrl || "").startsWith("data:image/") ? siteBackground.customUrl : "").replace(/<\//g, "<\\/") %>;
     let siteBackgroundCustomSource = siteBackgroundFileDataUrl ? "file" : "url";
     const SITE_BACKGROUND_RECOMMENDED_MAX_BYTES = 8 * 1024 * 1024;
@@ -1361,10 +1307,9 @@
       return Array.from(dashboardHtmlBlocks.querySelectorAll("[data-dashboard-html-block]"))
         .map(function (el, index) {
           const textarea = el.querySelector("textarea");
-          const positionSelect = el.querySelector("[data-dashboard-html-position]");
           return {
             id: el.getAttribute("data-block-id") || ("block-" + (index + 1)),
-            position: positionSelect && positionSelect.value === "above" ? "above" : "below",
+            position: "below",
             html: textarea ? String(textarea.value || "") : ""
           };
         })
@@ -1384,15 +1329,6 @@
             <div class="dashboard-html-block-head">
               <div class="dashboard-html-block-title">Bloc ${index + 1}</div>
               <button class="dashboard-html-block-remove" type="button" data-remove-dashboard-html-block="${escAttr(block.id || ("block-" + (index + 1)))}"><%= t("settings.dashboardHtml.removeBlock") %></button>
-            </div>
-            <div class="dashboard-html-block-meta">
-              <div class="settings-field dashboard-html-block-position">
-                <label><%= t("settings.dashboardHtml.position") %></label>
-                <select class="settings-inline-select" data-dashboard-html-position>
-                  <option value="above" ${block.position === "above" ? "selected" : ""}><%= t("settings.dashboardHtml.position.above") %></option>
-                  <option value="below" ${block.position === "above" ? "" : "selected"}><%= t("settings.dashboardHtml.position.below") %></option>
-                </select>
-              </div>
             </div>
             <textarea spellcheck="false" autocomplete="off">${escHtml(block.html || "")}</textarea>
           </div>
@@ -1460,29 +1396,6 @@
       }
     }
 
-    function renderDashboardBuiltinList() {
-      if (!dashboardBuiltinList) return;
-
-      dashboardBuiltinList.innerHTML = dashboardBuiltinItems.map(function (item, index) {
-        const isFirst = index === 0;
-        const isLast = index === dashboardBuiltinItems.length - 1;
-        return `<div class="builtin-card-row" data-builtin-key="${escAttr(item.key)}">
-          <div class="dash-card-meta">
-            <div class="dash-card-main">${escHtml(item.label)}</div>
-            <div class="dash-card-sub">${escHtml(item.description)}</div>
-          </div>
-          <div class="builtin-card-actions">
-            <button class="builtin-card-order-btn" type="button" data-builtin-move="up" ${isFirst ? "disabled" : ""}><%= t("settings.dashboardBuiltins.up") %></button>
-            <button class="builtin-card-order-btn" type="button" data-builtin-move="down" ${isLast ? "disabled" : ""}><%= t("settings.dashboardBuiltins.down") %></button>
-            <label class="switch" aria-label="Activer ou desactiver ${escAttr(item.label)}">
-              <input type="checkbox" data-builtin-enabled ${item.enabled ? "checked" : ""}>
-              <span class="slider"></span>
-            </label>
-          </div>
-        </div>`;
-      }).join("");
-    }
-
     function renderDashboardLayoutList() {
       if (!dashboardLayoutList) return;
 
@@ -1495,6 +1408,10 @@
             <div class="dash-card-sub">${escHtml(item.category)} · ${escHtml(item.description || "")}</div>
           </div>
           <div class="builtin-card-actions">
+            <label class="switch" aria-label="Activer ou desactiver ${escAttr(item.label)}">
+              <input type="checkbox" data-layout-enabled ${item.enabled ? "checked" : ""}>
+              <span class="slider"></span>
+            </label>
             <button class="builtin-card-order-btn" type="button" data-layout-move="up" ${isFirst ? "disabled" : ""}><%= t("settings.dashboardBuiltins.up") %></button>
             <button class="builtin-card-order-btn" type="button" data-layout-move="down" ${isLast ? "disabled" : ""}><%= t("settings.dashboardBuiltins.down") %></button>
           </div>
@@ -1572,132 +1489,32 @@
       renderDashboardLayoutList();
     }
 
-    function renderDashboardSectionList() {
-      if (!dashboardSectionList) return;
-
-      dashboardSectionList.innerHTML = dashboardSectionItems.map(function (item, index) {
-        const isFirst = index === 0;
-        const isLast = index === dashboardSectionItems.length - 1;
-        return `<div class="builtin-card-row" data-section-key="${escAttr(item.key)}">
-          <div class="dash-card-meta">
-            <div class="dash-card-main">${escHtml(item.label)}</div>
-            <div class="dash-card-sub">${escHtml(item.description)}</div>
-          </div>
-          <div class="builtin-card-actions">
-            <label class="switch" aria-label="Activer ou desactiver ${escAttr(item.label)}">
-              <input type="checkbox" data-section-enabled ${item.enabled ? "checked" : ""}>
-              <span class="slider"></span>
-            </label>
-            <select class="settings-inline-select" data-section-position>
-              <option value="above" ${item.position === "above" ? "selected" : ""}><%= t("settings.dashboardSections.position.above") %></option>
-              <option value="below" ${item.position === "below" ? "selected" : ""}><%= t("settings.dashboardSections.position.below") %></option>
-            </select>
-            <button class="builtin-card-order-btn" type="button" data-section-move="up" ${isFirst ? "disabled" : ""}><%= t("settings.dashboardBuiltins.up") %></button>
-            <button class="builtin-card-order-btn" type="button" data-section-move="down" ${isLast ? "disabled" : ""}><%= t("settings.dashboardBuiltins.down") %></button>
-          </div>
-        </div>`;
-      }).join("");
-    }
-
-    async function saveDashboardBuiltins(previousItems) {
-      if (!dashboardBuiltinState) return;
-        dashboardBuiltinState.textContent = "<%= t('settings.dashboardBuiltins.note') %>";
-
-      try {
-        const payload = dashboardBuiltinItems.map(function (item, index) {
-          return { key: item.key, enabled: !!item.enabled, order: index };
-        });
-        const resp = await fetch(bp + "/api/admin/dashboard-builtins", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ items: payload })
-        });
-        if (!resp.ok) throw new Error("HTTP " + resp.status);
-        const data = await resp.json();
-        dashboardBuiltinItems = (data.items || []).map(function (item) {
-          const current = dashboardBuiltinItems.find(function (entry) { return entry.key === item.key; });
-          return {
-            key: item.key,
-            enabled: item.enabled !== false,
-            order: item.order,
-            label: current ? current.label : item.key,
-            description: current ? current.description : ""
-          };
-        }).sort(function (a, b) { return a.order - b.order; });
-        renderDashboardBuiltinList();
-        syncDashboardLayoutItems();
-        dashboardBuiltinState.textContent = "<%= t('settings.dashboardBuiltins.note') %>";
-      } catch (_) {
-        dashboardBuiltinItems = previousItems.map(function (item) { return { ...item }; });
-        renderDashboardBuiltinList();
-        syncDashboardLayoutItems();
-        dashboardBuiltinState.textContent = "<%= t('settings.dashboardBuiltins.note') %>";
-      }
-    }
-
-    async function saveDashboardSections(previousItems) {
-      if (!dashboardSectionState) return;
-      dashboardSectionState.textContent = "<%= t('settings.dashboardSections.note') %>";
-
-      try {
-        const payload = dashboardSectionItems.map(function (item, index) {
-          return {
-            key: item.key,
-            enabled: item.enabled !== false,
-            position: item.position === "below" ? "below" : "above",
-            order: index
-          };
-        });
-        const resp = await fetch(bp + "/api/admin/dashboard-sections", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ items: payload })
-        });
-        if (!resp.ok) throw new Error("HTTP " + resp.status);
-        const data = await resp.json();
-        dashboardSectionItems = (data.items || []).map(function (item) {
-          const current = dashboardSectionItems.find(function (entry) { return entry.key === item.key; });
-          return {
-            key: item.key,
-            enabled: item.enabled !== false,
-            position: item.position === "below" ? "below" : "above",
-            order: item.order,
-            label: current ? current.label : item.key,
-            description: current ? current.description : ""
-          };
-        }).sort(function (a, b) { return a.order - b.order; });
-        renderDashboardSectionList();
-        syncDashboardLayoutItems();
-        dashboardSectionState.textContent = "<%= t('settings.dashboardSections.note') %>";
-      } catch (_) {
-        dashboardSectionItems = previousItems.map(function (item) { return { ...item }; });
-        renderDashboardSectionList();
-        syncDashboardLayoutItems();
-        dashboardSectionState.textContent = "<%= t('settings.dashboardSections.note') %>";
-      }
-    }
-
     async function saveDashboardLayout(previousItems) {
       if (!dashboardLayoutState) return;
       dashboardLayoutState.textContent = "<%= t('settings.dashboardLayout.note') %>";
 
       try {
-        const payload = dashboardLayoutItems.map(function (item) { return item.id; });
+        const payload = dashboardLayoutItems.map(function (item) {
+          return { id: item.id, enabled: item.enabled !== false };
+        });
         const resp = await fetch(bp + "/api/admin/dashboard-layout", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ids: payload })
+          body: JSON.stringify({ items: payload })
         });
         if (!resp.ok) throw new Error("HTTP " + resp.status);
         const data = await resp.json();
-        const order = Array.isArray(data.ids) ? data.ids : payload;
+        const savedItems = Array.isArray(data.items) ? data.items : payload;
         const byId = new Map(dashboardLayoutItems.map(function (item) { return [item.id, item]; }));
-        dashboardLayoutItems = order.map(function (id) { return byId.get(id); }).filter(Boolean);
-        renderDashboardLayoutList();
+        dashboardLayoutItems = savedItems.map(function (item) {
+          const current = byId.get(item.id);
+          return current ? { ...current, enabled: item.enabled !== false } : null;
+        }).filter(Boolean);
+        syncDashboardLayoutItems();
         dashboardLayoutState.textContent = "<%= t('settings.dashboardLayout.note') %>";
       } catch (_) {
         dashboardLayoutItems = previousItems.map(function (item) { return { ...item }; });
-        renderDashboardLayoutList();
+        syncDashboardLayoutItems();
         dashboardLayoutState.textContent = "<%= t('settings.dashboardLayout.note') %>";
       }
     }
@@ -1775,19 +1592,15 @@
       updateActionAvailability();
       dashboardCustomCardItems = (data.cards || []).map(function (card) { return { ...card }; });
 
-      dashCardsList.innerHTML = dashboardCustomCardItems.map((card, index) => {
+      dashCardsList.innerHTML = dashboardCustomCardItems.map((card) => {
         const colorName = colorsByKey[card.colorKey] || card.colorKey;
-        const isFirst = index === 0;
-        const isLast = index === (data.cards || []).length - 1;
         return `<div class="dash-card-row" data-card-id="${card.id}">
           <div class="dash-card-meta">
             <div class="dash-card-main">${escHtml(card.icon || "✨")} ${escHtml(card.title)} · ${escHtml(colorName)}</div>
             <div class="dash-card-sub">${escHtml(card.label)} · ${escHtml(card.description)}${(card.integrationKey || "custom") === "custom" && card.url ? " · " + escHtml(card.url) : ""}</div>
           </div>
-          <div class="dash-card-actions">
-            <button class="builtin-card-order-btn" data-custom-move="up" type="button" ${isFirst ? "disabled" : ""}><%= t("settings.dashboardBuiltins.up") %></button>
-            <button class="builtin-card-order-btn" data-custom-move="down" type="button" ${isLast ? "disabled" : ""}><%= t("settings.dashboardBuiltins.down") %></button>
-            <button
+	          <div class="dash-card-actions">
+	            <button
               class="dash-card-edit"
               data-edit-card-id="${card.id}"
               data-edit-label="${escHtml(card.label)}"
@@ -1864,55 +1677,6 @@
       });
     }
 
-    if (dashboardBuiltinList && dashboardBuiltinState) {
-      renderDashboardBuiltinList();
-
-      dashboardBuiltinList.addEventListener("click", async function (event) {
-        const button = event.target.closest("[data-builtin-move]");
-        if (!button || dashboardBuiltinsInFlight) return;
-
-        const row = button.closest("[data-builtin-key]");
-        if (!row) return;
-
-        const key = row.getAttribute("data-builtin-key");
-        const index = dashboardBuiltinItems.findIndex(function (item) { return item.key === key; });
-        if (index === -1) return;
-
-        const direction = button.getAttribute("data-builtin-move");
-        const targetIndex = direction === "up" ? index - 1 : index + 1;
-        if (targetIndex < 0 || targetIndex >= dashboardBuiltinItems.length) return;
-
-        const previousItems = dashboardBuiltinItems.map(function (item) { return { ...item }; });
-        const moved = dashboardBuiltinItems[index];
-        dashboardBuiltinItems.splice(index, 1);
-        dashboardBuiltinItems.splice(targetIndex, 0, moved);
-        renderDashboardBuiltinList();
-
-        dashboardBuiltinsInFlight = true;
-        await saveDashboardBuiltins(previousItems);
-        dashboardBuiltinsInFlight = false;
-      });
-
-      dashboardBuiltinList.addEventListener("change", async function (event) {
-        const input = event.target.closest("[data-builtin-enabled]");
-        if (!input || dashboardBuiltinsInFlight) return;
-
-        const row = input.closest("[data-builtin-key]");
-        if (!row) return;
-
-        const key = row.getAttribute("data-builtin-key");
-        const index = dashboardBuiltinItems.findIndex(function (item) { return item.key === key; });
-        if (index === -1) return;
-
-        const previousItems = dashboardBuiltinItems.map(function (item) { return { ...item }; });
-        dashboardBuiltinItems[index].enabled = !!input.checked;
-
-        dashboardBuiltinsInFlight = true;
-        await saveDashboardBuiltins(previousItems);
-        dashboardBuiltinsInFlight = false;
-      });
-    }
-
     if (dashboardLayoutList && dashboardLayoutState) {
       syncDashboardLayoutItems();
 
@@ -1941,55 +1705,24 @@
         await saveDashboardLayout(previousItems);
         dashboardLayoutInFlight = false;
       });
-    }
 
-    if (dashboardSectionList && dashboardSectionState) {
-      renderDashboardSectionList();
+      dashboardLayoutList.addEventListener("change", async function (event) {
+        const input = event.target.closest("[data-layout-enabled]");
+        if (!input || dashboardLayoutInFlight) return;
 
-      dashboardSectionList.addEventListener("click", async function (event) {
-        const button = event.target.closest("[data-section-move]");
-        if (!button || dashboardSectionsInFlight) return;
-
-        const row = button.closest("[data-section-key]");
+        const row = input.closest("[data-layout-id]");
         if (!row) return;
 
-        const key = row.getAttribute("data-section-key");
-        const index = dashboardSectionItems.findIndex(function (item) { return item.key === key; });
+        const id = row.getAttribute("data-layout-id");
+        const index = dashboardLayoutItems.findIndex(function (item) { return item.id === id; });
         if (index === -1) return;
 
-        const direction = button.getAttribute("data-section-move");
-        const targetIndex = direction === "up" ? index - 1 : index + 1;
-        if (targetIndex < 0 || targetIndex >= dashboardSectionItems.length) return;
+        const previousItems = dashboardLayoutItems.map(function (item) { return { ...item }; });
+        dashboardLayoutItems[index].enabled = !!input.checked;
 
-        const previousItems = dashboardSectionItems.map(function (item) { return { ...item }; });
-        const moved = dashboardSectionItems[index];
-        dashboardSectionItems.splice(index, 1);
-        dashboardSectionItems.splice(targetIndex, 0, moved);
-        renderDashboardSectionList();
-
-        dashboardSectionsInFlight = true;
-        await saveDashboardSections(previousItems);
-        dashboardSectionsInFlight = false;
-      });
-
-      dashboardSectionList.addEventListener("change", async function (event) {
-        const row = event.target.closest("[data-section-key]");
-        if (!row) return;
-        if (dashboardSectionsInFlight) return;
-
-        const key = row.getAttribute("data-section-key");
-        const index = dashboardSectionItems.findIndex(function (item) { return item.key === key; });
-        if (index === -1) return;
-
-        const previousItems = dashboardSectionItems.map(function (item) { return { ...item }; });
-        const select = row.querySelector("[data-section-position]");
-        const enabledInput = row.querySelector("[data-section-enabled]");
-        dashboardSectionItems[index].position = select && select.value === "below" ? "below" : "above";
-        dashboardSectionItems[index].enabled = enabledInput ? !!enabledInput.checked : true;
-
-        dashboardSectionsInFlight = true;
-        await saveDashboardSections(previousItems);
-        dashboardSectionsInFlight = false;
+        dashboardLayoutInFlight = true;
+        await saveDashboardLayout(previousItems);
+        dashboardLayoutInFlight = false;
       });
     }
 
@@ -2345,45 +2078,6 @@
     });
 
     dashCardsList.addEventListener("click", async function (e) {
-      const moveBtn = e.target.closest("[data-custom-move]");
-      if (moveBtn && !cardBusy) {
-        const row = moveBtn.closest("[data-card-id]");
-        if (!row) return;
-
-        const rows = Array.from(dashCardsList.querySelectorAll("[data-card-id]"));
-        const ids = rows.map(function (item) {
-          return Number(item.getAttribute("data-card-id"));
-        });
-        const id = Number(row.getAttribute("data-card-id"));
-        const currentIndex = ids.indexOf(id);
-        if (currentIndex === -1) return;
-
-        const targetIndex = moveBtn.getAttribute("data-custom-move") === "up" ? currentIndex - 1 : currentIndex + 1;
-        if (targetIndex < 0 || targetIndex >= ids.length) return;
-
-        const moved = ids[currentIndex];
-        ids.splice(currentIndex, 1);
-        ids.splice(targetIndex, 0, moved);
-
-        cardBusy = true;
-        try {
-          const resp = await fetch(bp + "/api/admin/dashboard-cards/order", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ ids })
-          });
-          const data = await resp.json();
-          if (!resp.ok) throw new Error(data.error || ("HTTP " + resp.status));
-          dashCardState.textContent = "Ordre des cartes mis a jour.";
-          await refreshCardData();
-        } catch (err) {
-          dashCardState.textContent = err.message || "Impossible de reordonner les cartes.";
-        } finally {
-          cardBusy = false;
-        }
-        return;
-      }
-
       const editBtn = e.target.closest("[data-edit-card-id]");
       if (editBtn && !cardBusy) {
         setFormModeEdit({

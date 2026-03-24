@@ -30,7 +30,7 @@
       return;
     }
 
-    if (item.type === "custom") {
+    if (item.type === "custom" && item.enabled !== false) {
       const card = customCardMap.get(String(item.refKey));
       if (card) currentCardGroup.push({ type: "custom-card", card: card });
       return;
@@ -38,7 +38,7 @@
 
     flushCardGroup();
 
-    if (item.type === "html") {
+    if (item.type === "html" && item.enabled !== false) {
       const block = htmlBlockMap.get(String(item.refKey));
       if (block && block.rendered) cardGroups.push({ type: "html", block: block });
       return;

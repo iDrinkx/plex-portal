@@ -42,7 +42,7 @@ const {
   getDashboardSectionConfig,
   saveDashboardSectionConfig
 } = require("../utils/dashboard-sections");
-const { buildDashboardLayoutItems, getDashboardLayoutOrder, saveDashboardLayoutOrder } = require("../utils/dashboard-layout");
+const { buildDashboardLayoutItems, saveDashboardLayoutConfig } = require("../utils/dashboard-layout");
 const {
   getDashboardCustomHtml,
   getDashboardCustomHtmlBlocks,
@@ -1134,10 +1134,8 @@ async function getWizarrSubscription(user) {
 
 router.get("/dashboard", requireAuth, async (req, res) => {
   const colorMap = getColorMap();
-  const dashboardSectionItems = getDashboardSectionConfig();
-  const dashboardServerStatsEnabled = !!dashboardSectionItems.find(item => item.key === "server-stats" && item.enabled !== false);
-  const dashboardBuiltinCards = buildDashboardBuiltinCards(req.session.user, req.basePath || "", res.locals.t);
   const dashboardBuiltinItems = getDashboardBuiltinAdminItems(res.locals.t);
+  const dashboardSectionItems = getDashboardSectionConfig();
   const dashboardCustomCards = DashboardCardQueries.list()
     .map(card => {
       const color = colorMap.get(card.colorKey);
@@ -1178,6 +1176,10 @@ router.get("/dashboard", requireAuth, async (req, res) => {
     htmlBlocks: dashboardCustomHtmlBlocks,
     t: res.locals.t
   });
+  const layoutEnabledMap = new Map(dashboardLayoutItems.map(item => [item.id, item.enabled !== false]));
+  const dashboardServerStatsEnabled = !!layoutEnabledMap.get("section:server-stats");
+  const dashboardBuiltinCards = buildDashboardBuiltinCards(req.session.user, req.basePath || "", res.locals.t)
+    .filter(card => layoutEnabledMap.get(`builtin:${card.key}`) !== false);
 
   res.render("dashboard/index", {
     user: req.session.user,
@@ -1877,15 +1879,37 @@ router.post("/api/admin/dashboard-sections", requireAuth, requireAdmin, (req, re
   res.json({ success: true, items: savedItems });
 });
 
-router.get("/api/admin/dashboard-layout", requireAuth, requireAdmin, (req, res) => {
-  res.json({ ids: getDashboardLayoutOrder() });
-});
-
 router.post("/api/admin/dashboard-layout", requireAuth, requireAdmin, (req, res) => {
-  const ids = Array.isArray(req.body?.ids) ? req.body.ids : [];
-  const savedIds = saveDashboardLayoutOrder(ids);
+  const items = Array.isArray(req.body?.items) ? req.body.items : [];
+  const savedItems = saveDashboardLayoutConfig(items);
+
+  const builtinItems = getDashboardBuiltinAdminItems(res.locals.t).map(item => {
+    const layoutItem = savedItems.find(entry => entry.id === `builtin:${item.key}`);
+    return {
+      key: item.key,
+      enabled: layoutItem ? layoutItem.enabled !== false : item.enabled !== false,
+      order: item.order
+    };
+  });
+  saveDashboardBuiltinConfig(builtinItems);
+
+  const sectionItems = getDashboardSectionAdminItems(res.locals.t).map(item => {
+    const layoutItem = savedItems.find(entry => entry.id === `section:${item.key}`);
+    return {
+      key: item.key,
+      enabled: layoutItem ? layoutItem.enabled !== false : item.enabled !== false,
+      position: item.position,
+      order: item.order
+    };
+  });
+  const savedSections = saveDashboardSectionConfig(sectionItems);
+  const serverStatsItem = savedSections.find(item => item.key === "server-stats");
+  if (serverStatsItem) {
+    AppSettingQueries.setBool("dashboard_server_stats_enabled", serverStatsItem.enabled !== false);
+  }
+
   log.create("[Admin]").info(`Ordre global dashboard mis a jour par ${req.session.user.username}`);
-  res.json({ success: true, ids: savedIds });
+  res.json({ success: true, items: savedItems });
 });
 
 router.get("/api/admin/dashboard-html", requireAuth, requireAdmin, (req, res) => {

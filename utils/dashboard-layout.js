@@ -1,52 +1,39 @@
 const { AppSettingQueries } = require("./database");
 
-const SETTING_KEY = "dashboard_layout_order";
+const SETTING_KEY = "dashboard_layout_config";
 
 function toLayoutId(type, value) {
   return `${type}:${value}`;
 }
 
-function getDashboardLayoutOrder() {
+function getDashboardLayoutConfig() {
   const raw = AppSettingQueries.get(SETTING_KEY, "");
   if (!raw) return [];
+
   try {
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed.map(item => String(item || "").trim()).filter(Boolean) : [];
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .map(item => ({
+        id: String(item?.id || "").trim(),
+        enabled: item?.enabled !== false
+      }))
+      .filter(item => item.id);
   } catch (_) {
     return [];
   }
 }
 
-function saveDashboardLayoutOrder(ids = []) {
-  const normalized = ids.map(id => String(id || "").trim()).filter(Boolean);
+function saveDashboardLayoutConfig(items = []) {
+  const normalized = items
+    .map(item => ({
+      id: String(item?.id || "").trim(),
+      enabled: item?.enabled !== false
+    }))
+    .filter(item => item.id);
+
   AppSettingQueries.set(SETTING_KEY, JSON.stringify(normalized));
   return normalized;
-}
-
-function buildDefaultLayoutIds({ builtinItems = [], sectionItems = [], customCards = [], htmlBlocks = [] }) {
-  const htmlAbove = htmlBlocks
-    .filter(block => block && block.position === "above")
-    .map(block => toLayoutId("html", block.id));
-  const htmlBelow = htmlBlocks
-    .filter(block => !block || block.position !== "above")
-    .map(block => toLayoutId("html", block.id));
-  const sectionsAbove = sectionItems
-    .filter(item => item && item.position !== "below")
-    .map(item => toLayoutId("section", item.key));
-  const sectionsBelow = sectionItems
-    .filter(item => item && item.position === "below")
-    .map(item => toLayoutId("section", item.key));
-  const builtins = builtinItems.map(item => toLayoutId("builtin", item.key));
-  const customs = customCards.map(card => toLayoutId("custom", card.id));
-
-  return [
-    ...htmlAbove,
-    ...sectionsAbove,
-    ...builtins,
-    ...customs,
-    ...sectionsBelow,
-    ...htmlBelow
-  ];
 }
 
 function buildDashboardLayoutItems({
@@ -113,16 +100,21 @@ function buildDashboardLayoutItems({
   });
 
   const byId = new Map(items.map(item => [item.id, item]));
-  const savedOrder = getDashboardLayoutOrder();
-  const defaultOrder = buildDefaultLayoutIds({ builtinItems, sectionItems, customCards, htmlBlocks });
-  const combined = [...savedOrder, ...defaultOrder];
+  const savedConfig = getDashboardLayoutConfig();
   const seen = new Set();
   const ordered = [];
 
-  combined.forEach(id => {
-    if (seen.has(id) || !byId.has(id)) return;
-    seen.add(id);
-    ordered.push(byId.get(id));
+  savedConfig.forEach(savedItem => {
+    const item = byId.get(savedItem.id);
+    if (!item || seen.has(savedItem.id)) return;
+    ordered.push({ ...item, enabled: savedItem.enabled });
+    seen.add(savedItem.id);
+  });
+
+  items.forEach(item => {
+    if (seen.has(item.id)) return;
+    ordered.push({ ...item });
+    seen.add(item.id);
   });
 
   return ordered;
@@ -130,6 +122,6 @@ function buildDashboardLayoutItems({
 
 module.exports = {
   buildDashboardLayoutItems,
-  getDashboardLayoutOrder,
-  saveDashboardLayoutOrder
+  getDashboardLayoutConfig,
+  saveDashboardLayoutConfig
 };
