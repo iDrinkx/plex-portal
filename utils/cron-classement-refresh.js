@@ -17,7 +17,7 @@ const {
 } = require('./classement-cache-store');
 
 const logCR = log.create('[Classement-Refresh]');
-const CLASSEMENT_REFRESH_CRON = '*/30 * * * *';
+const CLASSEMENT_REFRESH_CRON = '10 * * * *';
 const CLASSEMENT_WORKER_TIMEOUT_MS = 15 * 60 * 1000;
 
 let classementCache = loadClassementCacheFromDisk();
@@ -246,6 +246,11 @@ function runRefreshInWorker(options = {}) {
 }
 
 async function refreshClassementCache(options = {}) {
+  const normalizedOptions = {
+    ...options,
+    includeSecretEvaluation: options.includeSecretEvaluation === true
+  };
+
   if (classementRefreshInFlight) {
     logCR.debug('⏳ Refresh classement déjà en cours - requête fusionnée');
     return classementRefreshInFlight;
@@ -255,10 +260,10 @@ async function refreshClassementCache(options = {}) {
     try {
       logCR.debug('🔄 Refresh classement en cours...');
 
-      const runInWorker = options.useWorker !== false;
+      const runInWorker = normalizedOptions.useWorker !== false;
       const result = runInWorker
-        ? await runRefreshInWorker(options)
-        : await buildClassementSnapshot(options);
+        ? await runRefreshInWorker(normalizedOptions)
+        : await buildClassementSnapshot(normalizedOptions);
 
       if (!result || result.skipped) {
         const reason = result?.reason || 'unknown';
@@ -295,7 +300,7 @@ async function resetClassementCache() {
   corruptionCount = 0;
   clearClassementCacheOnDisk();
 
-  await refreshClassementCache();
+  await refreshClassementCache({ includeSecretEvaluation: true });
   logCR.info('✅ Cache réinitialisé et recalculé');
 }
 
@@ -354,7 +359,10 @@ async function startClassementRefreshJob(options = {}) {
 
   const launchInitialRefresh = async () => {
     try {
-      await refreshClassementCache(options.initialRefreshOptions || {});
+      await refreshClassementCache({
+        includeSecretEvaluation: false,
+        ...(options.initialRefreshOptions || {})
+      });
     } catch (err) {
       logCR.warn(`Refresh initial classement échoué: ${err.message}`);
     }
@@ -371,7 +379,7 @@ async function startClassementRefreshJob(options = {}) {
   }
 
   cron.schedule(CLASSEMENT_REFRESH_CRON, () => {
-    refreshClassementCache();
+    refreshClassementCache({ includeSecretEvaluation: false });
   });
 
   cron.schedule('0 0 1 * *', () => {
@@ -379,7 +387,7 @@ async function startClassementRefreshJob(options = {}) {
     corruptionCount = 0;
   });
 
-  logCR.info('✅ Cron job classement démarré (toutes les 30 minutes)');
+  logCR.info(`✅ Cron job classement démarré (${CLASSEMENT_REFRESH_CRON})`);
 }
 
 module.exports = {

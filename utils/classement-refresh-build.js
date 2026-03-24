@@ -115,7 +115,7 @@ async function mapInBatches(items, batchSize, mapper) {
 }
 
 async function buildClassementSnapshot(options = {}) {
-  const includeSecretEvaluation = options.includeSecretEvaluation !== false;
+  const includeSecretEvaluation = options.includeSecretEvaluation === true;
   const startTime = Date.now();
 
   if (!isTautulliReady()) {

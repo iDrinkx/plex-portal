@@ -4,7 +4,7 @@ const { spawn } = require('child_process');
 const { UserQueries } = require('./database');
 const log = require('./logger').create('[Achievements-Cron]');
 
-const ACHIEVEMENT_REFRESH_CRON = '15 */6 * * *';
+const ACHIEVEMENT_REFRESH_CRON = '5 * * * *';
 const ACHIEVEMENT_WORKER_TIMEOUT_MS = 5 * 60 * 1000;
 let achievementRefreshInFlight = null;
 

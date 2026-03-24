@@ -46,13 +46,7 @@ function startSessionCronJob(TAUTULLI_URL, TAUTULLI_API_KEY, PLEX_URL, PLEX_TOKE
       console.log("[CRON-JOB]   Duree:", duration, 'secondes');
       console.log("[CRON-JOB]   Les donnees mises a jour seront visibles aux clients connectes");
 
-      try {
-        const { refreshClassementCache } = require('./cron-classement-refresh');
-        await refreshClassementCache();
-        console.log("[CRON-JOB] Classement rafraichi apres mise a jour sessions.");
-      } catch (err) {
-        console.error("[CRON-JOB] Erreur refresh classement:", err.message);
-      }
+      console.log("[CRON-JOB] Scan sessions termine - succes et classement suivront via leurs cron dedies.");
     } catch (err) {
       console.error("[CRON-JOB] Erreur scan cron:", err.message);
       console.error("[CRON-JOB] Stack:", err.stack);

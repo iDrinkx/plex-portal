@@ -1195,11 +1195,11 @@ router.get("/dashboard", requireAuth, async (req, res) => {
       return rankIndex >= 0 ? rankIndex + 1 : null;
     };
 
-    classementPosition = resolveClassementPosition();
-    if (classementPosition === null) {
-      await refreshClassementCache();
-      classementPosition = resolveClassementPosition();
-    }
+	    classementPosition = resolveClassementPosition();
+	    if (classementPosition === null) {
+	      await refreshClassementCache({ includeSecretEvaluation: false });
+	      classementPosition = resolveClassementPosition();
+	    }
   } catch (_) {
     classementPosition = null;
   }
