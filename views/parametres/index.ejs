@@ -259,6 +259,74 @@
     line-height: 1.5;
   }
 
+  .config-diagnostics {
+    display: grid;
+    gap: 10px;
+    margin-top: 14px;
+  }
+
+  .config-diagnostics-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 10px;
+  }
+
+  .config-diagnostics-card {
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.04);
+    padding: 12px;
+  }
+
+  .config-diagnostics-card.is-ok {
+    border-color: rgba(52, 199, 89, 0.45);
+    background: rgba(52, 199, 89, 0.08);
+  }
+
+  .config-diagnostics-card.is-error {
+    border-color: rgba(255, 107, 107, 0.4);
+    background: rgba(255, 107, 107, 0.08);
+  }
+
+  .config-diagnostics-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 6px;
+  }
+
+  .config-diagnostics-title {
+    font-size: 13px;
+    font-weight: 800;
+    color: #eef3ff;
+  }
+
+  .config-diagnostics-badge {
+    font-size: 11px;
+    font-weight: 800;
+    border-radius: 999px;
+    padding: 4px 8px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #dbe7fb;
+  }
+
+  .config-diagnostics-badge.is-ok {
+    color: #8ef0aa;
+    border-color: rgba(52, 199, 89, 0.4);
+  }
+
+  .config-diagnostics-badge.is-error {
+    color: #ffb0b0;
+    border-color: rgba(255, 107, 107, 0.35);
+  }
+
+  .config-diagnostics-message {
+    font-size: 12px;
+    line-height: 1.45;
+    color: #a9b3c8;
+  }
+
   .settings-inline-select {
     min-width: 180px;
     width: 100%;
@@ -1198,9 +1266,14 @@
 
           <div class="settings-actions">
             <button class="settings-btn" id="saveConfigBtn" type="button"><%= t("settings.connections.save") %></button>
+            <button class="settings-btn settings-btn-secondary" id="runConfigDiagnosticsBtn" type="button">Tester les connexions</button>
           </div>
           <div class="settings-inline-note"><%= t("settings.connections.note") %></div>
           <div class="settings-inline-note" id="configState"><%= t("settings.connections.helper") %></div>
+          <div class="config-diagnostics" id="configDiagnostics">
+            <div class="settings-inline-note" id="configDiagnosticsState">Aucun test lancé pour le moment.</div>
+            <div class="config-diagnostics-list" id="configDiagnosticsList"></div>
+          </div>
         </div>
       </div>
     </div>
@@ -1263,6 +1336,10 @@
     const saveDashboardHtmlBtn = document.getElementById("saveDashboardHtmlBtn");
     const dashboardHtmlState = document.getElementById("dashboardHtmlState");
     const dashboardHtmlRawModeToggle = document.getElementById("dashboardHtmlRawModeToggle");
+    const runConfigDiagnosticsBtn = document.getElementById("runConfigDiagnosticsBtn");
+    const configDiagnostics = document.getElementById("configDiagnostics");
+    const configDiagnosticsState = document.getElementById("configDiagnosticsState");
+    const configDiagnosticsList = document.getElementById("configDiagnosticsList");
     if (!toggle || !state || !addBtn || !dashCardState || !dashCardsList || !form || !colorSelect || !cancelEditBtn) return;
 
     let cardBusy = false;
@@ -1310,6 +1387,50 @@
 
     function escAttr(v) {
       return escHtml(v).replace(/`/g, "&#96;");
+    }
+
+    function renderConfigDiagnostics(diagnostics) {
+      if (!configDiagnosticsList || !configDiagnosticsState) return;
+      const tests = Array.isArray(diagnostics && diagnostics.tests) ? diagnostics.tests : [];
+      if (!tests.length) {
+        configDiagnosticsState.textContent = "Aucun test lance pour le moment.";
+        configDiagnosticsList.innerHTML = "";
+        return;
+      }
+
+      const okCount = tests.filter(function (test) { return !!test.ok; }).length;
+      configDiagnosticsState.textContent = diagnostics && diagnostics.ok
+        ? "Toutes les connexions testees sont operationnelles."
+        : okCount + "/" + tests.length + " connexions valides. Les autres demandent une correction.";
+
+      configDiagnosticsList.innerHTML = tests.map(function (test) {
+        const ok = !!test.ok;
+        return `
+          <div class="config-diagnostics-card ${ok ? "is-ok" : "is-error"}">
+            <div class="config-diagnostics-head">
+              <div class="config-diagnostics-title">${escHtml(test.label || "Service")}</div>
+              <div class="config-diagnostics-badge ${ok ? "is-ok" : "is-error"}">${ok ? "Connexion OK" : "Erreur"}</div>
+            </div>
+            <div class="config-diagnostics-message">${escHtml(test.message || (ok ? "Connexion OK" : "Verification impossible"))}</div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    async function runConfigDiagnostics() {
+      if (!configDiagnosticsState || !configDiagnosticsList) return;
+      if (runConfigDiagnosticsBtn) runConfigDiagnosticsBtn.disabled = true;
+      configDiagnosticsState.textContent = "Verification des connexions en cours...";
+      try {
+        const resp = await fetch(bp + "/api/admin/config/diagnostics");
+        const data = await resp.json();
+        if (!resp.ok) throw new Error((data && (data.message || data.error)) || ("HTTP " + resp.status));
+        renderConfigDiagnostics(data);
+      } catch (err) {
+        configDiagnosticsState.textContent = err.message || "Impossible de verifier les connexions.";
+      } finally {
+        if (runConfigDiagnosticsBtn) runConfigDiagnosticsBtn.disabled = false;
+      }
     }
 
     function getDashboardHtmlBlocksPayload() {
@@ -1793,6 +1914,7 @@
           Array.from(configForm.querySelectorAll('input:not([type="password"])')).forEach(function (input) {
             input.dataset.dirty = "false";
           });
+          renderConfigDiagnostics(data && data.diagnostics);
           configState.textContent = "Connexions enregistrees avec succes.";
         } catch (err) {
           configState.textContent = err.message || "Impossible d'enregistrer les connexions.";
@@ -1800,6 +1922,16 @@
           saveConfigBtn.disabled = false;
         }
       });
+    }
+
+    if (runConfigDiagnosticsBtn) {
+      runConfigDiagnosticsBtn.addEventListener("click", function () {
+        runConfigDiagnostics();
+      });
+    }
+
+    if (configDiagnostics) {
+      runConfigDiagnostics();
     }
 
     if (siteLanguageSelect && siteLanguageState) {
