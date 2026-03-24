@@ -878,6 +878,7 @@
     var successRefreshTimerHandle = null;
     var successRefreshInstanceId = 'success-' + Date.now() + '-' + Math.random().toString(36).slice(2);
     var successLastAutoRefreshAt = 0;
+    var successEmbedReloadCooldownMs = 15000;
     try {
       successLastAutoRefreshAt = Number(sessionStorage.getItem(successAutoRefreshCooldownKey) || '0');
     } catch (_) {
@@ -926,12 +927,21 @@
         return;
       }
 
+      var now = Date.now();
+      if (window.__portallSuccessEmbedReloadInFlight) {
+        return;
+      }
+      if (window.__portallSuccessLastEmbedReloadAt && (now - window.__portallSuccessLastEmbedReloadAt) < successEmbedReloadCooldownMs) {
+        return;
+      }
+
       var modalBody = document.getElementById('succesModalBody');
       if (!modalBody) {
         window.location.reload();
         return;
       }
 
+      window.__portallSuccessEmbedReloadInFlight = true;
       fetch(successBasePath + '/succes?embed=1')
         .then(function(r) { return r.text(); })
         .then(function(html) {
@@ -944,9 +954,13 @@
             ns.textContent = s.textContent;
             s.replaceWith(ns);
           });
+          window.__portallSuccessLastEmbedReloadAt = Date.now();
         })
         .catch(function() {
           window.location.reload();
+        })
+        .finally(function() {
+          window.__portallSuccessEmbedReloadInFlight = false;
         });
     }
 

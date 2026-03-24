@@ -8,7 +8,7 @@ const Database = require('better-sqlite3');
 const path = require('path');
 const log = require('./logger').create('[Tautulli DB]');
 const { getConfigValue } = require('./config');
-const { CollectionItemMappingQueries } = require('./database');
+const { CollectionItemMappingQueries, AppSettingQueries } = require('./database');
 
 let tautulliDb = null;
 
@@ -20,7 +20,9 @@ const traktListInflight = {};
 const traktOfficialListIdCache = {};
 const plexLibraryIndexCache = { items: null, ts: 0, failedAt: 0, promise: null };
 const tautulliLibraryIndexCache = { items: null, ts: 0 };
-const COLLECTION_CACHE_TTL = 24 * 60 * 60 * 1000;
+const COLLECTION_CACHE_TTL = 3 * 24 * 60 * 60 * 1000;
+const COLLECTION_CACHE_STALE_TTL = 30 * 24 * 60 * 60 * 1000;
+const TRAKT_429_BACKOFF_MS = 15 * 60 * 1000;
 const COLLECTION_MOVIE_MIN_PERCENT = 50;
 const TRAKT_USER_AGENT = 'portall/1.0 (+https://github.com/iDrinkx/plex-portal)';
 
@@ -123,15 +125,65 @@ async function getTraktApiListUrls(traktListUrl) {
   return [];
 }
 
+function getTraktCacheSettingKey(achievementId) {
+  return `trakt_list_cache_${achievementId}`;
+}
+
+function normalizeTraktCacheEntry(raw) {
+  if (!raw) return null;
+  return {
+    items: Array.isArray(raw.items) ? raw.items : [],
+    ts: Number(raw.ts || 0),
+    blockedUntil: Number(raw.blockedUntil || 0),
+    lastError: String(raw.lastError || '').trim() || null
+  };
+}
+
+function readPersistedTraktCache(achievementId) {
+  try {
+    const raw = AppSettingQueries.get(getTraktCacheSettingKey(achievementId), null);
+    if (!raw) return null;
+    return normalizeTraktCacheEntry(JSON.parse(raw));
+  } catch (_) {
+    return null;
+  }
+}
+
+function saveTraktCacheEntry(achievementId, entry) {
+  const normalized = normalizeTraktCacheEntry(entry) || { items: [], ts: 0, blockedUntil: 0, lastError: null };
+  traktListCache[achievementId] = normalized;
+  try {
+    AppSettingQueries.set(getTraktCacheSettingKey(achievementId), JSON.stringify(normalized));
+  } catch (_) {}
+  return normalized;
+}
+
+function parseRetryAfterMs(resp) {
+  const retryAfter = String(resp?.headers?.get('retry-after') || '').trim();
+  if (!retryAfter) return 0;
+  const seconds = Number(retryAfter);
+  if (Number.isFinite(seconds) && seconds >= 0) return seconds * 1000;
+  const asDate = Date.parse(retryAfter);
+  if (Number.isFinite(asDate)) return Math.max(0, asDate - Date.now());
+  return 0;
+}
+
 async function getTraktListItems(achievementId) {
   const traktClientId = String(getConfigValue('TRAKT_CLIENT_ID', '') || '').trim();
   const traktListUrl = TRAKT_LISTS[achievementId];
   if (!traktClientId || !traktListUrl) return null;
 
   const now = Date.now();
-  const cached = traktListCache[achievementId];
+  let cached = normalizeTraktCacheEntry(traktListCache[achievementId]) || readPersistedTraktCache(achievementId);
+  if (cached) {
+    traktListCache[achievementId] = cached;
+  }
   if (cached && (now - cached.ts) < COLLECTION_CACHE_TTL) {
     return cached.items;
+  }
+  if (cached && cached.blockedUntil > now && (now - cached.ts) < COLLECTION_CACHE_STALE_TTL) {
+    log.warn(`Trakt ${achievementId}: backoff actif apres 429, reutilisation du cache (${cached.items.length} elements)`);
+    return cached.items.length ? cached.items : null;
   }
   if (traktListInflight[achievementId]) {
     return traktListInflight[achievementId];
@@ -163,7 +215,12 @@ async function getTraktListItems(achievementId) {
             }
           });
 
-          if (!resp.ok) throw new Error(`Trakt API HTTP ${resp.status}`);
+          if (!resp.ok) {
+            const error = new Error(`Trakt API HTTP ${resp.status}`);
+            error.status = resp.status;
+            error.retryAfterMs = resp.status === 429 ? parseRetryAfterMs(resp) : 0;
+            throw error;
+          }
 
           const payload = await resp.json();
           const pageItems = Array.isArray(payload) ? payload : [];
@@ -217,12 +274,27 @@ async function getTraktListItems(achievementId) {
       log.warn(`Trakt ${achievementId}: inventaire local indisponible, liste collection ignoree pour ce calcul`);
       return null;
     }
-    traktListCache[achievementId] = { items: availableItems, ts: now };
+    cached = saveTraktCacheEntry(achievementId, { items: availableItems, ts: now, blockedUntil: 0, lastError: null });
     log.info(`Trakt ${achievementId}: ${availableItems.length}/${normalized.length} éléments disponibles sur Plex`);
-    return availableItems;
+    return cached.items;
     } catch (err) {
+    if (Number(err?.status || 0) === 429) {
+      const retryAfterMs = Math.max(Number(err?.retryAfterMs || 0), TRAKT_429_BACKOFF_MS);
+      cached = saveTraktCacheEntry(achievementId, {
+        items: cached?.items || [],
+        ts: Number(cached?.ts || 0),
+        blockedUntil: Date.now() + retryAfterMs,
+        lastError: err.message
+      });
+      log.warn(`Trakt ${achievementId}: ${err.message} - backoff ${Math.ceil(retryAfterMs / 1000)}s`);
+      if (cached?.items?.length && (Date.now() - cached.ts) < COLLECTION_CACHE_STALE_TTL) {
+        log.warn(`Trakt ${achievementId}: reutilisation du cache stale (${cached.items.length} elements)`);
+        return cached.items;
+      }
+      return null;
+    }
     log.warn(`Trakt ${achievementId}: ${err.message}`);
-    if (cached?.items?.length) {
+    if (cached?.items?.length && (Date.now() - cached.ts) < COLLECTION_CACHE_STALE_TTL) {
       log.warn(`Trakt ${achievementId}: reutilisation du cache stale (${cached.items.length} elements)`);
       return cached.items;
     }

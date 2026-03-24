@@ -291,6 +291,8 @@ async function persistAchievementState(sessionUser, dbUserId, data, options = {}
   const today = new Date().toLocaleDateString("fr-FR");
   const includeSecretEvaluation = options.includeSecretEvaluation !== false;
   const previousSnapshot = normalizeSnapshot(AchievementSnapshotQueries.getForUser(dbUserId));
+  const previousProgressMap = dbUserId ? AchievementProgressQueries.getForUser(dbUserId) : {};
+  const achievementsById = new Map(ACHIEVEMENTS.getAll().map(achievement => [achievement.id, achievement]));
 
   const initialUnlockedMap = dbUserId ? UserAchievementQueries.getForUser(dbUserId) : {};
   const computedDates = getAchievementUnlockDates(username, joinedAtSeconds || null);
@@ -337,6 +339,8 @@ async function persistAchievementState(sessionUser, dbUserId, data, options = {}
       }
 
       for (const achievementId of revocableUnlocked) {
+        const achievement = achievementsById.get(achievementId);
+        if (achievement?.category === "collections") continue;
         if (evalUnlocked[achievementId]) continue;
         try {
           UserAchievementQueries.revoke(dbUserId, achievementId);
@@ -351,6 +355,11 @@ async function persistAchievementState(sessionUser, dbUserId, data, options = {}
 
       for (const achievementId of secretsToCheck) {
         if (evalProgress[achievementId]) continue;
+        const achievement = achievementsById.get(achievementId);
+        const previousProgress = previousProgressMap[achievementId];
+        if (achievement?.category === "collections" && previousProgress && Number(previousProgress.total || 0) > 0) {
+          continue;
+        }
         try {
           AchievementProgressQueries.remove(dbUserId, achievementId);
         } catch (_) {}
@@ -535,6 +544,7 @@ module.exports = {
   SUCCESS_REFRESH_TTL_MS,
   buildAchievementData,
   buildRenderProgressMap,
+  isSnapshotFullyEvaluated,
   getUserAchievementState,
   refreshUserAchievementState,
   queueBackgroundAchievementRefresh,
