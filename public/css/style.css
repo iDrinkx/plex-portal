@@ -1146,18 +1146,20 @@ body.site-bg-mode-custom .site-bg-image {
   .login-status-panel--dashboard .login-status-item__state-block {
     width: 100%;
     display: grid;
-    grid-template-columns: minmax(146px, 1fr) auto;
+    grid-template-columns: minmax(122px, 1fr) minmax(102px, auto);
     align-items: center;
     justify-items: start;
     text-align: left;
     min-height: 40px;
-    gap: 12px;
+    gap: 6px;
   }
 
   .login-status-panel--dashboard .login-status-item__since {
     margin-top: 0;
     text-align: right;
     white-space: nowrap;
+    font-size: 9px;
+    max-width: 102px;
     justify-self: end;
   }
 
@@ -1176,7 +1178,7 @@ body.site-bg-mode-custom .site-bg-image {
 
   .login-status-panel--dashboard .login-status-state {
     justify-self: start;
-    margin-left: 10px;
+    margin-left: 4px;
   }
 }
 
