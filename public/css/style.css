@@ -1023,13 +1023,22 @@ body.site-bg-mode-custom .site-bg-image {
 }
 
 .login-status-panel--dashboard .login-status-item__headline {
-  min-height: 44px;
+  min-height: 52px;
   justify-content: center;
+  align-items: center;
 }
 
 .login-status-panel--dashboard .login-status-item__service-brand {
   min-width: 0;
+  min-height: 52px;
   justify-content: center;
+  align-items: center;
+}
+
+.login-status-panel--dashboard .login-status-item__service-brand > img,
+.login-status-panel--dashboard .login-status-item__service-logo {
+  justify-content: center;
+  object-position: center;
 }
 
 .login-status-panel--dashboard .login-status-item__state-block {
@@ -2454,7 +2463,7 @@ body.site-bg-mode-custom .site-bg-image {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 3px;
   flex: 1;
   min-width: 90px;
@@ -2463,6 +2472,7 @@ body.site-bg-mode-custom .site-bg-image {
   background: rgba(255,255,255,0.01);
   position: relative;
   z-index: 1;
+  min-height: 98px;
 }
 
 .ssb-divider {
@@ -2478,7 +2488,11 @@ body.site-bg-mode-custom .site-bg-image {
 .ssb-icon {
   font-size: 20px;
   line-height: 1;
-  margin-bottom: 2px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 4px;
 }
 
 .ssb-num {
@@ -2487,6 +2501,9 @@ body.site-bg-mode-custom .site-bg-image {
   color: #fff;
   letter-spacing: -0.5px;
   line-height: 1;
+  min-height: 24px;
+  display: inline-flex;
+  align-items: center;
 }
 
 .ssb-label {
@@ -2496,6 +2513,10 @@ body.site-bg-mode-custom .site-bg-image {
   text-transform: uppercase;
   letter-spacing: 0.8px;
   text-align: center;
+  min-height: 28px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
 }
 
 .ssb-sub {
@@ -2503,6 +2524,10 @@ body.site-bg-mode-custom .site-bg-image {
   color: #8c96a6;
   margin-top: 1px;
   text-align: center;
+  min-height: 13px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
 }
 
 @media (max-width: 600px) {
