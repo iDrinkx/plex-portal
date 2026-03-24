@@ -1784,12 +1784,12 @@
 
   function formatQuotaMeta(quota, fallbackLabel = "Quota en cours") {
     if (!quota) return fallbackLabel;
+    if (isUnlimitedQuota(quota)) {
+      return "Sans restriction";
+    }
     const days = Number(quota.days);
     if (Number.isFinite(days) && days > 0) {
       return `Derniers ${days} jours`;
-    }
-    if (quota.restricted === false && !Number.isFinite(Number(quota.limit))) {
-      return "Sans restriction";
     }
     return fallbackLabel;
   }
@@ -1799,9 +1799,9 @@
     const quotaText = String(quota.text || '').trim().toLowerCase();
     const limit = Number(quota.limit);
     const remaining = Number(quota.remaining);
-    return (quota.restricted === false && !Number.isFinite(limit))
+    return (quota.restricted === false && (!Number.isFinite(limit) || limit <= 0))
       || quotaText.includes('illimit')
-      || (!Number.isFinite(limit) && !Number.isFinite(remaining));
+      || ((!Number.isFinite(limit) || limit <= 0) && !Number.isFinite(remaining));
   }
 
   function getQuotaProgressRatio(quota) {
