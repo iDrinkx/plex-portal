@@ -1070,8 +1070,8 @@ function getUserStatsFromTautulli(username) {
     // Durée = (stopped - started) en secondes
     const stmt = tautulliDb.prepare(`
       SELECT 
-        u.user_id,
-        u.username,
+        MIN(u.user_id) as user_id,
+        MIN(u.username) as username,
         COUNT(sh.id) as session_count,
         SUM(CAST((sh.stopped - sh.started) AS INTEGER)) as total_duration_seconds,
         MAX(sh.stopped) as last_session_timestamp,
@@ -1084,7 +1084,6 @@ function getUserStatsFromTautulli(username) {
       FROM session_history sh
       JOIN users u ON u.user_id = sh.user_id
       WHERE ${stableUserClause}
-      GROUP BY sh.user_id
     `);
     
     const stats = stmt.get(normalizedUsername);
