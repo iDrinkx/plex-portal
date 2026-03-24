@@ -922,6 +922,26 @@
 
       <div class="settings-panel" data-tab-panel="dashboard">
         <div class="settings-card">
+        <h3 class="settings-card-title"><%= t("settings.dashboardLayout.title") %></h3>
+        <p class="settings-card-sub"><%= t("settings.dashboardLayout.desc") %></p>
+        <div class="builtin-cards-list" id="dashboardLayoutList">
+          <% (dashboardLayoutItems || []).forEach(function(item, index) { %>
+            <div class="builtin-card-row" data-layout-id="<%= item.id %>">
+              <div class="dash-card-meta">
+                <div class="dash-card-main"><%= item.label %></div>
+                <div class="dash-card-sub"><%= item.category %> · <%= item.description %></div>
+              </div>
+              <div class="builtin-card-actions">
+                <button class="builtin-card-order-btn" type="button" data-layout-move="up" <%= index === 0 ? "disabled" : "" %>><%= t("settings.dashboardBuiltins.up") %></button>
+                <button class="builtin-card-order-btn" type="button" data-layout-move="down" <%= index === (dashboardLayoutItems || []).length - 1 ? "disabled" : "" %>><%= t("settings.dashboardBuiltins.down") %></button>
+              </div>
+            </div>
+          <% }) %>
+        </div>
+        <div class="settings-inline-note" id="dashboardLayoutState"><%= t("settings.dashboardLayout.note") %></div>
+        </div>
+
+        <div class="settings-card">
         <h3 class="settings-card-title"><%= t("settings.dashboardBuiltins.title") %></h3>
         <p class="settings-card-sub"><%= t("settings.dashboardBuiltins.desc") %></p>
         <div class="builtin-cards-list" id="dashboardBuiltinList">
@@ -1237,6 +1257,8 @@
     const navSubscriptionPillState = document.getElementById("navSubscriptionPillState");
     const dashboardBuiltinList = document.getElementById("dashboardBuiltinList");
     const dashboardBuiltinState = document.getElementById("dashboardBuiltinState");
+    const dashboardLayoutList = document.getElementById("dashboardLayoutList");
+    const dashboardLayoutState = document.getElementById("dashboardLayoutState");
     const dashboardSectionList = document.getElementById("dashboardSectionList");
     const dashboardSectionState = document.getElementById("dashboardSectionState");
     const addBtn = document.getElementById("addDashboardCardBtn");
@@ -1292,12 +1314,15 @@
     let editingCardId = null;
     let canCreate = true;
     let dashboardBuiltinsInFlight = false;
+    let dashboardLayoutInFlight = false;
     let dashboardSectionsInFlight = false;
     let siteBackgroundFileDataUrl = <%- JSON.stringify(siteBackground && String(siteBackground.customUrl || "").startsWith("data:image/") ? siteBackground.customUrl : "").replace(/<\//g, "<\\/") %>;
     let siteBackgroundCustomSource = siteBackgroundFileDataUrl ? "file" : "url";
     const SITE_BACKGROUND_RECOMMENDED_MAX_BYTES = 8 * 1024 * 1024;
     let dashboardBuiltinItems = <%- JSON.stringify(dashboardBuiltinItems || []).replace(/<\//g, "<\\/") %>;
+    let dashboardLayoutItems = <%- JSON.stringify(dashboardLayoutItems || []).replace(/<\//g, "<\\/") %>;
     let dashboardSectionItems = <%- JSON.stringify(dashboardSectionItems || []).replace(/<\//g, "<\\/") %>;
+    let dashboardCustomCardItems = <%- JSON.stringify(dashboardCustomCards || []).replace(/<\//g, "<\\/") %>;
     let dashboardHtmlBlockItems = <%- JSON.stringify((dashboardCustomHtmlBlocks && dashboardCustomHtmlBlocks.length ? dashboardCustomHtmlBlocks : [{ id: "block-1", html: dashboardCustomHtmlRaw || "" }]) || []).replace(/<\//g, "<\\/") %>;
     const backgroundPresetLabels = {
       particles: "<%= t('settings.background.presets.particles') %>",
@@ -1458,6 +1483,95 @@
       }).join("");
     }
 
+    function renderDashboardLayoutList() {
+      if (!dashboardLayoutList) return;
+
+      dashboardLayoutList.innerHTML = dashboardLayoutItems.map(function (item, index) {
+        const isFirst = index === 0;
+        const isLast = index === dashboardLayoutItems.length - 1;
+        return `<div class="builtin-card-row" data-layout-id="${escAttr(item.id)}">
+          <div class="dash-card-meta">
+            <div class="dash-card-main">${escHtml(item.label)}</div>
+            <div class="dash-card-sub">${escHtml(item.category)} · ${escHtml(item.description || "")}</div>
+          </div>
+          <div class="builtin-card-actions">
+            <button class="builtin-card-order-btn" type="button" data-layout-move="up" ${isFirst ? "disabled" : ""}><%= t("settings.dashboardBuiltins.up") %></button>
+            <button class="builtin-card-order-btn" type="button" data-layout-move="down" ${isLast ? "disabled" : ""}><%= t("settings.dashboardBuiltins.down") %></button>
+          </div>
+        </div>`;
+      }).join("");
+    }
+
+    function getDashboardLayoutCatalog() {
+      const items = [];
+
+      dashboardBuiltinItems.forEach(function (item) {
+        items.push({
+          id: "builtin:" + item.key,
+          label: item.label,
+          description: item.description,
+          category: "<%= t('settings.dashboardLayout.category.builtin') %>"
+        });
+      });
+
+      dashboardSectionItems.forEach(function (item) {
+        items.push({
+          id: "section:" + item.key,
+          label: item.label,
+          description: item.description,
+          category: "<%= t('settings.dashboardLayout.category.section') %>"
+        });
+      });
+
+      dashboardCustomCardItems.forEach(function (item) {
+        items.push({
+          id: "custom:" + item.id,
+          label: item.title || item.label || ("Carte " + item.id),
+          description: item.description || item.label || "",
+          category: "<%= t('settings.dashboardLayout.category.custom') %>"
+        });
+      });
+
+      dashboardHtmlBlockItems
+        .filter(function (item) { return String(item.html || "").trim(); })
+        .forEach(function (item, index) {
+          const plain = String(item.html || "")
+            .replace(/<[^>]+>/g, " ")
+            .replace(/\s+/g, " ")
+            .trim()
+            .slice(0, 100);
+          items.push({
+            id: "html:" + (item.id || ("block-" + (index + 1))),
+            label: "<%= t('settings.dashboardLayout.htmlBlockLabel', { index: '__INDEX__' }) %>".replace("__INDEX__", String(index + 1)),
+            description: plain || "<%= t('settings.dashboardLayout.htmlBlockEmpty') %>",
+            category: "<%= t('settings.dashboardLayout.category.html') %>"
+          });
+        });
+
+      return items;
+    }
+
+    function syncDashboardLayoutItems() {
+      const catalog = getDashboardLayoutCatalog();
+      const byId = new Map(catalog.map(function (item) { return [item.id, item]; }));
+      const next = [];
+      const seen = new Set();
+
+      dashboardLayoutItems.forEach(function (item) {
+        if (!item || !byId.has(item.id) || seen.has(item.id)) return;
+        next.push({ ...byId.get(item.id) });
+        seen.add(item.id);
+      });
+
+      catalog.forEach(function (item) {
+        if (seen.has(item.id)) return;
+        next.push({ ...item });
+      });
+
+      dashboardLayoutItems = next;
+      renderDashboardLayoutList();
+    }
+
     function renderDashboardSectionList() {
       if (!dashboardSectionList) return;
 
@@ -1511,10 +1625,12 @@
           };
         }).sort(function (a, b) { return a.order - b.order; });
         renderDashboardBuiltinList();
+        syncDashboardLayoutItems();
         dashboardBuiltinState.textContent = "<%= t('settings.dashboardBuiltins.note') %>";
       } catch (_) {
         dashboardBuiltinItems = previousItems.map(function (item) { return { ...item }; });
         renderDashboardBuiltinList();
+        syncDashboardLayoutItems();
         dashboardBuiltinState.textContent = "<%= t('settings.dashboardBuiltins.note') %>";
       }
     }
@@ -1551,11 +1667,38 @@
           };
         }).sort(function (a, b) { return a.order - b.order; });
         renderDashboardSectionList();
+        syncDashboardLayoutItems();
         dashboardSectionState.textContent = "<%= t('settings.dashboardSections.note') %>";
       } catch (_) {
         dashboardSectionItems = previousItems.map(function (item) { return { ...item }; });
         renderDashboardSectionList();
+        syncDashboardLayoutItems();
         dashboardSectionState.textContent = "<%= t('settings.dashboardSections.note') %>";
+      }
+    }
+
+    async function saveDashboardLayout(previousItems) {
+      if (!dashboardLayoutState) return;
+      dashboardLayoutState.textContent = "<%= t('settings.dashboardLayout.note') %>";
+
+      try {
+        const payload = dashboardLayoutItems.map(function (item) { return item.id; });
+        const resp = await fetch(bp + "/api/admin/dashboard-layout", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ids: payload })
+        });
+        if (!resp.ok) throw new Error("HTTP " + resp.status);
+        const data = await resp.json();
+        const order = Array.isArray(data.ids) ? data.ids : payload;
+        const byId = new Map(dashboardLayoutItems.map(function (item) { return [item.id, item]; }));
+        dashboardLayoutItems = order.map(function (id) { return byId.get(id); }).filter(Boolean);
+        renderDashboardLayoutList();
+        dashboardLayoutState.textContent = "<%= t('settings.dashboardLayout.note') %>";
+      } catch (_) {
+        dashboardLayoutItems = previousItems.map(function (item) { return { ...item }; });
+        renderDashboardLayoutList();
+        dashboardLayoutState.textContent = "<%= t('settings.dashboardLayout.note') %>";
       }
     }
 
@@ -1630,8 +1773,9 @@
       const colorsByKey = Object.fromEntries((data.allColors || []).map(c => [c.key, c.name]));
       canCreate = (data.availableColors || []).length > 0;
       updateActionAvailability();
+      dashboardCustomCardItems = (data.cards || []).map(function (card) { return { ...card }; });
 
-      dashCardsList.innerHTML = (data.cards || []).map((card, index) => {
+      dashCardsList.innerHTML = dashboardCustomCardItems.map((card, index) => {
         const colorName = colorsByKey[card.colorKey] || card.colorKey;
         const isFirst = index === 0;
         const isLast = index === (data.cards || []).length - 1;
@@ -1665,6 +1809,7 @@
       if ((data.availableColors || []).length === 0) {
         dashCardState.textContent = "Toutes les couleurs disponibles sont déjà utilisées.";
       }
+      syncDashboardLayoutItems();
     }
 
     let inFlight = false;
@@ -1765,6 +1910,36 @@
         dashboardBuiltinsInFlight = true;
         await saveDashboardBuiltins(previousItems);
         dashboardBuiltinsInFlight = false;
+      });
+    }
+
+    if (dashboardLayoutList && dashboardLayoutState) {
+      syncDashboardLayoutItems();
+
+      dashboardLayoutList.addEventListener("click", async function (event) {
+        const button = event.target.closest("[data-layout-move]");
+        if (!button || dashboardLayoutInFlight) return;
+
+        const row = button.closest("[data-layout-id]");
+        if (!row) return;
+
+        const id = row.getAttribute("data-layout-id");
+        const index = dashboardLayoutItems.findIndex(function (item) { return item.id === id; });
+        if (index === -1) return;
+
+        const direction = button.getAttribute("data-layout-move");
+        const targetIndex = direction === "up" ? index - 1 : index + 1;
+        if (targetIndex < 0 || targetIndex >= dashboardLayoutItems.length) return;
+
+        const previousItems = dashboardLayoutItems.map(function (item) { return { ...item }; });
+        const moved = dashboardLayoutItems[index];
+        dashboardLayoutItems.splice(index, 1);
+        dashboardLayoutItems.splice(targetIndex, 0, moved);
+        renderDashboardLayoutList();
+
+        dashboardLayoutInFlight = true;
+        await saveDashboardLayout(previousItems);
+        dashboardLayoutInFlight = false;
       });
     }
 
@@ -2051,6 +2226,7 @@
           dashboardHtmlBlockItems = [{ id: "block-1", html: "" }];
         }
         renderDashboardHtmlBlocks();
+        syncDashboardLayoutItems();
       });
     }
 
@@ -2063,6 +2239,7 @@
           html: ""
         });
         renderDashboardHtmlBlocks();
+        syncDashboardLayoutItems();
       });
     }
 
@@ -2085,10 +2262,11 @@
           if (!resp.ok) throw new Error(data.error || ("HTTP " + resp.status));
           dashboardHtmlBlockItems = Array.isArray(data.blocks) && data.blocks.length
             ? data.blocks.map(function (block) {
-                return { id: block.id || ("block-" + Date.now()), html: block.raw || block.html || "" };
+                return { id: block.id || ("block-" + Date.now()), html: block.raw || block.html || "", position: block.position || "below" };
               })
             : [{ id: "block-1", html: "" }];
           renderDashboardHtmlBlocks();
+          syncDashboardLayoutItems();
           dashboardHtmlState.textContent = data.mode === "raw"
             ? "<%= t('settings.dashboardHtml.savedRaw') %>"
             : "<%= t('settings.dashboardHtml.saved') %>";

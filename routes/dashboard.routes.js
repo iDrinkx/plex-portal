@@ -42,6 +42,7 @@ const {
   getDashboardSectionConfig,
   saveDashboardSectionConfig
 } = require("../utils/dashboard-sections");
+const { buildDashboardLayoutItems, getDashboardLayoutOrder, saveDashboardLayoutOrder } = require("../utils/dashboard-layout");
 const {
   getDashboardCustomHtml,
   getDashboardCustomHtmlBlocks,
@@ -1136,6 +1137,7 @@ router.get("/dashboard", requireAuth, async (req, res) => {
   const dashboardSectionItems = getDashboardSectionConfig();
   const dashboardServerStatsEnabled = !!dashboardSectionItems.find(item => item.key === "server-stats" && item.enabled !== false);
   const dashboardBuiltinCards = buildDashboardBuiltinCards(req.session.user, req.basePath || "", res.locals.t);
+  const dashboardBuiltinItems = getDashboardBuiltinAdminItems(res.locals.t);
   const dashboardCustomCards = DashboardCardQueries.list()
     .map(card => {
       const color = colorMap.get(card.colorKey);
@@ -1168,16 +1170,26 @@ router.get("/dashboard", requireAuth, async (req, res) => {
     }
   }
 
+  const dashboardCustomHtmlBlocks = getDashboardCustomHtmlBlocks();
+  const dashboardLayoutItems = buildDashboardLayoutItems({
+    builtinItems: dashboardBuiltinItems,
+    sectionItems: dashboardSectionItems,
+    customCards: dashboardCustomCards,
+    htmlBlocks: dashboardCustomHtmlBlocks,
+    t: res.locals.t
+  });
+
   res.render("dashboard/index", {
     user: req.session.user,
     basePath: req.basePath,
     dashboardBuiltinCards,
     dashboardCustomCards,
-    dashboardCustomHtmlBlocks: getDashboardCustomHtmlBlocks(),
+    dashboardCustomHtmlBlocks,
     dashboardCustomHtml: getDashboardCustomHtml(),
     dashboardCustomHtmlMode: getDashboardCustomHtmlMode(),
     dashboardServerStatsEnabled,
     dashboardSectionItems,
+    dashboardLayoutItems,
     uptimeKuma
   });
 });
@@ -1341,6 +1353,14 @@ router.get("/parametres", requireAuth, requireAdmin, (req, res) => {
     integrationKey: card.integrationKey || "custom",
     colorName: colorMap.get(card.colorKey)?.name || card.colorKey
   }));
+  const dashboardHtmlBlocksRaw = getDashboardCustomHtmlBlocksRaw();
+  const dashboardLayoutItems = buildDashboardLayoutItems({
+    builtinItems: dashboardBuiltinItems,
+    sectionItems: dashboardSectionItems,
+    customCards: customCardsResolved,
+    htmlBlocks: dashboardHtmlBlocksRaw,
+    t: res.locals.t
+  });
 
   res.render("parametres/index", {
     user: req.session.user,
@@ -1353,8 +1373,9 @@ router.get("/parametres", requireAuth, requireAdmin, (req, res) => {
     siteLanguage: getSiteLanguage(),
     dashboardBuiltinItems,
     dashboardSectionItems,
+    dashboardLayoutItems,
     dashboardCustomHtmlRaw: getDashboardCustomHtmlRaw(),
-    dashboardCustomHtmlBlocks: getDashboardCustomHtmlBlocksRaw(),
+    dashboardCustomHtmlBlocks: dashboardHtmlBlocksRaw,
     dashboardCustomHtmlPreview: getDashboardCustomHtml(),
     dashboardCustomHtmlPreviewBlocks: getDashboardCustomHtmlBlocks(),
     dashboardCustomHtmlMode: getDashboardCustomHtmlMode(),
@@ -1854,6 +1875,17 @@ router.post("/api/admin/dashboard-sections", requireAuth, requireAdmin, (req, re
   }
   log.create("[Admin]").info(`Agencement des sections dashboard mis a jour par ${req.session.user.username}`);
   res.json({ success: true, items: savedItems });
+});
+
+router.get("/api/admin/dashboard-layout", requireAuth, requireAdmin, (req, res) => {
+  res.json({ ids: getDashboardLayoutOrder() });
+});
+
+router.post("/api/admin/dashboard-layout", requireAuth, requireAdmin, (req, res) => {
+  const ids = Array.isArray(req.body?.ids) ? req.body.ids : [];
+  const savedIds = saveDashboardLayoutOrder(ids);
+  log.create("[Admin]").info(`Ordre global dashboard mis a jour par ${req.session.user.username}`);
+  res.json({ success: true, ids: savedIds });
 });
 
 router.get("/api/admin/dashboard-html", requireAuth, requireAdmin, (req, res) => {
