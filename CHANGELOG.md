@@ -1,3 +1,11 @@
+## [1.41.4](https://github.com/iDrinkx/portall/compare/v1.41.3...v1.41.4) (2026-03-25)
+
+### Corrections de bugs
+
+* audio pris en chage pour statistiques ([6db740d](https://github.com/iDrinkx/portall/commit/6db740d6ea1440e39dea67e9c73d14edfc923e28))
+* debug ([54e8194](https://github.com/iDrinkx/portall/commit/54e81945f5409e627b7058ed1f2154972ed9784e))
+* kuma icon maintenance ([3672d03](https://github.com/iDrinkx/portall/commit/3672d03628c9d474689221aa5964d8e4af80f35a))
+
 ## [1.41.3](https://github.com/iDrinkx/portall/compare/v1.41.2...v1.41.3) (2026-03-24)
 
 ### Corrections de bugs
