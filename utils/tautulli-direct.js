@@ -2256,7 +2256,7 @@ function getUserDetailedStats(username) {
         JOIN session_history_media_info shm ON sh.id = shm.id
         WHERE ${stableUserClause}
           AND sh.stopped > sh.started
-          AND sh.media_type IN ('movie', 'episode')
+          AND sh.media_type IN ('movie', 'episode', 'track', 'album')
         GROUP BY shm.transcode_decision
       `).all(norm);
       if (rows && rows.length > 0) {
@@ -2279,7 +2279,7 @@ function getUserDetailedStats(username) {
           JOIN session_history_media_info shm ON sh.id = shm.id
           WHERE ${stableUserClause}
             AND sh.stopped > sh.started
-            AND sh.media_type IN ('movie', 'episode')
+            AND sh.media_type IN ('movie', 'episode', 'track', 'album')
           GROUP BY decision
         `).all(norm);
         if (rows && rows.length > 0) {
@@ -2294,7 +2294,7 @@ function getUserDetailedStats(username) {
           FROM session_history sh
           WHERE ${stableUserClause}
             AND sh.stopped > sh.started
-            AND sh.media_type IN ('movie', 'episode')
+            AND sh.media_type IN ('movie', 'episode', 'track', 'album')
         `).all(norm);
         log.warn('[playMethod] ⚠ Using fallback: all sessions as "direct play"');
       }
@@ -2328,7 +2328,7 @@ function getUserDetailedStats(username) {
       SELECT COUNT(DISTINCT date(sh.started, 'unixepoch', 'localtime')) as cnt
       FROM session_history sh
       WHERE ${stableUserClause} AND sh.stopped > sh.started
-        AND sh.media_type IN ('movie', 'episode')
+        AND sh.media_type IN ('movie', 'episode', 'track', 'album')
     `).get(norm);
     activeDaysCount = Math.max(1, row?.cnt || 1);
   } catch (e) {}
@@ -2342,7 +2342,7 @@ function getUserDetailedStats(username) {
         SUM(CAST((sh.stopped - sh.started) AS REAL) / 3600) as hours
       FROM session_history sh
       WHERE ${stableUserClause} AND sh.stopped > sh.started
-        AND sh.media_type IN ('movie', 'episode')
+        AND sh.media_type IN ('movie', 'episode', 'track', 'album')
       GROUP BY hour, sh.media_type
       ORDER BY hour
     `).all(norm);
@@ -2388,7 +2388,7 @@ function getUserDetailedStats(username) {
         SUM(CAST((sh.stopped - sh.started) AS REAL) / 3600) as hours
       FROM session_history sh
       WHERE ${stableUserClause} AND sh.stopped > sh.started
-        AND sh.media_type IN ('movie', 'episode')
+        AND sh.media_type IN ('movie', 'episode', 'track', 'album')
       GROUP BY dow, sh.media_type
       ORDER BY dow
     `).all(norm);
@@ -2514,7 +2514,7 @@ function getGlobalDetailedStats() {
       FROM session_history sh
       JOIN session_history_media_info shm ON sh.id = shm.id
       WHERE sh.stopped > sh.started
-        AND sh.media_type IN ('movie', 'episode')
+        AND sh.media_type IN ('movie', 'episode', 'track', 'album')
       GROUP BY shm.transcode_decision
     `).all();
 
@@ -2548,7 +2548,7 @@ function getGlobalDetailedStats() {
       SELECT COUNT(DISTINCT date(sh.started, 'unixepoch', 'localtime')) as cnt
       FROM session_history sh
       WHERE sh.stopped > sh.started
-        AND sh.media_type IN ('movie', 'episode')
+        AND sh.media_type IN ('movie', 'episode', 'track', 'album')
     `).get();
     activeDaysCount = Math.max(1, row?.cnt || 1);
   } catch (_) {}
@@ -2562,7 +2562,7 @@ function getGlobalDetailedStats() {
         SUM(CAST((sh.stopped - sh.started) AS REAL) / 3600) as hours
       FROM session_history sh
       WHERE sh.stopped > sh.started
-        AND sh.media_type IN ('movie', 'episode')
+        AND sh.media_type IN ('movie', 'episode', 'track', 'album')
       GROUP BY hour, sh.media_type
       ORDER BY hour
     `).all();
@@ -2607,7 +2607,7 @@ function getGlobalDetailedStats() {
         SUM(CAST((sh.stopped - sh.started) AS REAL) / 3600) as hours
       FROM session_history sh
       WHERE sh.stopped > sh.started
-        AND sh.media_type IN ('movie', 'episode')
+        AND sh.media_type IN ('movie', 'episode', 'track', 'album')
       GROUP BY dow, sh.media_type
       ORDER BY dow
     `).all();
