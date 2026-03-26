@@ -1234,12 +1234,30 @@
                   <h4 class="config-section-title"><%= section.group %></h4>
                   <div class="settings-form">
                     <% (section.fields || []).forEach(function(field) { %>
-                      <div class="settings-field settings-field--full">
+                      <div
+                        class="settings-field settings-field--full"
+                        <% if (field.visibleForProviders && field.visibleForProviders.length) { %>
+                        data-uptime-provider-visible-for="<%= field.visibleForProviders.join(',') %>"
+                        <% } %>
+                      >
                         <label for="config-<%= field.key %>">
                           <%= field.label %>
                           <% if (field.required) { %><span class="settings-required"><%= t("common.required") %></span><% } %>
                           <% if (field.requiresRestart) { %><span class="settings-restart"><%= t("common.restartRequired") %></span><% } %>
                         </label>
+                        <% if (field.type === 'select') { %>
+                        <select
+                          id="config-<%= field.key %>"
+                          data-config-key="<%= field.key %>"
+                          data-configured="<%= field.configured ? 'true' : 'false' %>"
+                          data-dirty="false"
+                          class="settings-inline-select"
+                        >
+                          <% (field.options || []).forEach(function(option) { %>
+                            <option value="<%= option.value %>" <%= String(field.value || '') === String(option.value) ? 'selected' : '' %>><%= option.label %></option>
+                          <% }) %>
+                        </select>
+                        <% } else { %>
                         <input
                           id="config-<%= field.key %>"
                           data-config-key="<%= field.key %>"
@@ -1256,6 +1274,7 @@
                           data-form-type="<%= field.secret ? 'other' : '' %>"
                           spellcheck="false"
                         >
+                        <% } %>
                       </div>
                     <% }) %>
                   </div>
@@ -1340,6 +1359,7 @@
     const configDiagnostics = document.getElementById("configDiagnostics");
     const configDiagnosticsState = document.getElementById("configDiagnosticsState");
     const configDiagnosticsList = document.getElementById("configDiagnosticsList");
+    const uptimeProviderInput = document.getElementById("config-UPTIME_PROVIDER");
     if (!toggle || !state || !addBtn || !dashCardState || !dashCardsList || !form || !colorSelect || !cancelEditBtn) return;
 
     let cardBusy = false;
@@ -1415,6 +1435,17 @@
           </div>
         `;
       }).join("");
+    }
+
+    function updateUptimeProviderFields() {
+      const provider = uptimeProviderInput ? String(uptimeProviderInput.value || "kuma").trim().toLowerCase() : "kuma";
+      Array.from(document.querySelectorAll("[data-uptime-provider-visible-for]")).forEach(function (field) {
+        const allowed = String(field.getAttribute("data-uptime-provider-visible-for") || "")
+          .split(",")
+          .map(function (value) { return String(value || "").trim().toLowerCase(); })
+          .filter(Boolean);
+        field.style.display = !allowed.length || allowed.includes(provider) ? "" : "none";
+      });
     }
 
     async function parseJsonResponse(resp) {
@@ -1882,15 +1913,18 @@
     });
 
     if (saveConfigBtn && configForm && configState) {
-      Array.from(configForm.querySelectorAll("input[data-config-key]")).forEach(function (input) {
-        input.addEventListener("input", function () {
+      Array.from(configForm.querySelectorAll("[data-config-key]")).forEach(function (input) {
+        const markDirty = function () {
           input.dataset.dirty = "true";
-        });
+          if (input === uptimeProviderInput) updateUptimeProviderFields();
+        };
+        input.addEventListener("input", markDirty);
+        input.addEventListener("change", markDirty);
       });
 
       saveConfigBtn.addEventListener("click", async function () {
         const payload = {};
-        Array.from(configForm.querySelectorAll("input[data-config-key]")).forEach(function (input) {
+        Array.from(configForm.querySelectorAll("[data-config-key]")).forEach(function (input) {
           const key = input.dataset.configKey;
           if (!key) return;
           const value = String(input.value || "").trim();
@@ -1922,15 +1956,16 @@
           if (!resp.ok) throw new Error((data && (data.message || data.error)) || ("HTTP " + resp.status));
           Array.from(configForm.querySelectorAll('input[type="password"]')).forEach(function (input) {
             input.value = "";
-            const key = input.name;
+            const key = input.dataset.configKey;
             const wasCleared = Object.prototype.hasOwnProperty.call(payload, key) && !payload[key];
             input.dataset.configured = wasCleared ? "false" : "true";
             input.dataset.dirty = "false";
             input.placeholder = wasCleared ? "" : "Valeur deja configuree";
           });
-          Array.from(configForm.querySelectorAll('input:not([type="password"])')).forEach(function (input) {
+          Array.from(configForm.querySelectorAll('[data-config-key]:not(input[type="password"])')).forEach(function (input) {
             input.dataset.dirty = "false";
           });
+          updateUptimeProviderFields();
           renderConfigDiagnostics(data && data.diagnostics);
           configState.textContent = "Connexions enregistrees avec succes.";
         } catch (err) {
@@ -1948,6 +1983,7 @@
     }
 
     if (configDiagnostics) {
+      updateUptimeProviderFields();
       runConfigDiagnostics();
     }
 

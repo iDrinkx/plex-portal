@@ -21,9 +21,46 @@ const CONFIG_FIELDS = [
   { key: "WIZARR_API_KEY", label: "API key Wizarr", group: "Wizarr", type: "password", secret: true },
   { key: "TRAKT_CLIENT_ID", label: "Client ID Trakt", group: "Trakt", type: "password", secret: true },
 
-  { key: "UPTIME_KUMA_URL", label: "URL Uptime Kuma", group: "Uptime Kuma", type: "url" },
-  { key: "UPTIME_KUMA_USERNAME", label: "Identifiant Uptime Kuma", group: "Uptime Kuma", type: "text" },
-  { key: "UPTIME_KUMA_PASSWORD", label: "Mot de passe Uptime Kuma", group: "Uptime Kuma", type: "password", secret: true },
+  {
+    key: "UPTIME_PROVIDER",
+    label: "Provider Uptime",
+    group: "Uptime",
+    type: "select",
+    options: [
+      { value: "kuma", label: "Uptime Kuma" },
+      { value: "robot", label: "UptimeRobot" }
+    ]
+  },
+  {
+    key: "UPTIME_KUMA_URL",
+    label: "URL Uptime Kuma",
+    group: "Uptime",
+    type: "url",
+    visibleForProviders: ["kuma"]
+  },
+  {
+    key: "UPTIME_KUMA_USERNAME",
+    label: "Identifiant Uptime Kuma",
+    group: "Uptime",
+    type: "text",
+    visibleForProviders: ["kuma"]
+  },
+  {
+    key: "UPTIME_KUMA_PASSWORD",
+    label: "Mot de passe Uptime Kuma",
+    group: "Uptime",
+    type: "password",
+    secret: true,
+    visibleForProviders: ["kuma"]
+  },
+  {
+    key: "UPTIME_ROBOT_API_KEY",
+    label: "API key UptimeRobot",
+    group: "Uptime",
+    type: "password",
+    secret: true,
+    visibleForProviders: ["robot"]
+  },
 
   { key: "RADARR_URL", label: "URL Radarr", group: "Radarr", type: "url" },
   { key: "RADARR_API_KEY", label: "API key Radarr", group: "Radarr", type: "password", secret: true },

@@ -1,6 +1,7 @@
 <%
   const uptimeLayout = layout === "dashboard" ? "dashboard" : "login";
-  const rawStatusData = uptimeKuma && uptimeKuma.enabled ? uptimeKuma : null;
+  const rawInputStatus = uptimeStatus || uptimeKuma || null;
+  const rawStatusData = rawInputStatus && rawInputStatus.enabled ? rawInputStatus : null;
   const filteredServices = rawStatusData && Array.isArray(rawStatusData.services)
     ? rawStatusData.services.filter(service => {
         const serviceName = String(service?.name || "").trim().toLowerCase();
@@ -171,7 +172,7 @@
       <article class="login-status-item login-status-item--empty">
         <div class="login-status-item__meta">
           <div class="login-status-item__headline">
-            <strong>Uptime Kuma</strong>
+            <strong><%= statusData.title || "Uptime" %></strong>
             <span class="login-status-state login-status-state--unknown">
               <span class="login-status-state__dot" aria-hidden="true"></span>
               <span>Indisponible</span>
