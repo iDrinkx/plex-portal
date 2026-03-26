@@ -244,10 +244,8 @@ function buildNormalizedStatus({ baseUrl, monitorsPayload, maintenancePayload })
       "status_changed_at",
       "statusChangedAt",
       "last_status_change",
-      "lastStatusChange",
-      "last_checked_at",
-      "lastCheckedAt"
-    ])) || parseRobotTime(pickFirst(monitor, ["createDateTime", "create_datetime"])) || parseRobotTime(durationSecondsToIso(pickFirst(monitor, ["currentStateDuration", "current_state_duration"])));
+      "lastStatusChange"
+    ])) || parseRobotTime(durationSecondsToIso(pickFirst(monitor, ["currentStateDuration", "current_state_duration"]))) || parseRobotTime(pickFirst(monitor, ["createDateTime", "create_datetime"]));
     const latestTime = parseRobotTime(pickFirst(monitor, [
       "updated_at",
       "updatedAt",
