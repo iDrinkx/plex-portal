@@ -1,3 +1,18 @@
+## [1.42.2](https://github.com/iDrinkx/portall/compare/v1.42.1...v1.42.2) (2026-03-26)
+
+### Corrections de bugs
+
+* carte natives ([a1632b2](https://github.com/iDrinkx/portall/commit/a1632b28b7c8d343be1a683382a43ab41f6038a2))
+* carte supp incohérence visuel ([ba4a2a4](https://github.com/iDrinkx/portall/commit/ba4a2a47f0946207e354565b8d45a2abdb7b491e))
+* cartes supp ([782a1e3](https://github.com/iDrinkx/portall/commit/782a1e38dac8bcfda20eda7606680d6f8bdd23d4))
+* cohérence globale dashboard ([c8d7e62](https://github.com/iDrinkx/portall/commit/c8d7e62f3ba6b241084e0dba1792ab67ad7e9764))
+* dash cohérence ([1f813aa](https://github.com/iDrinkx/portall/commit/1f813aa33e0a927ca377842f3b373f5abfd01eaa))
+* html cohérence ([b724919](https://github.com/iDrinkx/portall/commit/b724919c1ddbbd6e2ade279cb1855cc24b78c020))
+* opacité cartes ([4e1b164](https://github.com/iDrinkx/portall/commit/4e1b1646cab879a287c66454fe3d18efedabe07c))
+* opacity uptime ([750a767](https://github.com/iDrinkx/portall/commit/750a767ee55eb9368682cb79038c945adb3a241c))
+* scroll html ([6394727](https://github.com/iDrinkx/portall/commit/6394727aa38c84781ba2a644bdb86973e638f9bd))
+* unifrmisation details deashboard ([933894a](https://github.com/iDrinkx/portall/commit/933894a4b83453077de92668018192b620289e70))
+
 ## [1.42.1](https://github.com/iDrinkx/portall/compare/v1.42.0...v1.42.1) (2026-03-26)
 
 ### Corrections de bugs
