@@ -702,8 +702,11 @@ body.site-bg-mode-custom .site-bg-image {
   padding: 14px 16px;
   border-radius: 16px;
   margin-bottom: 18px;
-  background: rgba(17, 26, 40, 0.52);
-  border: 1px solid rgba(170, 201, 228, 0.08);
+  background: rgb(14 22 34 / var(--site-card-opacity, 0.012));
+  border: 1px solid rgba(226, 246, 255, 0.22);
+  box-shadow:
+    0 10px 26px rgba(0,0,0,.10),
+    0 0 0 1px rgba(232, 248, 255, 0.05) inset;
 }
 
 .login-status-summary--operational {
@@ -801,11 +804,11 @@ body.site-bg-mode-custom .site-bg-image {
 .login-status-item {
   padding: 14px 16px;
   border-radius: 16px;
-  background: rgba(17, 26, 40, 0.42);
-  border: 1px solid rgba(170, 201, 228, 0.06);
+  background: rgb(14 22 34 / var(--site-card-opacity, 0.012));
+  border: 1px solid rgba(226, 246, 255, 0.22);
   box-shadow:
     0 10px 26px rgba(0,0,0,.10),
-    0 0 0 1px rgba(232, 248, 255, 0.03) inset;
+    0 0 0 1px rgba(232, 248, 255, 0.05) inset;
 }
 
 .login-status-item--empty {
