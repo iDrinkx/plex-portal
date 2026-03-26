@@ -1704,7 +1704,7 @@ body.site-bg-mode-custom .site-bg-image {
 .dashboard-custom-html {
   margin: 18px 0 22px;
   border: 1px solid rgba(226, 246, 255, 0.42);
-  border-radius: 18px;
+  border-radius: 20px;
   background: rgb(14 22 34 / var(--site-card-opacity, 0.012));
   padding: 18px;
   box-shadow:
@@ -1714,6 +1714,7 @@ body.site-bg-mode-custom .site-bg-image {
   backdrop-filter: blur(3px) saturate(112%) contrast(1.01) brightness(1.02);
   -webkit-backdrop-filter: blur(3px) saturate(112%) contrast(1.01) brightness(1.02);
   min-width: 0;
+  overflow: hidden;
   overflow-x: auto;
   position: relative;
   isolation: isolate;
