@@ -18,7 +18,7 @@ const { initTautulliDatabase, getAllUserStatsFromTautulli } = require("./utils/t
 const { buildDashboardNavItems } = require("./utils/dashboard-builtins");
 const { getSiteLanguage, createTranslator, getRuntimeTextMap } = require("./utils/i18n");
 const { getSiteBackgroundSettings } = require("./utils/site-background");
-const { getPublicStatusPageSummary } = require("./utils/uptime-kuma");
+const { getConfiguredStatusSummary, normalizeProvider } = require("./utils/uptime-status");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -292,26 +292,35 @@ app.get("/", async (req, res) => {
     return res.redirect(redirectUrl);
   }
 
+  const uptimeProvider = normalizeProvider(getConfigValue("UPTIME_PROVIDER", "kuma"));
   const uptimeKumaUrl = String(getConfigValue("UPTIME_KUMA_URL", "") || "").trim();
   const uptimeKumaUsername = String(getConfigValue("UPTIME_KUMA_USERNAME", "") || "").trim();
   const uptimeKumaPassword = String(getConfigValue("UPTIME_KUMA_PASSWORD", "") || "").trim();
+  const uptimeRobotApiUrl = String(getConfigValue("UPTIME_ROBOT_API_URL", "") || "").trim();
+  const uptimeRobotApiKey = String(getConfigValue("UPTIME_ROBOT_API_KEY", "") || "").trim();
 
-  let uptimeKuma = null;
-  if (uptimeKumaUrl && uptimeKumaUsername && uptimeKumaPassword) {
+  let uptimeStatus = null;
+  const hasUptimeConfig = uptimeProvider === "robot"
+    ? !!uptimeRobotApiKey
+    : !!(uptimeKumaUrl && uptimeKumaUsername && uptimeKumaPassword);
+  if (hasUptimeConfig) {
     try {
-      uptimeKuma = await getPublicStatusPageSummary({
-        baseUrl: uptimeKumaUrl,
-        username: uptimeKumaUsername,
-        password: uptimeKumaPassword
+      uptimeStatus = await getConfiguredStatusSummary({
+        provider: uptimeProvider,
+        kumaUrl: uptimeKumaUrl,
+        kumaUsername: uptimeKumaUsername,
+        kumaPassword: uptimeKumaPassword,
+        robotApiUrl: uptimeRobotApiUrl,
+        robotApiKey: uptimeRobotApiKey
       });
     } catch (_) {
-      uptimeKuma = null;
+      uptimeStatus = null;
     }
   }
 
   res.render("login", {
     error: req.query.error || null,
-    uptimeKuma
+    uptimeStatus
   });
 });
 

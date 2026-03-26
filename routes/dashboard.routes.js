@@ -54,7 +54,7 @@ const {
 } = require("../utils/dashboard-custom-html");
 const { SUPPORTED_LOCALES, getSiteLanguage } = require("../utils/i18n");
 const { BACKGROUND_PRESETS, getSiteBackgroundSettings, saveSiteBackgroundSettings } = require("../utils/site-background");
-const { getPublicStatusPageSummary } = require("../utils/uptime-kuma");
+const { DEFAULT_API_BASE_URL, getConfiguredStatusSummary, normalizeProvider } = require("../utils/uptime-status");
 
 const PLEX_LIVE_TIMEOUT_MS = 12000;
 const NOW_PLAYING_CACHE_TTL_MS = 45 * 1000;
@@ -267,13 +267,45 @@ async function testKomgaConnection() {
   return summarizeConfigTest("Komga", false, "Endpoint non compatible");
 }
 
+async function testUptimeConnection() {
+  const provider = normalizeProvider(getConfigValue("UPTIME_PROVIDER", "kuma"));
+
+  if (provider === "robot") {
+    const apiUrl = String(getConfigValue("UPTIME_ROBOT_API_URL", "") || "").trim() || DEFAULT_API_BASE_URL;
+    const apiKey = String(getConfigValue("UPTIME_ROBOT_API_KEY", "") || "").trim();
+    if (!apiKey) return summarizeConfigTest("UptimeRobot", false, "Configuration incomplète");
+    try {
+      const resp = await fetchWithConfigTest(`${apiUrl.replace(/\/+$/, "")}/monitors`, {
+        headers: {
+          Accept: "application/json",
+          Authorization: `Basic ${Buffer.from(`${apiKey}:`).toString("base64")}`
+        }
+      });
+      if (resp.ok) return summarizeConfigTest("UptimeRobot", true, "Connexion OK");
+      if (resp.status === 401 || resp.status === 403) return summarizeConfigTest("UptimeRobot", false, "Clé invalide");
+      if (resp.status === 429) return summarizeConfigTest("UptimeRobot", false, "Rate limit atteint");
+      return summarizeConfigTest("UptimeRobot", false, `HTTP ${resp.status}`);
+    } catch (err) {
+      return summarizeConfigTest("UptimeRobot", false, err.message || "Connexion impossible");
+    }
+  }
+
+  const uptimeKumaUrl = String(getConfigValue("UPTIME_KUMA_URL", "") || "").trim();
+  const uptimeKumaUsername = String(getConfigValue("UPTIME_KUMA_USERNAME", "") || "").trim();
+  const uptimeKumaPassword = String(getConfigValue("UPTIME_KUMA_PASSWORD", "") || "").trim();
+  if (!uptimeKumaUrl || !uptimeKumaUsername || !uptimeKumaPassword) {
+    return summarizeConfigTest("Uptime Kuma", false, "Configuration incomplète");
+  }
+  return testUrlReachable("Uptime Kuma", uptimeKumaUrl);
+}
+
 async function runAdminConfigDiagnostics() {
   const tests = await Promise.all([
     testPlexConnection(),
     testTautulliConnection(),
     testSeerrConnection(),
     testWizarrConnection(),
-    testUrlReachable("Uptime Kuma", getConfigValue("UPTIME_KUMA_URL", "")),
+    testUptimeConnection(),
     testArrConnection("Radarr", getConfigValue("RADARR_URL", ""), getConfigValue("RADARR_API_KEY", "")),
     testArrConnection("Sonarr", getConfigValue("SONARR_URL", ""), getConfigValue("SONARR_API_KEY", "")),
     testKomgaConnection(),
@@ -1302,19 +1334,28 @@ router.get("/dashboard", requireAuth, async (req, res) => {
     })
     .filter(Boolean);
 
-  let uptimeKuma = null;
+  let uptimeStatus = null;
+  const uptimeProvider = normalizeProvider(getConfigValue("UPTIME_PROVIDER", "kuma"));
   const uptimeKumaUrl = String(getConfigValue("UPTIME_KUMA_URL", "") || "").trim();
   const uptimeKumaUsername = String(getConfigValue("UPTIME_KUMA_USERNAME", "") || "").trim();
   const uptimeKumaPassword = String(getConfigValue("UPTIME_KUMA_PASSWORD", "") || "").trim();
-  if (uptimeKumaUrl && uptimeKumaUsername && uptimeKumaPassword) {
+  const uptimeRobotApiUrl = String(getConfigValue("UPTIME_ROBOT_API_URL", "") || "").trim();
+  const uptimeRobotApiKey = String(getConfigValue("UPTIME_ROBOT_API_KEY", "") || "").trim();
+  const hasUptimeConfig = uptimeProvider === "robot"
+    ? !!uptimeRobotApiKey
+    : !!(uptimeKumaUrl && uptimeKumaUsername && uptimeKumaPassword);
+  if (hasUptimeConfig) {
     try {
-      uptimeKuma = await getPublicStatusPageSummary({
-        baseUrl: uptimeKumaUrl,
-        username: uptimeKumaUsername,
-        password: uptimeKumaPassword
+      uptimeStatus = await getConfiguredStatusSummary({
+        provider: uptimeProvider,
+        kumaUrl: uptimeKumaUrl,
+        kumaUsername: uptimeKumaUsername,
+        kumaPassword: uptimeKumaPassword,
+        robotApiUrl: uptimeRobotApiUrl,
+        robotApiKey: uptimeRobotApiKey
       });
     } catch (_) {
-      uptimeKuma = null;
+      uptimeStatus = null;
     }
   }
 
@@ -1425,7 +1466,7 @@ router.get("/dashboard", requireAuth, async (req, res) => {
     dashboardServerStatsEnabled,
     dashboardSectionItems,
     dashboardLayoutItems,
-    uptimeKuma
+    uptimeStatus
   });
 });
 

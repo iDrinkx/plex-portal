@@ -59,7 +59,7 @@
       <%- group.block.rendered %>
     </div>
   <% } else if (group.type === "section" && group.section.key === "uptime-kuma") { %>
-    <%- include('../partials/uptime-kuma-panel', { uptimeKuma, layout: 'dashboard' }) %>
+    <%- include('../partials/uptime-kuma-panel', { uptimeStatus, layout: 'dashboard' }) %>
   <% } else if (group.type === "section" && group.section.key === "server-stats" && dashboardServerStatsEnabled) { %>
     <div class="server-stats-bar" id="serverStatsBar">
       <div class="ssb-item" id="ssb-movies">
