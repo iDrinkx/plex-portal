@@ -239,7 +239,7 @@ function buildNormalizedStatus({ baseUrl, monitorsPayload, maintenancePayload })
     if (!monitor || typeof monitor !== "object") return;
 
     const id = String(pickFirst(monitor, ["id", "monitor_id", "monitorId"]) ?? index);
-    const name = String(pickFirst(monitor, ["friendly_name", "name", "label"]) || `Monitor ${id}`).trim();
+    const name = String(pickFirst(monitor, ["friendlyName", "friendly_name", "name", "label"]) || `Monitor ${id}`).trim();
     const statusChangedAt = parseRobotTime(pickFirst(monitor, [
       "status_changed_at",
       "statusChangedAt",
