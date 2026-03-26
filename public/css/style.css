@@ -2619,7 +2619,11 @@ body.site-bg-mode-custom .site-bg-image {
   min-width: 90px;
   padding: 8px 12px;
   border-radius: 14px;
-  background: rgba(255,255,255,0.01);
+  background: rgb(14 22 34 / var(--site-card-opacity, 0.012));
+  border: 1px solid rgba(226, 246, 255, 0.22);
+  box-shadow:
+    0 10px 26px rgba(0,0,0,.10),
+    0 0 0 1px rgba(232, 248, 255, 0.05) inset;
   position: relative;
   z-index: 1;
   min-height: 86px;
