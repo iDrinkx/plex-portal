@@ -837,6 +837,14 @@
   var classementRefreshIntervalMs = 60 * 60 * 1000;
   var classementTimerHandle = null;
   var classementAutoRefreshPending = false;
+  var classementEmptyRetryHandle = null;
+
+  function setLoadingMessage(message) {
+    var loadingEl = document.getElementById('lbLoading');
+    if (!loadingEl) return;
+    var textEl = loadingEl.querySelector('span');
+    if (textEl) textEl.textContent = message;
+  }
 
   function formatRefreshCountdown(totalSeconds) {
     if (totalSeconds < 60) return totalSeconds + 's';
@@ -870,8 +878,35 @@
     fetch(bp + '/api/classement')
       .then(function(r) { return r.ok ? r.json() : Promise.reject(r.status); })
       .then(function(data) {
+        var byLevel = Array.isArray(data.byLevel) ? data.byLevel : [];
+        var byHours = Array.isArray(data.byHours) ? data.byHours : [];
+        var hasClassementData = byLevel.length > 0 || byHours.length > 0;
+
+        if (!hasClassementData) {
+          classementAutoRefreshPending = false;
+          document.getElementById('lbContent').style.display = 'none';
+          document.getElementById('lbError').style.display   = 'none';
+          document.getElementById('lbLoading').style.display = 'flex';
+          setLoadingMessage('Classement en cours de génération...');
+          var timerEl = document.getElementById('lbRefreshTimer');
+          if (timerEl) {
+            timerEl.textContent = 'Le classement sera affiché automatiquement dès qu’il sera prêt.';
+          }
+          if (!classementEmptyRetryHandle) {
+            classementEmptyRetryHandle = setTimeout(function() {
+              classementEmptyRetryHandle = null;
+              loadClassementData(false);
+            }, 3000);
+          }
+          return;
+        }
+
+        if (classementEmptyRetryHandle) {
+          clearTimeout(classementEmptyRetryHandle);
+          classementEmptyRetryHandle = null;
+        }
         usersByName = {};
-        (data.byLevel || []).forEach(function(u) { usersByName[u.username] = u; });
+        byLevel.forEach(function(u) { usersByName[u.username] = u; });
         if (data.lastRefresh) {
           lastRefreshTime = new Date(data.lastRefresh).getTime();
         }
@@ -883,11 +918,15 @@
         document.getElementById('lbLoading').style.display = 'none';
         document.getElementById('lbError').style.display   = 'none';
         document.getElementById('lbContent').style.display = 'block';
-        renderTable(data.byLevel, 'rankLevelList', 'level', 0);
-        renderTable(data.byHours, 'rankHoursList', 'hours', 0);
+        renderTable(byLevel, 'rankLevelList', 'level', 0);
+        renderTable(byHours, 'rankHoursList', 'hours', 0);
       })
       .catch(function() {
         classementAutoRefreshPending = false;
+        if (classementEmptyRetryHandle) {
+          clearTimeout(classementEmptyRetryHandle);
+          classementEmptyRetryHandle = null;
+        }
         if (initialLoad) {
           document.getElementById('lbLoading').style.display = 'none';
           document.getElementById('lbError').style.display   = 'block';

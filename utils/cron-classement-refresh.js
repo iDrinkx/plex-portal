@@ -330,18 +330,20 @@ function healthCheckAndRepair() {
         logCR.warn(`⚠️ ${percentMissing.toFixed(1)}% des users sans joinedAt`);
         logCR.warn('   💡 Fallback intelligent sera utilisé (30/60/120 jours selon heures)');
       }
-      logCR.warn('   🔧 Réinitialisation du cache pour recalcul automatique');
+      if (lastValidCache && lastValidCache.data.byLevel.length > 0) {
+        logCR.warn('   🛟 Cache existant conservé pendant le backfill joinedAt');
+        classementCache = {
+          ...classementCache,
+          data: {
+            byHours: [...lastValidCache.data.byHours],
+            byLevel: [...lastValidCache.data.byLevel]
+          }
+        };
+        logCR.info('✅ Cache conservé - recalcul et backfill en arrière-plan au prochain refresh');
+        return;
+      }
 
-      classementCache = {
-        data: { byHours: [], byLevel: [] },
-        timestamp: null,
-        lastRefresh: null
-      };
-      lastValidCache = null;
-      corruptionCount = 0;
-      clearClassementCacheOnDisk();
-
-      logCR.info('✅ Cache réinitialisé - recalcul immédiat au prochain refresh');
+      logCR.warn('   ℹ️ Aucun cache valide à conserver - le premier recalcul reconstruira le classement');
       return;
     }
 

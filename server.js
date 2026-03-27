@@ -304,16 +304,17 @@ app.get("/", async (req, res) => {
     : !!(uptimeKumaUrl && uptimeKumaUsername && uptimeKumaPassword);
   if (hasUptimeConfig) {
     try {
-      uptimeStatus = await getConfiguredStatusSummary({
-        provider: uptimeProvider,
-        kumaUrl: uptimeKumaUrl,
-        kumaUsername: uptimeKumaUsername,
-        kumaPassword: uptimeKumaPassword,
-        robotApiKey: uptimeRobotApiKey
-      });
-    } catch (_) {
-      uptimeStatus = null;
-    }
+        uptimeStatus = await getConfiguredStatusSummary({
+          provider: uptimeProvider,
+          kumaUrl: uptimeKumaUrl,
+          kumaUsername: uptimeKumaUsername,
+          kumaPassword: uptimeKumaPassword,
+          robotApiKey: uptimeRobotApiKey,
+          softTimeoutMs: 1500
+        });
+      } catch (_) {
+        uptimeStatus = null;
+      }
   }
 
   res.render("login", {

@@ -1573,6 +1573,33 @@ body.site-bg-mode-custom .site-bg-image {
   transform: translateY(3px);
 }
 
+.hero-icon--loading-live {
+  gap: 2px;
+  flex-direction: column;
+  line-height: 1;
+}
+
+.hero-loading-spinner {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  border: 2px solid rgba(191, 219, 254, 0.28);
+  border-top-color: #bfdbfe;
+  animation: hero-loading-spin 0.9s linear infinite;
+}
+
+.hero-loading-text {
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: 0.55px;
+  color: rgba(191, 219, 254, 0.88);
+}
+
+@keyframes hero-loading-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 .hero-card-stats {
   --hero-card-tint-rgb-a: 13 26 24;
   --hero-card-tint-rgb-b: 11 28 21;
