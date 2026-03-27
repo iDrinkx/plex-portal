@@ -1153,165 +1153,182 @@ async function getWizarrSubscription(user) {
 =============================== */
 
 router.get("/dashboard", requireAuth, async (req, res) => {
-  const colorMap = getColorMap();
-  const dashboardBuiltinItems = getDashboardBuiltinAdminItems(res.locals.t);
-  const dashboardSectionItems = getDashboardSectionConfig();
-  const dashboardCustomCards = DashboardCardQueries.list()
-    .map(card => {
-      const color = colorMap.get(card.colorKey);
-      if (!color) return null;
-      const bgStartTint = parseRgbaToTintVars(color.bgStart, "255 255 255", 1.8);
-      const bgEndTint = parseRgbaToTintVars(color.bgEnd, "255 255 255", 0.9);
-      return {
-        ...card,
-        color: {
-          ...color,
-          bgStartRgb: bgStartTint.rgb,
-          bgStartStrength: bgStartTint.strength,
-          bgEndRgb: bgEndTint.rgb,
-          bgEndStrength: bgEndTint.strength
-        },
-        openInIframe: !!card.openInIframe,
-        openInNewTab: !!card.openInNewTab,
-        integrationKey: card.integrationKey || "custom",
-        href: toCardHref(card, req.basePath || ""),
-        external: String(card.integrationKey || "custom") === "romm_auto" || !!card.openInNewTab
-      };
-    })
-    .filter(Boolean);
+  try {
+    const colorMap = getColorMap();
+    const dashboardBuiltinItems = getDashboardBuiltinAdminItems(res.locals.t);
+    const dashboardSectionItems = getDashboardSectionConfig();
+    const dashboardCustomCards = DashboardCardQueries.list()
+      .map(card => {
+        const color = colorMap.get(card.colorKey);
+        if (!color) return null;
+        const bgStartTint = parseRgbaToTintVars(color.bgStart, "255 255 255", 1.8);
+        const bgEndTint = parseRgbaToTintVars(color.bgEnd, "255 255 255", 0.9);
+        return {
+          ...card,
+          color: {
+            ...color,
+            bgStartRgb: bgStartTint.rgb,
+            bgStartStrength: bgStartTint.strength,
+            bgEndRgb: bgEndTint.rgb,
+            bgEndStrength: bgEndTint.strength
+          },
+          openInIframe: !!card.openInIframe,
+          openInNewTab: !!card.openInNewTab,
+          integrationKey: card.integrationKey || "custom",
+          href: toCardHref(card, req.basePath || ""),
+          external: String(card.integrationKey || "custom") === "romm_auto" || !!card.openInNewTab
+        };
+      })
+      .filter(Boolean);
 
-  let uptimeStatus = null;
-  const uptimeProvider = normalizeProvider(getConfigValue("UPTIME_PROVIDER", "kuma"));
-  const uptimeKumaUrl = String(getConfigValue("UPTIME_KUMA_URL", "") || "").trim();
-  const uptimeKumaUsername = String(getConfigValue("UPTIME_KUMA_USERNAME", "") || "").trim();
-  const uptimeKumaPassword = String(getConfigValue("UPTIME_KUMA_PASSWORD", "") || "").trim();
-  const uptimeRobotApiKey = String(getConfigValue("UPTIME_ROBOT_API_KEY", "") || "").trim();
-  const hasUptimeConfig = uptimeProvider === "robot"
-    ? !!uptimeRobotApiKey
-    : !!(uptimeKumaUrl && uptimeKumaUsername && uptimeKumaPassword);
-  if (hasUptimeConfig) {
-    try {
-      uptimeStatus = await getConfiguredStatusSummary({
-        provider: uptimeProvider,
-        kumaUrl: uptimeKumaUrl,
-        kumaUsername: uptimeKumaUsername,
-        kumaPassword: uptimeKumaPassword,
-        robotApiKey: uptimeRobotApiKey
-      });
-    } catch (_) {
-      uptimeStatus = null;
+    let uptimeStatus = null;
+    const uptimeProvider = normalizeProvider(getConfigValue("UPTIME_PROVIDER", "kuma"));
+    const uptimeKumaUrl = String(getConfigValue("UPTIME_KUMA_URL", "") || "").trim();
+    const uptimeKumaUsername = String(getConfigValue("UPTIME_KUMA_USERNAME", "") || "").trim();
+    const uptimeKumaPassword = String(getConfigValue("UPTIME_KUMA_PASSWORD", "") || "").trim();
+    const uptimeRobotApiKey = String(getConfigValue("UPTIME_ROBOT_API_KEY", "") || "").trim();
+    const hasUptimeConfig = uptimeProvider === "robot"
+      ? !!uptimeRobotApiKey
+      : !!(uptimeKumaUrl && uptimeKumaUsername && uptimeKumaPassword);
+    if (hasUptimeConfig) {
+      try {
+        uptimeStatus = await getConfiguredStatusSummary({
+          provider: uptimeProvider,
+          kumaUrl: uptimeKumaUrl,
+          kumaUsername: uptimeKumaUsername,
+          kumaPassword: uptimeKumaPassword,
+          robotApiKey: uptimeRobotApiKey
+        });
+      } catch (_) {
+        uptimeStatus = null;
+      }
     }
-  }
 
-  const dashboardCustomHtmlBlocks = getDashboardCustomHtmlBlocks();
-  const dashboardLayoutItems = buildDashboardLayoutItems({
-    builtinItems: dashboardBuiltinItems,
-    sectionItems: dashboardSectionItems,
-    customCards: dashboardCustomCards,
-    htmlBlocks: dashboardCustomHtmlBlocks,
-    t: res.locals.t
-  });
-  const layoutEnabledMap = new Map(dashboardLayoutItems.map(item => [item.id, item.enabled !== false]));
-  const dashboardServerStatsEnabled = !!layoutEnabledMap.get("section:server-stats");
-  const normalizeLeaderboardUsername = (value) => String(value || "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]/g, "");
-  const usernameNormalized = normalizeLeaderboardUsername(req.session.user?.username || "");
-
-  let classementPosition = null;
-  try {
-    const { getClassementCache, refreshClassementCache } = require("../utils/cron-classement-refresh");
-    const resolveClassementPosition = () => {
-      const cacheData = getClassementCache();
-      const byLevel = Array.isArray(cacheData?.data?.byLevel) ? cacheData.data.byLevel : [];
-      const rankIndex = byLevel.findIndex(entry => normalizeLeaderboardUsername(entry?.username || "") === usernameNormalized);
-      return rankIndex >= 0 ? rankIndex + 1 : null;
-    };
-
-	    classementPosition = resolveClassementPosition();
-	    if (classementPosition === null) {
-	      await refreshClassementCache({ includeSecretEvaluation: false });
-	      classementPosition = resolveClassementPosition();
-	    }
-  } catch (_) {
-    classementPosition = null;
-  }
-
-  let totalSessionCount = null;
-  try {
-    const userStats = await getTautulliStats(
-      String(req.session.user?.username || ""),
-      getConfigValue("TAUTULLI_URL", ""),
-      getConfigValue("TAUTULLI_API_KEY", ""),
-      req.session.user?.id,
-      getConfigValue("PLEX_URL", ""),
-      getConfigValue("PLEX_TOKEN", ""),
-      req.session.user?.joinedAtTimestamp
-    );
-    const parsedCount = Number(userStats?.sessionCount || 0);
-    totalSessionCount = Number.isFinite(parsedCount) ? parsedCount : null;
-  } catch (_) {
-    totalSessionCount = null;
-  }
-
-  const calendarNow = new Date();
-  const calendarDay = String(calendarNow.getDate());
-  const calendarMonth = calendarNow.toLocaleDateString(res.locals.locale || "fr-FR", { month: "short" }).replace(".", "");
-
-  const dashboardBuiltinCards = buildDashboardBuiltinCards(req.session.user, req.basePath || "", res.locals.t)
-    .filter(card => layoutEnabledMap.get(`builtin:${card.key}`) !== false)
-    .map(card => {
-      if (card.key === "classement" && Number.isInteger(classementPosition) && classementPosition > 0) {
-        return {
-          ...card,
-          visual: {
-            type: "rank",
-            value: classementPosition
-          }
-        };
-      }
-
-      if (card.key === "calendrier") {
-        return {
-          ...card,
-          visual: {
-            type: "date",
-            day: calendarDay,
-            month: String(calendarMonth || "").toUpperCase()
-          }
-        };
-      }
-
-      if (card.key === "mes-stats" && Number.isFinite(totalSessionCount) && totalSessionCount > 0) {
-        const countText = String(Math.max(0, Math.trunc(totalSessionCount)));
-        return {
-          ...card,
-          visual: {
-            type: "count",
-            value: countText,
-            size: countText.length >= 6 ? "sm" : (countText.length >= 5 ? "md" : "lg")
-          }
-        };
-      }
-
-      return card;
+    const dashboardCustomHtmlBlocks = getDashboardCustomHtmlBlocks();
+    const dashboardLayoutItems = buildDashboardLayoutItems({
+      builtinItems: dashboardBuiltinItems,
+      sectionItems: dashboardSectionItems,
+      customCards: dashboardCustomCards,
+      htmlBlocks: dashboardCustomHtmlBlocks,
+      t: res.locals.t
     });
+    const layoutEnabledMap = new Map(dashboardLayoutItems.map(item => [item.id, item.enabled !== false]));
+    const dashboardServerStatsEnabled = !!layoutEnabledMap.get("section:server-stats");
+    const normalizeLeaderboardUsername = (value) => String(value || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, "");
+    const usernameNormalized = normalizeLeaderboardUsername(req.session.user?.username || "");
 
-  res.render("dashboard/index", {
-    user: req.session.user,
-    basePath: req.basePath,
-    dashboardBuiltinCards,
-    dashboardCustomCards,
-    dashboardCustomHtmlBlocks,
-    dashboardCustomHtml: getDashboardCustomHtml(),
-    dashboardCustomHtmlMode: getDashboardCustomHtmlMode(),
-    dashboardServerStatsEnabled,
-    dashboardSectionItems,
-    dashboardLayoutItems,
-    uptimeStatus
-  });
+    let classementPosition = null;
+    try {
+      const { getClassementCache, refreshClassementCache } = require("../utils/cron-classement-refresh");
+      const resolveClassementPosition = () => {
+        const cacheData = getClassementCache();
+        const byLevel = Array.isArray(cacheData?.data?.byLevel) ? cacheData.data.byLevel : [];
+        const rankIndex = byLevel.findIndex(entry => normalizeLeaderboardUsername(entry?.username || "") === usernameNormalized);
+        return rankIndex >= 0 ? rankIndex + 1 : null;
+      };
+
+      classementPosition = resolveClassementPosition();
+      if (classementPosition === null) {
+        await refreshClassementCache({ includeSecretEvaluation: false });
+        classementPosition = resolveClassementPosition();
+      }
+    } catch (_) {
+      classementPosition = null;
+    }
+
+    let totalSessionCount = null;
+    try {
+      const userStats = await getTautulliStats(
+        String(req.session.user?.username || ""),
+        getConfigValue("TAUTULLI_URL", ""),
+        getConfigValue("TAUTULLI_API_KEY", ""),
+        req.session.user?.id,
+        getConfigValue("PLEX_URL", ""),
+        getConfigValue("PLEX_TOKEN", ""),
+        req.session.user?.joinedAtTimestamp
+      );
+      const parsedCount = Number(userStats?.sessionCount || 0);
+      totalSessionCount = Number.isFinite(parsedCount) ? parsedCount : null;
+    } catch (_) {
+      totalSessionCount = null;
+    }
+
+    const calendarNow = new Date();
+    const calendarDay = String(calendarNow.getDate());
+    const calendarMonth = calendarNow.toLocaleDateString(res.locals.locale || "fr-FR", { month: "short" }).replace(".", "");
+
+    const dashboardBuiltinCards = buildDashboardBuiltinCards(req.session.user, req.basePath || "", res.locals.t)
+      .filter(card => layoutEnabledMap.get(`builtin:${card.key}`) !== false)
+      .map(card => {
+        if (card.key === "classement" && Number.isInteger(classementPosition) && classementPosition > 0) {
+          return {
+            ...card,
+            visual: {
+              type: "rank",
+              value: classementPosition
+            }
+          };
+        }
+
+        if (card.key === "calendrier") {
+          return {
+            ...card,
+            visual: {
+              type: "date",
+              day: calendarDay,
+              month: String(calendarMonth || "").toUpperCase()
+            }
+          };
+        }
+
+        if (card.key === "mes-stats" && Number.isFinite(totalSessionCount) && totalSessionCount > 0) {
+          const countText = String(Math.max(0, Math.trunc(totalSessionCount)));
+          return {
+            ...card,
+            visual: {
+              type: "count",
+              value: countText,
+              size: countText.length >= 6 ? "sm" : (countText.length >= 5 ? "md" : "lg")
+            }
+          };
+        }
+
+        return card;
+      });
+
+    return res.render("dashboard/index", {
+      user: req.session.user,
+      basePath: req.basePath,
+      dashboardBuiltinCards,
+      dashboardCustomCards,
+      dashboardCustomHtmlBlocks,
+      dashboardCustomHtml: getDashboardCustomHtml(),
+      dashboardCustomHtmlMode: getDashboardCustomHtmlMode(),
+      dashboardServerStatsEnabled,
+      dashboardSectionItems,
+      dashboardLayoutItems,
+      uptimeStatus
+    });
+  } catch (err) {
+    log.create("[Dashboard]").error(`Rendu dashboard impossible: ${err.message}`);
+    return res.render("dashboard/index", {
+      user: req.session.user,
+      basePath: req.basePath,
+      dashboardBuiltinCards: [],
+      dashboardCustomCards: [],
+      dashboardCustomHtmlBlocks: [],
+      dashboardCustomHtml: "",
+      dashboardCustomHtmlMode: "safe",
+      dashboardServerStatsEnabled: false,
+      dashboardSectionItems: [],
+      dashboardLayoutItems: [],
+      uptimeStatus: null
+    });
+  }
 });
 
 router.get("/profil", requireAuth, async (req, res) => {

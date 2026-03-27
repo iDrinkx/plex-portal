@@ -194,6 +194,10 @@
       justify-content: flex-end;
     }
 
+    .setup-btn.is-hidden {
+      display: none;
+    }
+
     .setup-diagnostics {
       margin-top: 18px;
       padding-top: 18px;
@@ -339,6 +343,7 @@
           <div class="setup-actions-buttons">
             <button class="setup-btn setup-btn-secondary" id="runSetupDiagnosticsBtn" type="button"><%= t("setup.diagnostics.run") %></button>
             <button class="setup-btn" type="submit"><%= t("setup.save") %></button>
+            <button class="setup-btn setup-btn-secondary is-hidden" id="continueToPlexBtn" type="button"><%= t("setup.continue") %></button>
           </div>
         </div>
         <div class="setup-state" id="setupState"><%= t("setup.state.empty") %></div>
@@ -396,8 +401,10 @@
       const diagnosticsState = document.getElementById("setupDiagnosticsState");
       const diagnosticsList = document.getElementById("setupDiagnosticsList");
       const diagnosticsBtn = document.getElementById("runSetupDiagnosticsBtn");
+      const continueBtn = document.getElementById("continueToPlexBtn");
       const uptimeProviderInput = document.getElementById("setup-UPTIME_PROVIDER");
       if (!form || !state || !diagnosticsState || !diagnosticsList) return;
+      let continueUrl = "<%= basePath %>/";
 
       function escHtml(value) {
         return String(value == null ? "" : value)
@@ -511,6 +518,12 @@
         diagnosticsBtn.addEventListener("click", runDiagnostics);
       }
 
+      if (continueBtn) {
+        continueBtn.addEventListener("click", function () {
+          window.location.href = continueUrl || "<%= basePath %>/";
+        });
+      }
+
       form.addEventListener("submit", async function (event) {
         event.preventDefault();
         state.textContent = "<%= t('setup.state.saving') %>";
@@ -528,7 +541,8 @@
           }
 
           state.textContent = "<%= t('setup.state.saved') %>";
-          window.location.href = data.redirectTo || "<%= basePath %>/";
+          continueUrl = data.redirectTo || "<%= basePath %>/";
+          if (continueBtn) continueBtn.classList.remove("is-hidden");
         } catch (error) {
           state.textContent = error.message || "<%= t('setup.state.error') %>";
         }
