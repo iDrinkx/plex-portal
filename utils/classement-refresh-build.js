@@ -93,6 +93,20 @@ function chooseBestClassementFallbackUsers() {
   };
 }
 
+function parsePlexTimestamp(value) {
+  const numeric = Number(value);
+  if (Number.isFinite(numeric) && numeric > 0) {
+    return numeric < 1e13 ? numeric : Math.floor(numeric / 1000);
+  }
+
+  const parsed = new Date(String(value || "")).getTime();
+  if (Number.isFinite(parsed) && parsed > 0) {
+    return Math.floor(parsed / 1000);
+  }
+
+  return null;
+}
+
 function getPlexCloudToken() {
   const runtimeToken = String(AppSettingQueriesSafe.get('runtime_plex_cloud_token', '') || '').trim();
   if (runtimeToken) return runtimeToken;
@@ -128,7 +142,9 @@ async function buildClassementSnapshot(options = {}) {
   const plexToken = getPlexCloudToken();
   const thumbMap = {};
   const plexJoinedAtMap = {};
+  const plexJoinedAtById = {};
   const emailToUsername = {};
+  const plexIdToUsername = {};
   let thumbsFetched = 0;
 
   try {
@@ -144,9 +160,13 @@ async function buildClassementSnapshot(options = {}) {
           thumbMap[ownerKey] = od.thumb;
           thumbsFetched++;
         }
-        const ownerTs = Number(od.joinedAt || od.joined_at || 0);
+        const ownerTs = parsePlexTimestamp(od.joinedAt || od.joined_at || od.createdAt || od.created_at);
         if (ownerTs > 0) plexJoinedAtMap[ownerKey] = ownerTs;
         if (od.email) emailToUsername[od.email.toLowerCase()] = od.username;
+        if (od.id != null) {
+          plexIdToUsername[String(od.id)] = od.username;
+          if (ownerTs > 0) plexJoinedAtById[String(od.id)] = ownerTs;
+        }
       }
     } else {
       logCR.debug(`Plex API v2 cloud token refuse: HTTP ${ownerResp.status}`);
@@ -169,9 +189,14 @@ async function buildClassementSnapshot(options = {}) {
       allUserEntries.forEach((block) => {
         const openTagMatch = block.match(/<User\b([^>]*)>/i) || block.match(/<User\b([^>]*)\/>/i);
         const source = openTagMatch?.[1] ? `${openTagMatch[1]} ${block}` : block;
+        const idMatch = source.match(/\bid="([^"]*)"/i) || source.match(/\buserID="([^"]*)"/i) || source.match(/\buserId="([^"]*)"/i);
         const usernameMatch = source.match(/username="([^"]*)"/i) || source.match(/title="([^"]*)"/i);
         const thumbMatch = source.match(/thumb="([^"]*)"/i) || source.match(/avatar="([^"]*)"/i) || source.match(/photo="([^"]*)"/i);
-        const joinedAtMatch = source.match(/joined_at="([^"]*)"/i);
+        const joinedAtMatch =
+          source.match(/\bjoined_at="([^"]*)"/i) ||
+          source.match(/\bjoinedAt="([^"]*)"/i) ||
+          source.match(/\bcreated_at="([^"]*)"/i) ||
+          source.match(/\bcreatedAt="([^"]*)"/i);
         const emailMatch = source.match(/\bemail="([^"]*)"/i);
 
         if (usernameMatch?.[1]) {
@@ -182,11 +207,20 @@ async function buildClassementSnapshot(options = {}) {
             thumbsFetched++;
           }
           if (joinedAtMatch?.[1]) {
-            const ts = Number(joinedAtMatch[1]);
+            const ts = parsePlexTimestamp(joinedAtMatch[1]);
             if (ts > 0) plexJoinedAtMap[name] = ts;
           }
           if (emailMatch?.[1]) {
             emailToUsername[emailMatch[1].toLowerCase()] = rawUsername;
+          }
+          if (idMatch?.[1]) {
+            const idKey = String(idMatch[1]).trim();
+            if (idKey) {
+              plexIdToUsername[idKey] = rawUsername;
+              if (plexJoinedAtMap[name]) {
+                plexJoinedAtById[idKey] = plexJoinedAtMap[name];
+              }
+            }
           }
         }
       });
@@ -197,7 +231,7 @@ async function buildClassementSnapshot(options = {}) {
     logCR.debug(`Plex API XML failed: ${err.message}`);
   }
 
-  logCR.debug(`Plex: ${thumbsFetched} avatars, ${Object.keys(plexJoinedAtMap).length} joined_at, ${Object.keys(emailToUsername).length} emails=>username`);
+  logCR.debug(`Plex: ${thumbsFetched} avatars, ${Object.keys(plexJoinedAtMap).length} joined_at, ${Object.keys(emailToUsername).length} emails=>username, ${Object.keys(plexIdToUsername).length} ids=>username`);
 
   const wizarrUrl = String(getConfigValue('WIZARR_URL', '') || '').trim();
   const wizarrApiKey = String(getConfigValue('WIZARR_API_KEY', '') || '').trim();
@@ -240,8 +274,17 @@ async function buildClassementSnapshot(options = {}) {
     logCR.debug(`${wizarrUsers.length} users Wizarr (apres dedup email)`);
     for (const wUser of wizarrUsers) {
       try {
-        const plexName = (wUser.email && emailToUsername[wUser.email.toLowerCase()]) || wUser.username;
-        UserQueries.upsert(plexName, wUser.plexUserId, wUser.email, null);
+        const plexUserIdKey = wUser.plexUserId != null ? String(wUser.plexUserId) : "";
+        const plexName =
+          (wUser.email && emailToUsername[wUser.email.toLowerCase()]) ||
+          (plexUserIdKey && plexIdToUsername[plexUserIdKey]) ||
+          wUser.username;
+        const joinedAtTs =
+          plexJoinedAtMap[String(plexName || "").toLowerCase()] ||
+          (wUser.email ? plexJoinedAtMap[String(emailToUsername[wUser.email.toLowerCase()] || "").toLowerCase()] : null) ||
+          (plexUserIdKey ? plexJoinedAtById[plexUserIdKey] : null) ||
+          null;
+        UserQueries.upsert(plexName, wUser.plexUserId, wUser.email, joinedAtTs);
       } catch (_) {}
     }
   } else if (!wizarrConfigured) {
@@ -286,7 +329,11 @@ async function buildClassementSnapshot(options = {}) {
   }
 
   const statsToUse = wizarrUsers.map((wUser) => {
-    const plexUsername = (wUser.email && emailToUsername[wUser.email.toLowerCase()]) || wUser.username;
+    const plexUserIdKey = wUser.plexUserId != null ? String(wUser.plexUserId) : "";
+    const plexUsername =
+      (wUser.email && emailToUsername[wUser.email.toLowerCase()]) ||
+      (plexUserIdKey && plexIdToUsername[plexUserIdKey]) ||
+      wUser.username;
 
     if (plexUsername !== wUser.username) {
       logCR.debug(`Correlation email: ${wUser.username} -> ${plexUsername} (via ${wUser.email})`);
@@ -335,7 +382,15 @@ async function buildClassementSnapshot(options = {}) {
       || wizarrUsers.find((entry) => String(entry?.email || '').trim().toLowerCase() && emailToUsername[String(entry.email || '').trim().toLowerCase()]?.toLowerCase() === key)
       || null;
 
-    let joinedAtTs = plexJoinedAtMap[key] || null;
+    const sourcePlexIdKey = wizarrUser?.plexUserId != null
+      ? String(wizarrUser.plexUserId)
+      : (stats.userId != null ? String(stats.userId) : "");
+
+    let joinedAtTs =
+      plexJoinedAtMap[key] ||
+      (sourcePlexIdKey ? plexJoinedAtById[sourcePlexIdKey] : null) ||
+      (wizarrUser?.email ? plexJoinedAtMap[String(emailToUsername[String(wizarrUser.email).toLowerCase()] || "").toLowerCase()] : null) ||
+      null;
     if (!joinedAtTs) {
       const dbUser = UserQueries.getByUsername(stats.username);
       if (dbUser && dbUser.joinedAt) {
@@ -346,13 +401,13 @@ async function buildClassementSnapshot(options = {}) {
       }
     }
 
-    if (plexJoinedAtMap[key]) {
+    if (joinedAtTs) {
       try {
-        UserQueries.upsert(stats.username, null, null, plexJoinedAtMap[key]);
+        UserQueries.upsert(stats.username, wizarrUser?.plexUserId || stats.userId || null, wizarrUser?.email || null, joinedAtTs);
       } catch (_) {}
     }
 
-    logCR.debug(`XP ${stats.username}: joinedAtTs=${joinedAtTs} src=${plexJoinedAtMap[key] ? 'plex' : joinedAtTs ? 'db' : 'fallback'}`);
+    logCR.debug(`XP ${stats.username}: joinedAtTs=${joinedAtTs} src=${(plexJoinedAtMap[key] || (sourcePlexIdKey && plexJoinedAtById[sourcePlexIdKey])) ? 'plex' : joinedAtTs ? 'db' : 'fallback'}`);
 
     try {
       const monthlyHours = Number(getMonthlyHoursFromTautulli(stats.username) || 0);

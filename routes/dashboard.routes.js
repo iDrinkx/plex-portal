@@ -1275,6 +1275,17 @@ router.get("/dashboard", requireAuth, async (req, res) => {
           };
         }
 
+        if (card.key === "classement" && classementPosition === null) {
+          return {
+            ...card,
+            description: "Classement en cours de génération...",
+            loadingHint: "Le classement apparaîtra dans quelques instants.",
+            visual: {
+              type: "loading"
+            }
+          };
+        }
+
         if (card.key === "calendrier") {
           return {
             ...card,
