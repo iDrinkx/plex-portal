@@ -54,12 +54,11 @@ const {
 } = require("../utils/dashboard-custom-html");
 const { SUPPORTED_LOCALES, getSiteLanguage } = require("../utils/i18n");
 const { BACKGROUND_PRESETS, getSiteBackgroundSettings, saveSiteBackgroundSettings } = require("../utils/site-background");
-const { DEFAULT_API_BASE_URL, getConfiguredStatusSummary, normalizeProvider } = require("../utils/uptime-status");
+const { getConfiguredStatusSummary, normalizeProvider } = require("../utils/uptime-status");
+const { runConfigDiagnostics } = require("../utils/config-diagnostics");
 
 const PLEX_LIVE_TIMEOUT_MS = 12000;
 const NOW_PLAYING_CACHE_TTL_MS = 45 * 1000;
-const CONFIG_TEST_TIMEOUT_MS = 6000;
-
 /* ===============================
    ?? AUTH
 =============================== */
@@ -138,184 +137,8 @@ function parsePlexSessionsResponse(rawBody = "") {
   return sessions;
 }
 
-function normalizeBaseUrl(value) {
-  return String(value || "").trim().replace(/\/+$/, "");
-}
-
-async function fetchWithConfigTest(url, options = {}) {
-  return fetch(url, { timeout: CONFIG_TEST_TIMEOUT_MS, ...options });
-}
-
-function summarizeConfigTest(label, ok, message, extra = {}) {
-  return { label, ok, message, ...extra };
-}
-
-async function testPlexConnection() {
-  const plexUrl = normalizeBaseUrl(getConfigValue("PLEX_URL", ""));
-  const plexToken = String(getConfigValue("PLEX_TOKEN", "") || "").trim();
-  if (!plexUrl || !plexToken) return summarizeConfigTest("Plex", false, "Configuration incomplète");
-  try {
-    const resp = await fetchWithConfigTest(`${plexUrl}/identity`, {
-      headers: { "X-Plex-Token": plexToken, Accept: "application/json" }
-    });
-    if (resp.ok) return summarizeConfigTest("Plex", true, "Connexion OK");
-    if (resp.status === 401 || resp.status === 403) return summarizeConfigTest("Plex", false, "Token invalide");
-    return summarizeConfigTest("Plex", false, `HTTP ${resp.status}`);
-  } catch (err) {
-    return summarizeConfigTest("Plex", false, err.message || "Connexion impossible");
-  }
-}
-
-async function testTautulliConnection() {
-  const tautulliUrl = normalizeBaseUrl(getConfigValue("TAUTULLI_URL", ""));
-  const apiKey = String(getConfigValue("TAUTULLI_API_KEY", "") || "").trim();
-  if (!tautulliUrl || !apiKey) return summarizeConfigTest("Tautulli", false, "Configuration incomplète");
-  try {
-    const resp = await fetchWithConfigTest(`${tautulliUrl}/api/v2?apikey=${encodeURIComponent(apiKey)}&cmd=get_activity`, {
-      headers: { Accept: "application/json" }
-    });
-    if (!resp.ok) {
-      if (resp.status === 401 || resp.status === 403) return summarizeConfigTest("Tautulli", false, "Clé invalide");
-      return summarizeConfigTest("Tautulli", false, `HTTP ${resp.status}`);
-    }
-    const data = await resp.json().catch(() => null);
-    const result = String(data?.response?.result || "").toLowerCase();
-    if (result === "success") return summarizeConfigTest("Tautulli", true, "Connexion OK");
-    return summarizeConfigTest("Tautulli", false, data?.response?.message || "Réponse invalide");
-  } catch (err) {
-    return summarizeConfigTest("Tautulli", false, err.message || "Connexion impossible");
-  }
-}
-
-async function testWizarrConnection() {
-  const wizarrUrl = normalizeBaseUrl(getConfigValue("WIZARR_URL", ""));
-  const apiKey = String(getConfigValue("WIZARR_API_KEY", "") || "").trim();
-  if (!wizarrUrl || !apiKey) return summarizeConfigTest("Wizarr", false, "Configuration incomplète");
-  try {
-    const resp = await fetchWithConfigTest(`${wizarrUrl}/api/users?limit=1`, {
-      headers: { Accept: "application/json", "X-API-Key": apiKey }
-    });
-    if (resp.ok) return summarizeConfigTest("Wizarr", true, "Connexion OK");
-    if (resp.status === 401 || resp.status === 403) return summarizeConfigTest("Wizarr", false, "Clé invalide");
-    return summarizeConfigTest("Wizarr", false, `HTTP ${resp.status}`);
-  } catch (err) {
-    return summarizeConfigTest("Wizarr", false, err.message || "Connexion impossible");
-  }
-}
-
-async function testSeerrConnection() {
-  const seerrUrl = normalizeBaseUrl(getConfigValue("SEERR_URL", ""));
-  const apiKey = String(getConfigValue("SEERR_API_KEY", "") || "").trim();
-  if (!seerrUrl || !apiKey) return summarizeConfigTest("Seerr", false, "Configuration incomplète");
-  try {
-    const resp = await fetchWithConfigTest(`${seerrUrl}/api/v1/auth/me`, {
-      headers: { Accept: "application/json", "X-API-Key": apiKey }
-    });
-    if (resp.ok) return summarizeConfigTest("Seerr", true, "Connexion OK");
-    if (resp.status === 401 || resp.status === 403) return summarizeConfigTest("Seerr", false, "Clé invalide");
-    return summarizeConfigTest("Seerr", false, `HTTP ${resp.status}`);
-  } catch (err) {
-    return summarizeConfigTest("Seerr", false, err.message || "Connexion impossible");
-  }
-}
-
-async function testUrlReachable(label, rawUrl) {
-  const url = normalizeBaseUrl(rawUrl);
-  if (!url) return summarizeConfigTest(label, false, "Non configuré");
-  try {
-    const resp = await fetchWithConfigTest(url, { headers: { Accept: "text/html,application/json" } });
-    if (resp.ok) return summarizeConfigTest(label, true, "Connexion OK");
-    return summarizeConfigTest(label, false, `HTTP ${resp.status}`);
-  } catch (err) {
-    return summarizeConfigTest(label, false, err.message || "Connexion impossible");
-  }
-}
-
-async function testArrConnection(label, baseUrl, apiKey) {
-  const url = normalizeBaseUrl(baseUrl);
-  const key = String(apiKey || "").trim();
-  if (!url || !key) return summarizeConfigTest(label, false, "Configuration incomplète");
-  try {
-    const resp = await fetchWithConfigTest(`${url}/api/v3/system/status`, {
-      headers: { Accept: "application/json", "X-Api-Key": key }
-    });
-    if (resp.ok) return summarizeConfigTest(label, true, "Connexion OK");
-    if (resp.status === 401 || resp.status === 403) return summarizeConfigTest(label, false, "Clé invalide");
-    return summarizeConfigTest(label, false, `HTTP ${resp.status}`);
-  } catch (err) {
-    return summarizeConfigTest(label, false, err.message || "Connexion impossible");
-  }
-}
-
-async function testKomgaConnection() {
-  const komgaUrl = normalizeBaseUrl(getConfigValue("KOMGA_URL", ""));
-  const apiKey = String(getConfigValue("KOMGA_API_KEY", "") || "").trim();
-  if (!komgaUrl || !apiKey) return summarizeConfigTest("Komga", false, "Configuration incomplète");
-  const endpoints = ["/api/v2/users/me", "/api/v1/users/me", "/api/v1/books?page=0&size=1"];
-  for (const endpoint of endpoints) {
-    try {
-      const resp = await fetchWithConfigTest(`${komgaUrl}${endpoint}`, {
-        headers: { Accept: "application/json", "X-API-Key": apiKey }
-      });
-      if (resp.ok) return summarizeConfigTest("Komga", true, "Connexion OK");
-      if (resp.status === 401 || resp.status === 403) return summarizeConfigTest("Komga", false, "Clé invalide");
-      if (resp.status !== 404) return summarizeConfigTest("Komga", false, `HTTP ${resp.status}`);
-    } catch (err) {
-      return summarizeConfigTest("Komga", false, err.message || "Connexion impossible");
-    }
-  }
-  return summarizeConfigTest("Komga", false, "Endpoint non compatible");
-}
-
-async function testUptimeConnection() {
-  const provider = normalizeProvider(getConfigValue("UPTIME_PROVIDER", "kuma"));
-
-  if (provider === "robot") {
-    const apiKey = String(getConfigValue("UPTIME_ROBOT_API_KEY", "") || "").trim();
-    if (!apiKey) return summarizeConfigTest("UptimeRobot", false, "Configuration incomplète");
-    try {
-      const resp = await fetchWithConfigTest(`${DEFAULT_API_BASE_URL}/monitors`, {
-        headers: {
-          Accept: "application/json",
-          Authorization: `Bearer ${apiKey}`
-        }
-      });
-      if (resp.ok) return summarizeConfigTest("UptimeRobot", true, "Connexion OK");
-      if (resp.status === 401 || resp.status === 403) return summarizeConfigTest("UptimeRobot", false, "Clé invalide");
-      if (resp.status === 429) return summarizeConfigTest("UptimeRobot", false, "Rate limit atteint");
-      return summarizeConfigTest("UptimeRobot", false, `HTTP ${resp.status}`);
-    } catch (err) {
-      return summarizeConfigTest("UptimeRobot", false, err.message || "Connexion impossible");
-    }
-  }
-
-  const uptimeKumaUrl = String(getConfigValue("UPTIME_KUMA_URL", "") || "").trim();
-  const uptimeKumaUsername = String(getConfigValue("UPTIME_KUMA_USERNAME", "") || "").trim();
-  const uptimeKumaPassword = String(getConfigValue("UPTIME_KUMA_PASSWORD", "") || "").trim();
-  if (!uptimeKumaUrl || !uptimeKumaUsername || !uptimeKumaPassword) {
-    return summarizeConfigTest("Uptime Kuma", false, "Configuration incomplète");
-  }
-  return testUrlReachable("Uptime Kuma", uptimeKumaUrl);
-}
-
 async function runAdminConfigDiagnostics() {
-  const tests = await Promise.all([
-    testPlexConnection(),
-    testTautulliConnection(),
-    testSeerrConnection(),
-    testWizarrConnection(),
-    testUptimeConnection(),
-    testArrConnection("Radarr", getConfigValue("RADARR_URL", ""), getConfigValue("RADARR_API_KEY", "")),
-    testArrConnection("Sonarr", getConfigValue("SONARR_URL", ""), getConfigValue("SONARR_API_KEY", "")),
-    testKomgaConnection(),
-    testUrlReachable("Jellyfin", getConfigValue("JELLYFIN_URL", "")),
-    testUrlReachable("RomM", getConfigValue("ROMM_URL", ""))
-  ]);
-
-  return {
-    ok: tests.every(test => test.ok),
-    tests
-  };
+  return runConfigDiagnostics();
 }
 
 function normalizePlexIdentity(value = "") {
