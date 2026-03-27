@@ -2,6 +2,19 @@ const fetch = require("node-fetch");
 const log = require("./logger");
 const logPlex = log.create('[Plex]');
 
+async function fetchWithTimeout(url, options = {}, timeoutMs = 6000) {
+  const ctrl = new AbortController();
+  const timeout = setTimeout(() => ctrl.abort(), Math.max(1000, Number(timeoutMs || 6000)));
+  try {
+    return await fetch(url, {
+      ...options,
+      signal: ctrl.signal
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 function getEffectivePlexToken() {
   try {
     const { AppSettingQueries } = require("./database");
@@ -32,13 +45,13 @@ const AUTH_USERS_CACHE_TTL_MS = 60 * 1000; // 60s: accélère le login sans dér
  */
 async function getServerOwnerId(PLEX_TOKEN) {
   if (_cachedOwnerId !== null) return _cachedOwnerId;
-  const res = await fetch("https://plex.tv/api/v2/user", {
+  const res = await fetchWithTimeout("https://plex.tv/api/v2/user", {
     headers: {
       "X-Plex-Token": PLEX_TOKEN,
       "X-Plex-Client-Identifier": "portall-app",
       "Accept": "application/json"
     }
-  });
+  }, 6000);
   if (!res.ok) throw new Error(`plex.tv/api/v2/user → HTTP ${res.status}`);
   const data = await res.json();
   _cachedOwnerId = data.id ? parseInt(data.id) : null;
@@ -53,12 +66,12 @@ async function getServerOwnerId(PLEX_TOKEN) {
 async function getServerMachineId(PLEX_URL, PLEX_TOKEN) {
   if (_cachedMachineId !== undefined) return _cachedMachineId;
   try {
-    const res = await fetch(`${PLEX_URL}/identity`, {
+    const res = await fetchWithTimeout(`${PLEX_URL}/identity`, {
       headers: {
         "X-Plex-Token": PLEX_TOKEN,
         "Accept": "application/json"
       }
-    });
+    }, 4000);
     if (!res.ok) { _cachedMachineId = null; return null; }
     const data = await res.json();
     _cachedMachineId = data.MediaContainer?.machineIdentifier || null;
@@ -86,13 +99,13 @@ async function getAuthorizedServerUsers(PLEX_TOKEN, machineId) {
     return _cachedAuthorizedUsers;
   }
 
-  const res = await fetch("https://plex.tv/api/users", {
+  const res = await fetchWithTimeout("https://plex.tv/api/users", {
     headers: {
       "X-Plex-Token": PLEX_TOKEN,
       "X-Plex-Client-Identifier": "portall-app",
       "Accept": "application/xml"
     }
-  });
+  }, 6000);
   if (!res.ok) throw new Error(`plex.tv/api/users → HTTP ${res.status}`);
 
   const xml = await res.text();
@@ -140,13 +153,13 @@ async function getAuthorizedServerUsers(PLEX_TOKEN, machineId) {
  * Retourne tous les utilisateurs de plex.tv/api/users sans filtrage server.
  */
 async function getPlexFriends(PLEX_TOKEN) {
-  const res = await fetch("https://plex.tv/api/users", {
+  const res = await fetchWithTimeout("https://plex.tv/api/users", {
     headers: {
       "X-Plex-Token": PLEX_TOKEN,
       "X-Plex-Client-Identifier": "portall-app",
       "Accept": "application/xml"
     }
-  });
+  }, 6000);
   if (!res.ok) throw new Error(`plex.tv/api/users → HTTP ${res.status}`);
 
   const xml = await res.text();
@@ -214,13 +227,13 @@ async function getPlexUserInfo(plexUserId, _PLEX_URL, PLEX_TOKEN) {
     const userId = parseInt(plexUserId);
 
     // Vérifier si c'est l'owner
-    const ownerRes = await fetch("https://plex.tv/api/v2/user", {
+    const ownerRes = await fetchWithTimeout("https://plex.tv/api/v2/user", {
       headers: {
         "X-Plex-Token": PLEX_TOKEN,
         "X-Plex-Client-Identifier": "portall-app",
         "Accept": "application/json"
       }
-    });
+    }, 6000);
     if (ownerRes.ok) {
       const owner = await ownerRes.json();
       if (parseInt(owner.id) === userId) return owner;

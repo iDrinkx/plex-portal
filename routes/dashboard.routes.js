@@ -1197,7 +1197,8 @@ router.get("/dashboard", requireAuth, async (req, res) => {
           kumaUrl: uptimeKumaUrl,
           kumaUsername: uptimeKumaUsername,
           kumaPassword: uptimeKumaPassword,
-          robotApiKey: uptimeRobotApiKey
+          robotApiKey: uptimeRobotApiKey,
+          softTimeoutMs: 1500
         });
       } catch (_) {
         uptimeStatus = null;
@@ -1233,7 +1234,7 @@ router.get("/dashboard", requireAuth, async (req, res) => {
 
       classementPosition = resolveClassementPosition();
       if (classementPosition === null) {
-        await refreshClassementCache({ includeSecretEvaluation: false });
+        refreshClassementCache({ includeSecretEvaluation: false }).catch(() => {});
         classementPosition = resolveClassementPosition();
       }
     } catch (_) {
