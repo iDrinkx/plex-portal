@@ -1,6 +1,6 @@
 const fetch = require('node-fetch');
 const log = require('./logger');
-const { UserQueries, AchievementSnapshotQueries } = require('./database');
+const { UserQueries, AchievementSnapshotQueries, mergeUsersByIdentity } = require('./database');
 const { XP_SYSTEM } = require('./xp-system');
 const {
   getUserStatsFromTautulli,
@@ -111,7 +111,8 @@ async function fetchCommunityFriendsCreatedAtMap(plexToken) {
   if (!plexToken) {
     return {
       byUsername: {},
-      byId: {}
+      byId: {},
+      entries: []
     };
   }
 
@@ -153,6 +154,7 @@ async function fetchCommunityFriendsCreatedAtMap(plexToken) {
     const rows = Array.isArray(payload?.data?.allFriendsV2) ? payload.data.allFriendsV2 : [];
     const byUsername = {};
     const byId = {};
+    const entries = [];
 
     rows.forEach((entry) => {
       const username = String(entry?.user?.username || '').trim().toLowerCase();
@@ -162,16 +164,324 @@ async function fetchCommunityFriendsCreatedAtMap(plexToken) {
 
       if (username) byUsername[username] = createdAt;
       if (idRaw) byId[idRaw] = createdAt;
+      entries.push({
+        username,
+        plexId: idRaw || null,
+        joinedAtTimestamp: createdAt
+      });
     });
 
-    return { byUsername, byId };
+    return { byUsername, byId, entries };
   } catch (err) {
     logCR.debug(`Plex community friends lookup failed: ${err.message}`);
     return {
       byUsername: {},
-      byId: {}
+      byId: {},
+      entries: []
     };
   }
+}
+
+async function fetchCommunityCreatedAtByUsernames(plexToken, usernames = []) {
+  const normalizedUsernames = [...new Set(
+    usernames
+      .map((username) => String(username || '').trim())
+      .filter(Boolean)
+  )];
+
+  if (!plexToken || normalizedUsernames.length === 0) {
+    return {};
+  }
+
+  const createdAtByUsername = {};
+
+  await mapInBatches(normalizedUsernames, 5, async (username) => {
+    try {
+      const response = await fetch('https://community.plex.tv/api', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Origin': 'https://app.plex.tv',
+          'Referer': 'https://app.plex.tv/',
+          'X-Plex-Client-Identifier': 'portall-app',
+          'X-Plex-Platform': 'Node.js',
+          'X-Plex-Product': 'portall',
+          'X-Plex-Token': plexToken,
+          'X-Plex-Version': '1.0.0'
+        },
+        body: JSON.stringify({
+          operationName: 'GetUserDetails',
+          variables: { username },
+          query: `
+            query GetUserDetails($username: ID!) {
+              userByUsername(username: $username) {
+                username
+                id
+                createdAt
+              }
+            }
+          `
+        }),
+        timeout: 10000
+      });
+
+      if (!response.ok) {
+        throw new Error(`community.plex.tv detail -> HTTP ${response.status}`);
+      }
+
+      const payload = await response.json();
+      const user = payload?.data?.userByUsername;
+      const resolvedUsername = String(user?.username || username).trim().toLowerCase();
+      const createdAt = parsePlexTimestamp(user?.createdAt);
+
+      if (resolvedUsername && createdAt) {
+        createdAtByUsername[resolvedUsername] = createdAt;
+      }
+    } catch (err) {
+      logCR.debug(`Plex community user detail failed for ${username}: ${err.message}`);
+    }
+  });
+
+  return createdAtByUsername;
+}
+
+function mergeCanonicalProfiles(profiles = []) {
+  const records = [];
+  const indexByKey = new Map();
+
+  const getKeys = (profile) => {
+    const keys = [];
+    const username = String(profile?.username || '').trim().toLowerCase();
+    const email = String(profile?.email || '').trim().toLowerCase();
+    const plexId = profile?.plexId != null ? String(profile.plexId).trim() : '';
+    if (username) keys.push(`username:${username}`);
+    if (email) keys.push(`email:${email}`);
+    if (plexId) keys.push(`plexId:${plexId}`);
+    const aliases = Array.isArray(profile?.aliases) ? profile.aliases : [];
+    aliases.forEach((alias) => {
+      const normalized = String(alias || '').trim().toLowerCase();
+      if (normalized) keys.push(`username:${normalized}`);
+    });
+    return [...new Set(keys)];
+  };
+
+  const mergeInto = (target, source) => {
+    if (!target.username && source.username) target.username = source.username;
+    if (!target.email && source.email) target.email = source.email;
+    if (!target.plexId && source.plexId != null) target.plexId = source.plexId;
+    if (!target.joinedAtTimestamp && source.joinedAtTimestamp) target.joinedAtTimestamp = source.joinedAtTimestamp;
+    if (source.thumb && !target.thumb) target.thumb = source.thumb;
+    const aliases = new Set([...(target.aliases || []), ...(source.aliases || [])]);
+    if (target.username) aliases.add(target.username);
+    if (source.username) aliases.add(source.username);
+    target.aliases = [...aliases].filter(Boolean);
+    return target;
+  };
+
+  const reindexRecord = (record, index) => {
+    getKeys(record).forEach((key) => indexByKey.set(key, index));
+  };
+
+  profiles.forEach((profile) => {
+    const keys = getKeys(profile);
+    if (!keys.length) return;
+
+    const matchedIndices = [...new Set(keys.map((key) => indexByKey.get(key)).filter((value) => Number.isInteger(value)))];
+    let baseIndex = matchedIndices.length ? matchedIndices[0] : -1;
+
+    if (baseIndex === -1) {
+      const record = mergeInto({
+        username: '',
+        email: null,
+        plexId: null,
+        joinedAtTimestamp: null,
+        thumb: null,
+        aliases: []
+      }, profile);
+      records.push(record);
+      reindexRecord(record, records.length - 1);
+      return;
+    }
+
+    const baseRecord = records[baseIndex];
+    mergeInto(baseRecord, profile);
+
+    for (const otherIndex of matchedIndices.slice(1)) {
+      const other = records[otherIndex];
+      if (!other || other === baseRecord) continue;
+      mergeInto(baseRecord, other);
+      records[otherIndex] = null;
+    }
+
+    reindexRecord(baseRecord, baseIndex);
+  });
+
+  return records.filter(Boolean).map((record) => ({
+    ...record,
+    aliases: [...new Set((record.aliases || []).map((alias) => String(alias || '').trim()).filter(Boolean))]
+  }));
+}
+
+function isLikelyEmail(value) {
+  return String(value || '').includes('@');
+}
+
+function buildCanonicalProfiles({ plexUsers = [], communityFriends = { byUsername: {}, byId: {} }, wizarrUsers = [], tautulliUsers = [] } = {}) {
+  const profiles = [];
+
+  plexUsers.forEach((user) => {
+    const username = String(user?.username || '').trim();
+    profiles.push({
+      username,
+      email: user?.email || null,
+      plexId: user?.plexId || null,
+      joinedAtTimestamp: user?.joinedAtTimestamp || null,
+      thumb: user?.thumb || null,
+      aliases: [username, user?.title || null]
+    });
+  });
+
+  (communityFriends.entries || []).forEach((entry) => {
+    profiles.push({
+      username: String(entry?.username || '').trim(),
+      email: null,
+      plexId: entry?.plexId || null,
+      joinedAtTimestamp: entry?.joinedAtTimestamp || null,
+      aliases: [entry?.username || null]
+    });
+  });
+
+  wizarrUsers.forEach((user) => {
+    profiles.push({
+      username: String(user?.username || '').trim(),
+      email: user?.email || null,
+      plexId: user?.plexUserId || null,
+      joinedAtTimestamp: null,
+      aliases: [user?.username || null]
+    });
+  });
+
+  tautulliUsers.forEach((user) => {
+    const username = String(user?.username || '').trim();
+    profiles.push({
+      username,
+      email: null,
+      plexId: user?.userId || null,
+      joinedAtTimestamp: null,
+      aliases: [username]
+    });
+  });
+
+  return mergeCanonicalProfiles(profiles);
+}
+
+async function enrichCanonicalProfilesWithCommunityDetails(canonicalProfiles = [], plexToken = '') {
+  const unresolvedUsernames = canonicalProfiles
+    .filter((profile) => !profile?.joinedAtTimestamp)
+    .map((profile) => profile?.username)
+    .filter((username) => username && !isLikelyEmail(username));
+
+  if (unresolvedUsernames.length === 0) {
+    return { enrichedProfiles: canonicalProfiles, resolvedCount: 0 };
+  }
+
+  const createdAtByUsername = await fetchCommunityCreatedAtByUsernames(plexToken, unresolvedUsernames);
+  let resolvedCount = 0;
+
+  const enrichedProfiles = canonicalProfiles.map((profile) => {
+    if (profile?.joinedAtTimestamp) {
+      return profile;
+    }
+
+    const keys = [profile?.username, ...(profile?.aliases || [])]
+      .map((value) => String(value || '').trim().toLowerCase())
+      .filter(Boolean);
+
+    const joinedAtTimestamp = keys
+      .map((key) => createdAtByUsername[key] || null)
+      .find((value) => Number.isFinite(value) && value > 0);
+
+    if (!joinedAtTimestamp) {
+      return profile;
+    }
+
+    resolvedCount++;
+    return {
+      ...profile,
+      joinedAtTimestamp
+    };
+  });
+
+  return {
+    enrichedProfiles,
+    resolvedCount
+  };
+}
+
+function reconcileUsersWithCanonicalProfiles(canonicalProfiles = [], dbUsers = []) {
+  if (!canonicalProfiles.length) {
+    return { reconciledProfiles: 0, enrichedUsers: 0, orphanUsers: dbUsers };
+  }
+
+  const canonicalByEmail = new Map();
+  const canonicalByPlexId = new Map();
+  const canonicalByUsername = new Map();
+
+  canonicalProfiles.forEach((profile) => {
+    const email = String(profile?.email || '').trim().toLowerCase();
+    const plexId = profile?.plexId != null ? String(profile.plexId).trim() : '';
+    const aliases = [profile?.username, ...(profile?.aliases || [])];
+    if (email) canonicalByEmail.set(email, profile);
+    if (plexId) canonicalByPlexId.set(plexId, profile);
+    aliases.forEach((alias) => {
+      const normalized = String(alias || '').trim().toLowerCase();
+      if (normalized) canonicalByUsername.set(normalized, profile);
+    });
+  });
+
+  let reconciledProfiles = 0;
+  let enrichedUsers = 0;
+  const orphanUsers = [];
+
+  dbUsers.forEach((dbUser) => {
+    const email = String(dbUser?.email || '').trim().toLowerCase();
+    const plexId = dbUser?.plexId != null ? String(dbUser.plexId).trim() : '';
+    const username = String(dbUser?.username || '').trim().toLowerCase();
+    const profile = canonicalByEmail.get(email) || canonicalByPlexId.get(plexId) || canonicalByUsername.get(username) || null;
+
+    if (!profile) {
+      orphanUsers.push(dbUser);
+      return;
+    }
+
+    const aliases = new Set([dbUser.username, profile.username, ...(profile.aliases || [])]);
+    aliases.forEach((alias) => {
+      if (!alias) return;
+      if (isLikelyEmail(alias) && String(alias).trim().toLowerCase() !== username) return;
+      try {
+        const updated = UserQueries.upsert(
+          alias,
+          profile.plexId || dbUser.plexId || null,
+          profile.email || dbUser.email || null,
+          profile.joinedAtTimestamp || dbUser.joinedAt || null
+        );
+        if (updated && (updated.plexId || updated.email || updated.joinedAt)) {
+          enrichedUsers++;
+        }
+      } catch (_) {}
+    });
+    reconciledProfiles++;
+  });
+
+  try {
+    mergeUsersByIdentity();
+  } catch (_) {}
+
+  return {
+    reconciledProfiles,
+    enrichedUsers,
+    orphanUsers
+  };
 }
 
 function getPlexCloudToken() {
@@ -212,6 +522,7 @@ async function buildClassementSnapshot(options = {}) {
   const plexJoinedAtById = {};
   const emailToUsername = {};
   const plexIdToUsername = {};
+  const plexUsers = [];
   let thumbsFetched = 0;
 
   try {
@@ -234,6 +545,14 @@ async function buildClassementSnapshot(options = {}) {
           plexIdToUsername[String(od.id)] = od.username;
           if (ownerTs > 0) plexJoinedAtById[String(od.id)] = ownerTs;
         }
+        plexUsers.push({
+          username: od.username,
+          title: od.friendlyName || od.username,
+          email: od.email || null,
+          plexId: od.id || null,
+          joinedAtTimestamp: ownerTs || null,
+          thumb: od.thumb || null
+        });
       }
     } else {
       logCR.debug(`Plex API v2 cloud token refuse: HTTP ${ownerResp.status}`);
@@ -289,6 +608,14 @@ async function buildClassementSnapshot(options = {}) {
               }
             }
           }
+          plexUsers.push({
+            username: rawUsername,
+            title: usernameMatch?.[1] || rawUsername,
+            email: emailMatch?.[1] || null,
+            plexId: idMatch?.[1] || null,
+            joinedAtTimestamp: plexJoinedAtMap[name] || null,
+            thumb: thumbMatch?.[1] || null
+          });
         }
       });
     } else {
@@ -405,6 +732,23 @@ async function buildClassementSnapshot(options = {}) {
       skipped: true,
       reason: 'no_users'
     };
+  }
+
+  const tautulliUsers = getAllUserStatsFromTautulli() || [];
+  const dbUsersBeforeReconcile = UserQueries.getAll() || [];
+  const initialCanonicalProfiles = buildCanonicalProfiles({
+    plexUsers,
+    communityFriends,
+    wizarrUsers,
+    tautulliUsers
+  });
+  const canonicalEnrichment = await enrichCanonicalProfilesWithCommunityDetails(initialCanonicalProfiles, plexToken);
+  const canonicalProfiles = canonicalEnrichment.enrichedProfiles;
+  const reconciliation = reconcileUsersWithCanonicalProfiles(canonicalProfiles, dbUsersBeforeReconcile);
+  logCR.info(`Reconciliation identites: ${canonicalProfiles.length} profils canoniques, ${canonicalEnrichment.resolvedCount} joinedAt recuperes via detail user, ${reconciliation.reconciledProfiles} users DB rapproches, ${reconciliation.orphanUsers.length} orphelins restants`);
+  if (reconciliation.orphanUsers.length > 0) {
+    const sample = reconciliation.orphanUsers.slice(0, 10).map((user) => user.username).join(', ');
+    logCR.debug(`Orphelins (sample): ${sample}`);
   }
 
   const statsToUse = wizarrUsers.map((wUser) => {

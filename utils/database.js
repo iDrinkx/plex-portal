@@ -1485,5 +1485,6 @@ module.exports = {
   AppSettingQueries,
   DashboardCardQueries,
   UserServiceCredentialQueries,
-  DB_PATH
+  DB_PATH,
+  mergeUsersByIdentity
 };
