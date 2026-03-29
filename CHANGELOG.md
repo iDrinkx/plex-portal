@@ -1,3 +1,11 @@
+## [1.42.5](https://github.com/iDrinkx/portall/compare/v1.42.4...v1.42.5) (2026-03-29)
+
+### Corrections de bugs
+
+* tautulli + wizarr timeout ([ac24f46](https://github.com/iDrinkx/portall/commit/ac24f46a24711d8efdc35b7b2cad3e0fb41667c6))
+* test wizarr ([d731209](https://github.com/iDrinkx/portall/commit/d7312093791279c3747f6f1c4af59366a7a840eb))
+* wizarr api ([94f4efd](https://github.com/iDrinkx/portall/commit/94f4efdf199ffed7997c2b62a61b19ffb1ad89c1))
+
 ## [1.42.4](https://github.com/iDrinkx/portall/compare/v1.42.3...v1.42.4) (2026-03-27)
 
 ### Corrections de bugs
