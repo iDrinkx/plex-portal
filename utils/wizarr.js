@@ -2,7 +2,7 @@ const fetch = require('node-fetch');
 const log = require('./logger').create('[Wizarr]');
 
 const MS_PER_DAY = 1000 * 60 * 60 * 24;
-const WIZARR_PROBE_TIMEOUT_MS = 10000;
+const WIZARR_PROBE_TIMEOUT_MS = 30000;
 const WIZARR_LIST_TIMEOUT_MS = 60000;
 
 function delay(ms) {

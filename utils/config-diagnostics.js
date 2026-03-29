@@ -4,6 +4,7 @@ const { getConfigValue } = require("./config");
 const { probeWizarrConnection } = require("./wizarr");
 
 const CONFIG_TEST_TIMEOUT_MS = 5000;
+const TAUTULLI_TEST_TIMEOUT_MS = 60000;
 
 function normalizeBaseUrl(value) {
   return String(value || "").trim().replace(/\/+$/, "");
@@ -59,6 +60,7 @@ async function testTautulliConnection(overrides = {}, options = {}) {
   if (!tautulliUrl || !apiKey) return summarizeMissingConfig("Tautulli", options);
   try {
     const resp = await fetchWithConfigTest(`${tautulliUrl}/api/v2?apikey=${encodeURIComponent(apiKey)}&cmd=get_activity`, {
+      timeout: TAUTULLI_TEST_TIMEOUT_MS,
       headers: { Accept: "application/json" }
     });
     if (!resp.ok) {
