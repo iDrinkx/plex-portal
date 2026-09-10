@@ -297,6 +297,10 @@
 
     <div class="setup-card">
       <form id="setupForm">
+        <div class="setup-field">
+          <label for="setupToken">Setup token</label>
+          <input id="setupToken" type="password" autocomplete="off" autocapitalize="none" spellcheck="false" required>
+        </div>
         <div class="setup-grid">
           <% (configSections || []).forEach(function(section) { %>
             <div class="setup-section">
@@ -434,6 +438,14 @@
         return payload;
       }
 
+      function getSetupHeaders() {
+        const tokenInput = document.getElementById("setupToken");
+        return {
+          "Content-Type": "application/json",
+          "X-Setup-Token": String(tokenInput && tokenInput.value || "")
+        };
+      }
+
       async function parseJsonResponse(resp) {
         const raw = await resp.text();
         let data = null;
@@ -493,7 +505,7 @@
         try {
           const response = await fetch("<%= basePath %>/api/setup/diagnostics", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: getSetupHeaders(),
             body: JSON.stringify(getPayload())
           });
           const data = await parseJsonResponse(response);
@@ -532,7 +544,7 @@
           const payload = getPayload();
           const response = await fetch("<%= basePath %>/api/setup", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: getSetupHeaders(),
             body: JSON.stringify(payload)
           });
           const data = await response.json();

@@ -187,7 +187,7 @@ async function getPlexFriends(PLEX_TOKEN) {
  * - Autorisé s'il est le propriétaire du token admin (l'admin lui-même)
  * - Autorisé s'il a un <Server machineIdentifier="..."> dans plex.tv/api/users
  *   → seuls les utilisateurs avec accès actif au serveur ont cette entrée
- * - Propagate les erreurs réseau → l'appelant décide du fail-open
+ * - Propagate les erreurs réseau → l'appelant doit refuser l'accès si l'autorisation ne peut pas être confirmée
  */
 async function isUserAuthorized(plexUserId, PLEX_URL, PLEX_TOKEN) {
   const userId = parseInt(plexUserId);

@@ -56,6 +56,15 @@ function getCustomFaviconAsset() {
   return { href: "/logo.png", type: "image/png" };
 }
 
+const CONFIG_FAVICON_ASSETS = new Map([
+  ["/favicon.ico", { file: "favicon.ico", type: "image/x-icon" }],
+  ["/favicon.png", { file: "favicon.png", type: "image/png" }],
+  ["/favicon.svg", { file: "favicon.svg", type: "image/svg+xml" }],
+  ["/favicon.webp", { file: "favicon.webp", type: "image/webp" }],
+  ["/favicon.jpg", { file: "favicon.jpg", type: "image/jpeg" }],
+  ["/favicon.jpeg", { file: "favicon.jpeg", type: "image/jpeg" }]
+]);
+
 function slugifyCardTitle(value) {
   const normalized = String(value || "")
     .normalize("NFD")
@@ -212,13 +221,22 @@ app.use((err, req, res, next) => {
 ========================= */
 
 app.use(express.static(path.join(__dirname, "public")));
-app.use(express.static("/config"));
+app.use((req, res, next) => {
+  const asset = CONFIG_FAVICON_ASSETS.get(req.path);
+  if (!asset) return next();
+
+  const filePath = path.join("/config", asset.file);
+  if (!fs.existsSync(filePath)) return next();
+
+  res.type(asset.type);
+  return res.sendFile(filePath);
+});
 
 app.use((req, res, next) => {
   res.locals.setupComplete = isSetupComplete();
 
   if (res.locals.setupComplete) return next();
-  if (req.path === "/setup" || req.path === "/api/setup") return next();
+  if (req.path === "/setup" || req.path === "/api/setup" || req.path === "/api/setup/diagnostics") return next();
 
   return res.redirect((req.basePath || "") + "/setup");
 });
