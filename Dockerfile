@@ -5,7 +5,7 @@ WORKDIR /app
 RUN apt-get update \
   && apt-get install -y --no-install-recommends python3 make g++ \
   && rm -rf /var/lib/apt/lists/* \
-  && npm install -g npm@11.18.0
+  && npm install -g npm@11.19.1
 
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev --no-audit --no-fund
