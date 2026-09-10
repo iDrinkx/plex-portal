@@ -5,10 +5,11 @@ const log = require("../utils/logger");
 const logAuth = log.create('[Auth]');
 const { AppSettingQueries, UserQueries } = require("../utils/database");
 
-const { isUserAuthorized, getAuthorizedServerUsers, getServerOwnerId, getServerMachineId } = require("../utils/plex");
+const { getAuthorizedServerUsers, getServerOwnerId, getServerMachineId } = require("../utils/plex");
 const { checkWizarrAccess } = require("../utils/wizarr");
 const { getConfigSections, getConfigValue, getMissingRequiredConfigKeys, isSetupComplete, saveEditableConfig } = require("../utils/config");
 const { runConfigDiagnostics } = require("../utils/config-diagnostics");
+const { requireSetupToken } = require("../middleware/setup-token.middleware");
 
 function getSafeUserLabel(user) {
   return `user#${user?.id || "unknown"}`;
@@ -134,13 +135,13 @@ router.get("/setup", (req, res) => {
   res.render("setup", {
     layout: false,
     basePath: req.basePath || "",
-    configSections: getConfigSections(),
+    configSections: getConfigSections({ includeSecretValues: false }),
     missingKeys: getMissingRequiredConfigKeys(),
     error: req.query.error || null
   });
 });
 
-router.post("/api/setup", (req, res) => {
+router.post("/api/setup", requireSetupToken, (req, res) => {
   if (isSetupComplete()) {
     return res.status(403).json({ error: "Setup déjà terminé" });
   }
@@ -157,7 +158,7 @@ router.post("/api/setup", (req, res) => {
   return res.json({ success: true, redirectTo: (req.basePath || "") + "/" });
 });
 
-router.post("/api/setup/diagnostics", async (req, res) => {
+router.post("/api/setup/diagnostics", requireSetupToken, async (req, res) => {
   try {
     const diagnostics = await runConfigDiagnostics(req.body || {}, { optionalWhenMissing: true });
     res.json(diagnostics);
@@ -240,7 +241,7 @@ router.get("/auth-complete", ensureSetupComplete, async (req, res) => {
 
   // ── Vérification accès serveur (Plex) ──────────────────────────────────────────────
   // Plex est BLOQUANT (obligatoire pour le login)
-  let authorizedByPlex = true;
+  let authorizedByPlex = false;
   let isAdmin = false;
   const plexUrl = getConfigValue("PLEX_URL", "");
   const configuredPlexToken = String(getConfigValue("PLEX_TOKEN", "") || "").trim();
@@ -249,37 +250,36 @@ router.get("/auth-complete", ensureSetupComplete, async (req, res) => {
   const adminLookupToken = String(runtimePlexToken || configuredPlexToken || "").trim();
   const plexServerToken = String(configuredPlexToken || runtimePlexToken || authToken || "").trim();
 
-  if (persistedAdminUserId && Number(persistedAdminUserId) === Number(user.id)) {
-    isAdmin = true;
-  }
-
-  if (plexUrl && adminLookupToken && !isAdmin) {
-    try {
-      const userId = parseInt(user.id);
-      const [ownerId, machineId] = await Promise.all([
-        getServerOwnerId(adminLookupToken),
-        getServerMachineId(plexUrl, plexServerToken)
-      ]);
-
-      if (ownerId && ownerId === userId) {
-        isAdmin = true;
-        logAuth.info(`Proprietaire du serveur detecte pour user#${userId}`);
-      } else {
-        const authorizedUsers = await getAuthorizedServerUsers(adminLookupToken, machineId);
-        if (!authorizedUsers.some(u => u.id === userId)) {
-          logAuth.warn(`Acces Plex refuse pour user#${userId}`);
-          authorizedByPlex = false;
-        }
-      }
-    } catch (authErr) {
-      logAuth.warn(`Vérification Plex impossible (${authErr.message}) — accès accordé par défaut`);
+  try {
+    const userId = Number(user.id);
+    if (!Number.isSafeInteger(userId) || !plexUrl || !adminLookupToken || !plexServerToken) {
+      throw new Error("Plex authorization prerequisites are unavailable");
     }
-  } else if (plexUrl && !isAdmin) {
-    logAuth.warn("Aucun token admin Plex disponible pour verifier les acces serveur — acces accorde par defaut");
+
+    const ownerId = await getServerOwnerId(adminLookupToken);
+    if (ownerId && ownerId === userId) {
+      authorizedByPlex = true;
+      isAdmin = true;
+      logAuth.info(`Proprietaire du serveur detecte pour user#${userId}`);
+    } else {
+      const machineId = await getServerMachineId(plexUrl, plexServerToken);
+      if (!machineId) throw new Error("Plex server identity is unavailable");
+
+      const authorizedUsers = await getAuthorizedServerUsers(adminLookupToken, machineId);
+      authorizedByPlex = authorizedUsers.some(u => u.id === userId);
+      if (!authorizedByPlex) logAuth.warn(`Acces Plex refuse pour user#${userId}`);
+    }
+  } catch (authErr) {
+    logAuth.warn(`Vérification Plex impossible pour ${getSafeUserLabel(user)}: ${authErr.message}`);
+    return res.redirect((req.basePath || "") + "/?error=plex_unavailable");
   }
 
   if (!authorizedByPlex) {
     return res.redirect((req.basePath || "") + "/?error=unauthorized");
+  }
+
+  if (persistedAdminUserId && Number(persistedAdminUserId) === Number(user.id)) {
+    isAdmin = true;
   }
 
   if (persistedAdminUserId) {
