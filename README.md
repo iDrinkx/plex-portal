@@ -197,6 +197,7 @@ Le modèle actuel est:
 Variables de bootstrap typiques:
 
 - `SESSION_SECRET`
+- `SETUP_TOKEN` (uniquement pour les API de configuration initiale)
 - `PORT`
 - `COOKIE_SECURE`
 - `NODE_ENV`
@@ -237,6 +238,7 @@ services:
       - "4000:3000"
     environment:
       SESSION_SECRET: "change-me"
+      SETUP_TOKEN: "${SETUP_TOKEN}"
       NODE_ENV: "production"
       COOKIE_SECURE: "true"
       TZ: "UTC"
@@ -251,6 +253,8 @@ networks:
   proxy:
     external: true
 ```
+
+Avant le premier lancement, définissez `SETUP_TOKEN` dans `.env` avec une valeur aléatoire longue (par exemple `openssl rand -hex 32`). Ce n'est pas un token Plex : saisissez la même valeur dans le champ **Setup token** de l'écran `/setup`.
 
 ---
 

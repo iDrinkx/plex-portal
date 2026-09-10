@@ -14,13 +14,16 @@ Les URLs et clés API des services sont désormais gérées par le setup web pui
 ## Demarrage rapide
 
 1. Editez `docker-compose.yml`
-2. Renseignez au minimum `SESSION_SECRET`
+2. Renseignez `SESSION_SECRET` et définissez un `SETUP_TOKEN` aléatoire long dans votre fichier `.env` :
+```bash
+SETUP_TOKEN=$(openssl rand -hex 32)
+```
 3. Lancez:
 ```bash
 docker-compose up -d
 ```
 4. Ouvrez l'application
-5. Finalisez `/setup`
+5. Finalisez `/setup` en saisissant la même valeur dans le champ **Setup token**
 6. Renseignez ensuite les services dans `Parametres > Connexions`
 
 ## Exemple compose
@@ -36,6 +39,7 @@ services:
       - "3000:3000"
     environment:
       SESSION_SECRET: "change-me"
+      SETUP_TOKEN: "${SETUP_TOKEN}"
       NODE_ENV: "production"
       COOKIE_SECURE: "true"
     volumes:
@@ -50,5 +54,6 @@ services:
 ```bash
 openssl rand -hex 32
 ```
+- `SETUP_TOKEN` protège uniquement les API de configuration initiale. Ce n'est pas un token Plex : générez une valeur aléatoire longue, définissez-la dans `.env`, puis saisissez la même valeur dans le champ **Setup token** lors du premier `/setup`.
 - Les secrets applicatifs saisis dans l'UI sont persistés en base SQLite. Protégez le volume `/config`.
 - Pour les intégrations iframe et SSO, utilisez des URLs publiques HTTPS cohérentes sur le même domaine parent quand nécessaire.

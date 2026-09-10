@@ -38,14 +38,15 @@ mkdir -p /mnt/user/appdata/portall/config
 
 ### 1. Créer/modifier `docker-compose.yml`
 
-Ajouter au minimum le `SESSION_SECRET`:
+Ajouter `SESSION_SECRET` et `SETUP_TOKEN` :
 
 ```yaml
 environment:
   SESSION_SECRET: "change-me-to-a-secure-key"
+  SETUP_TOKEN: "${SETUP_TOKEN}"
 ```
 
-**C'est tout pour le bootstrap.**
+Définissez `SETUP_TOKEN` dans le fichier `.env` avec une valeur aléatoire longue (par exemple `openssl rand -hex 32`). Il protège uniquement les API de configuration initiale : ce n'est pas un token Plex.
 
 L'app détectera automatiquement:
 - La présence du reverse proxy via les headers `X-Forwarded-*`
@@ -84,6 +85,7 @@ Recommandé: 300x300px ou 400x400px
 
 5. **Environment Variables:**
    - `SESSION_SECRET` = `your-secret-key` ⚠️ **OBLIGATOIRE**
+   - `SETUP_TOKEN` = une valeur aléatoire longue ⚠️ **OBLIGATOIRE pour le setup initial**
    - `COOKIE_SECURE` = `true` ⚠️ **OBLIGATOIRE en production (HTTPS)**
    - `DEBUG` = `true` (optionnel, pour voir les logs)
 
@@ -104,6 +106,7 @@ services:
       - "3000:3000"
     environment:
       SESSION_SECRET: "change-me-to-a-secure-key"
+      SETUP_TOKEN: "${SETUP_TOKEN}"
       COOKIE_SECURE: "true"   # HTTPS via reverse proxy
     volumes:
       - /mnt/user/appdata/portall/config:/config
@@ -123,7 +126,7 @@ Au premier lancement:
 
 1. Ouvrir l'URL du portail
 2. Si l'application n'est pas encore configurée, elle redirige vers `/setup`
-3. Renseigner au minimum les connexions Plex
+3. Saisir la même valeur que `SETUP_TOKEN` dans le champ **Setup token**, puis renseigner au minimum les connexions Plex
 4. Enregistrer
 
 Les valeurs seront ensuite modifiables dans `Parametres > Connexions`.
@@ -359,6 +362,7 @@ docker-compose up -d
 - ✅ ngx proxy manager installé
 - ✅ Dossier `/mnt/user/appdata/portall/config` créé
 - ✅ SESSION_SECRET configuré
+- ✅ SETUP_TOKEN aléatoire long configuré pour le setup initial
 - ✅ `logo.png` placé dans `config/` (optionnel)
 - ✅ Conteneur Docker créé et en cours d'exécution
 - ✅ Route ngx créée avec "Strip Path: ON"
