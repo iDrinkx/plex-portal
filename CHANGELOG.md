@@ -1,3 +1,9 @@
+## [1.42.13](https://github.com/iDrinkx/portall/compare/v1.42.12...v1.42.13) (2026-09-10)
+
+### Corrections de bugs
+
+* **deps:** resolve dependency vulnerabilities ([866e61a](https://github.com/iDrinkx/portall/commit/866e61a93d262a6971623f5306b73aa2f007a7ba))
+
 ## [1.42.12](https://github.com/iDrinkx/portall/compare/v1.42.11...v1.42.12) (2026-07-12)
 
 ### Corrections de bugs
