@@ -1,3 +1,13 @@
+## [1.42.14](https://github.com/iDrinkx/portall/compare/v1.42.13...v1.42.14) (2026-09-10)
+
+### Corrections de bugs
+
+* **security:** harden setup and Plex authorization ([d1ccb26](https://github.com/iDrinkx/portall/commit/d1ccb2670b06b379da2a4ec53b691493f7561d4b))
+
+### Documentation
+
+* **security:** document setup token configuration ([e249c18](https://github.com/iDrinkx/portall/commit/e249c18910de41a1d0f5757d0753e3a6a33e26b6))
+
 ## [1.42.13](https://github.com/iDrinkx/portall/compare/v1.42.12...v1.42.13) (2026-09-10)
 
 ### Corrections de bugs
